@@ -1,35 +1,35 @@
 ---
 title: "Checkly"
-description: "How to sync secrets from Infisical to Checkly"
+description: "How to sync secrets from KMS to Checkly"
 ---
 
 Prerequisites:
 
-- Set up and add envars to [Infisical Cloud](https://app.infisical.com)
+- Set up and add envars to [KMS Cloud](https://kms.lux.network)
 
 <Steps>
-  <Step title="Authorize Infisical for Checkly">
+  <Step title="Authorize KMS for Checkly">
     Obtain a Checkly API Key in User Settings > API Keys.
 
     ![integrations checkly dashboard](../../images/integrations/checkly/integrations-checkly-dashboard.png)
     ![integrations checkly token](../../images/integrations/checkly/integrations-checkly-token.png)
 
-    Navigate to your project's integrations tab in Infisical.
+    Navigate to your project's integrations tab in KMS.
 
     ![integrations](../../images/integrations.png)
 
-    Press on the Checkly tile and input your Checkly API Key to grant Infisical access to your Checkly account.
+    Press on the Checkly tile and input your Checkly API Key to grant KMS access to your Checkly account.
 
     ![integrations checkly authorization](../../images/integrations/checkly/integrations-checkly-auth.png)
 
   </Step>
   <Step title="Start integration">
-    Select which Infisical environment secrets you want to sync to Checkly and press create integration to start syncing secrets.
+    Select which KMS environment secrets you want to sync to Checkly and press create integration to start syncing secrets.
 
     ![integrations checkly](../../images/integrations/checkly/integrations-checkly-create.png)
 
     <Note>
-      Infisical integrates with Checkly's environment variables at the **global** and **group** levels.
+      KMS integrates with Checkly's environment variables at the **global** and **group** levels.
       
       To sync secrets to a specific group, you can select a group from the Checkly Group dropdown; otherwise, leaving it empty will sync secrets globally.
     </Note>

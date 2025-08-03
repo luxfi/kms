@@ -60,7 +60,7 @@ export const SecretSyncsTab = () => {
             <div className="flex items-start gap-1">
               <p className="text-xl font-semibold text-mineshaft-100">Secret Syncs</p>
               <a
-                href="https://infisical.com/docs/integrations/secret-syncs/overview"
+                href="https://lux.network/docs/integrations/secret-syncs/overview"
                 target="_blank"
                 rel="noopener noreferrer"
               >

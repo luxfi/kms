@@ -24,7 +24,7 @@ export const SecretSyncModalHeader = ({ destination, isConfigured }: Props) => {
           {destinationDetails.name} Sync
           <a
             target="_blank"
-            href={`https://infisical.com/docs/integrations/secret-syncs/${destination}`}
+            href={`https://lux.network/docs/integrations/secret-syncs/${destination}`}
             className="mb-1 ml-1"
             rel="noopener noreferrer"
           >

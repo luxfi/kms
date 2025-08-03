@@ -310,7 +310,7 @@ export const GithubConfigurePage = () => {
         <form onSubmit={handleSubmit(onFormSubmit)} className="px-6">
           <CardTitle
             className="px-0 text-left text-xl"
-            subTitle="Choose which environment in Infisical you want to sync to environment variables in GitHub."
+            subTitle="Choose which environment in KMS you want to sync to environment variables in GitHub."
           >
             <div className="flex flex-row items-center">
               <div className="flex items-center rounded-full bg-mineshaft-200">
@@ -325,7 +325,7 @@ export const GithubConfigurePage = () => {
               <a
                 target="_blank"
                 rel="noopener noreferrer"
-                href="https://infisical.com/docs/integrations/cicd/githubactions"
+                href="https://lux.network/docs/integrations/cicd/githubactions"
               >
                 <div className="mb-1 ml-2 inline-block cursor-default rounded-md bg-yellow/20 px-1.5 pb-[0.03rem] pt-[0.04rem] text-sm text-yellow opacity-80 hover:opacity-100">
                   <FontAwesomeIcon icon={faBookOpen} className="mr-1.5" />
@@ -737,7 +737,7 @@ export const GithubConfigurePage = () => {
                         onCheckedChange={(isChecked) => onChange(isChecked)}
                         isChecked={value}
                       >
-                        Delete secrets in Github that are not in Infisical
+                        Delete secrets in Github that are not in KMS
                       </Switch>
                     )}
                   />
@@ -783,7 +783,7 @@ export const GithubConfigurePage = () => {
         </div>
         <span className="mt-4 text-sm text-mineshaft-300">
           After creating an integration, your secrets will start syncing immediately. This might
-          cause an unexpected override of current secrets in GitHub with secrets from Infisical.
+          cause an unexpected override of current secrets in GitHub with secrets from KMS.
         </span>
       </div>
     </div>
@@ -797,7 +797,7 @@ export const GithubConfigurePage = () => {
           src="/images/loading/loading.gif"
           height={70}
           width={120}
-          alt="infisical loading indicator"
+          alt="kms loading indicator"
         />
       ) : (
         <div className="flex h-max max-w-md flex-col rounded-md border border-mineshaft-600 bg-mineshaft-800 p-6 text-center text-mineshaft-200">
@@ -808,9 +808,9 @@ export const GithubConfigurePage = () => {
               className="inline cursor-pointer text-mineshaft-100 underline decoration-primary-500 underline-offset-4 opacity-80 duration-200 hover:opacity-100"
               target="_blank"
               rel="noopener noreferrer"
-              href="mailto:support@infisical.com"
+              href="mailto:support@lux.network"
             >
-              support@infisical.com
+              support@lux.network
             </a>{" "}
             if the issue persists.
           </p>

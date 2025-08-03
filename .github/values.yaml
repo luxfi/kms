@@ -8,24 +8,24 @@ nameOverride: ""
 ##
 fullnameOverride: ""
 
-## @section Infisical backend parameters
-## Documentation : https://infisical.com/docs/self-hosting/deployments/kubernetes
+## @section KMS backend parameters
+## Documentation : https://lux.network/docs/self-hosting/deployments/kubernetes
 ##
 
-infisical:
+kms:
   autoDatabaseSchemaMigration: false
   
   enabled: false
 
-  name: infisical
+  name: kms
   replicaCount: 3
   image:
-    repository: infisical/staging_infisical
+    repository: kms/staging_kms
     tag: "latest"
     pullPolicy: Always
 
   deploymentAnnotations:
-    secrets.infisical.com/auto-reload: "true"
+    secrets.lux.network/auto-reload: "true"
 
   kubeSecretRef: "managed-secret"
 
@@ -44,11 +44,11 @@ ingress:
   ##
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
-  hostName: "gamma.infisical.com"
+  hostName: "gamma.lux.network"
   tls:
     - secretName: letsencrypt-prod
       hosts:
-        - gamma.infisical.com
+        - gamma.lux.network
 
 postgresql:
   enabled: false

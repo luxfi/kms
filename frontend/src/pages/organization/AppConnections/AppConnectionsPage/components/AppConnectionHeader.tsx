@@ -32,7 +32,7 @@ export const AppConnectionHeader = ({ app, isConnected, onBack }: Props) => {
         <div className="flex items-center text-mineshaft-300">
           {appDetails.name}
           <a
-            href={`https://infisical.com/docs/integrations/app-connections/${app}`}
+            href={`https://lux.network/docs/integrations/app-connections/${app}`}
             target="_blank"
             className="mb-1 ml-1"
             rel="noopener noreferrer"

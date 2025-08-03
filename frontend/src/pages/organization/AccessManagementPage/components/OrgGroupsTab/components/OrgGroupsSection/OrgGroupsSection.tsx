@@ -27,7 +27,7 @@ export const OrgGroupsSection = () => {
     if (!subscription?.groups) {
       handlePopUpOpen("upgradePlan", {
         description:
-          "You can manage users more efficiently with groups if you upgrade your Infisical plan to an Enterprise license."
+          "You can manage users more efficiently with groups if you upgrade your KMS plan to an Enterprise license."
       });
     } else {
       handlePopUpOpen("group");

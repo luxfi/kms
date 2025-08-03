@@ -101,14 +101,14 @@ export const SecretSyncSelect = ({ onSelect }: Props) => {
               className="max-w-sm py-4"
               content={
                 <>
-                  <p className="mb-2">Infisical is constantly adding support for more services.</p>
+                  <p className="mb-2">KMS is constantly adding support for more services.</p>
                   <p>
                     {`If you don't see the third-party
             service you're looking for,`}{" "}
                     <a
                       target="_blank"
                       className="underline hover:text-mineshaft-300"
-                      href="https://infisical.com/slack"
+                      href="https://lux.network/slack"
                       rel="noopener noreferrer"
                     >
                       let us know on Slack
@@ -117,7 +117,7 @@ export const SecretSyncSelect = ({ onSelect }: Props) => {
                     <a
                       target="_blank"
                       className="underline hover:text-mineshaft-300"
-                      href="https://github.com/Infisical/infisical/discussions"
+                      href="https://github.com/luxfi/kms/discussions"
                       rel="noopener noreferrer"
                     >
                       make a request on GitHub
@@ -146,7 +146,7 @@ export const SecretSyncSelect = ({ onSelect }: Props) => {
       <UpgradePlanModal
         isOpen={popUp.upgradePlan.isOpen}
         onOpenChange={(isOpen) => handlePopUpToggle("upgradePlan", isOpen)}
-        text="You can use every Secret Sync if you switch to Infisical's Enterprise plan."
+        text="You can use every Secret Sync if you switch to KMS's Enterprise plan."
       />
     </div>
   );

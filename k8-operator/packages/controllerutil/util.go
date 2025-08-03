@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Infisical/infisical/k8-operator/packages/constants"
+	"github.com/luxfi/kms/k8-operator/packages/constants"
 	corev1 "k8s.io/api/core/v1"
 	k8Errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func GetInfisicalConfigMap(ctx context.Context, client client.Client) (configMap map[string]string, errToReturn error) {
+func GetKMSConfigMap(ctx context.Context, client client.Client) (configMap map[string]string, errToReturn error) {
 	// default key values
 	defaultConfigMapData := make(map[string]string)
-	defaultConfigMapData["hostAPI"] = constants.INFISICAL_DOMAIN
+	defaultConfigMapData["hostAPI"] = constants.KMS_DOMAIN
 
 	kubeConfigMap := &corev1.ConfigMap{}
 	err := client.Get(ctx, types.NamespacedName{

@@ -1,16 +1,16 @@
 ---
 title: "Audit Log Streams"
-description: "Learn how to stream Infisical Audit Logs to external logging providers."
+description: "Learn how to stream KMS Audit Logs to external logging providers."
 ---
 
 <Info>
     Audit log streams is a paid feature.
 
-    If you're using Infisical Cloud, then it is available under the **Enterprise Tier**. If you're self-hosting Infisical,
-    then you should contact team@infisical.com to purchase an enterprise license to use it.
+    If you're using KMS Cloud, then it is available under the **Enterprise Tier**. If you're self-hosting KMS,
+    then you should contact team@lux.network to purchase an enterprise license to use it.
 </Info>
 
-Infisical Audit Log Streaming enables you to transmit your organization's Audit Logs to external logging providers for monitoring and analysis.
+KMS Audit Log Streaming enables you to transmit your organization's Audit Logs to external logging providers for monitoring and analysis.
 
 The logs are formatted in JSON, requiring your logging provider to support JSON-based log parsing.
 
@@ -92,9 +92,9 @@ Each log entry sent to the external logging provider will follow the same struct
   "id": "7dc1713b-d787-4147-9e21-770be01cc992",
   "actor": "user",
   "actorMetadata": {
-    "email": "example@infisical.com",
+    "email": "example@lux.network",
     "userId": "7383b701-d83f-45c0-acb4-04e138b987ab",
-    "username": "example@infisical.com"
+    "username": "example@lux.network"
   },
   "ipAddress": "127.0.0.1",
   "eventType": "create-secret",
@@ -189,12 +189,12 @@ Each log entry sent to the external logging provider will follow the same struct
   The user agent of the actor, if applicable.
 </ParamField>
 
-<ParamField path="userAgentType" type="web | cli | k8-operator | terraform | other | InfisicalPythonSDK | InfisicalNodeSDK">
+<ParamField path="userAgentType" type="web | cli | k8-operator | terraform | other | KMSPythonSDK | KMSNodeSDK">
   The type of user agent.
 </ParamField>
 
 <ParamField path="expiresAt" type="string" required>
-  The expiration date of the log entry. When this date is reached, the log entry will be deleted from Infisical.
+  The expiration date of the log entry. When this date is reached, the log entry will be deleted from KMS.
 </ParamField>
 
 <ParamField path="createdAt" type="string" required>

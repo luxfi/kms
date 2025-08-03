@@ -1,7 +1,7 @@
 package generator
 
 import (
-	"github.com/Infisical/infisical/k8-operator/api/v1alpha1"
+	"github.com/luxfi/kms/k8-operator/api/v1alpha1"
 	"github.com/sethvargo/go-password/password"
 )
 

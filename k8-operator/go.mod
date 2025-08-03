@@ -1,11 +1,11 @@
-module github.com/Infisical/infisical/k8-operator
+module github.com/luxfi/kms/k8-operator
 
 go 1.21
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/aws/smithy-go v1.20.3
-	github.com/infisical/go-sdk v0.5.97
+	github.com/kms/go-sdk v0.5.97
 	github.com/lestrrat-go/jwx/v2 v2.1.4
 	github.com/onsi/ginkgo/v2 v2.6.0
 	github.com/onsi/gomega v1.24.1

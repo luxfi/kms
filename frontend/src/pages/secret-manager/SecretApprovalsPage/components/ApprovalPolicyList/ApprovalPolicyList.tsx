@@ -255,7 +255,7 @@ export const ApprovalPolicyList = ({ workspaceId }: IProps) => {
               <div className="flex items-start gap-1">
                 <p className="text-xl font-semibold text-mineshaft-100">Policies</p>
                 <a
-                  href="https://infisical.com/docs/documentation/platform/pr-workflows"
+                  href="https://lux.network/docs/documentation/platform/pr-workflows"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -515,7 +515,7 @@ export const ApprovalPolicyList = ({ workspaceId }: IProps) => {
       <UpgradePlanModal
         isOpen={popUp.upgradePlan.isOpen}
         onOpenChange={(isOpen) => handlePopUpToggle("upgradePlan", isOpen)}
-        text="You can add secret approval policy if you switch to Infisical's Enterprise plan."
+        text="You can add secret approval policy if you switch to KMS's Enterprise plan."
       />
     </AnimatePresence>
   );

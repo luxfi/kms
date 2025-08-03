@@ -79,11 +79,11 @@ const awsRegions = [
 
 const mappingBehaviors = [
   {
-    label: "Many to One (All Infisical secrets will be mapped to a single AWS secret)",
+    label: "Many to One (All KMS secrets will be mapped to a single AWS secret)",
     value: IntegrationMappingBehavior.MANY_TO_ONE
   },
   {
-    label: "One to One - (Each Infisical secret will be mapped to its own AWS secret)",
+    label: "One to One - (Each KMS secret will be mapped to its own AWS secret)",
     value: IntegrationMappingBehavior.ONE_TO_ONE
   }
 ];
@@ -226,7 +226,7 @@ export const AwsSecretManagerConfigurePage = () => {
         <Card className="max-w-lg rounded-md border border-mineshaft-600">
           <CardTitle
             className="px-6 text-left text-xl"
-            subTitle="Choose which environment in Infisical you want to sync to secerts in AWS Secrets Manager."
+            subTitle="Choose which environment in KMS you want to sync to secerts in AWS Secrets Manager."
           >
             <div className="flex flex-row items-center">
               <div className="flex items-center">
@@ -239,7 +239,7 @@ export const AwsSecretManagerConfigurePage = () => {
               </div>
               <span className="ml-1.5">AWS Secrets Manager Integration </span>
               <a
-                href="https://infisical.com/docs/integrations/cloud/aws-secret-manager"
+                href="https://lux.network/docs/integrations/cloud/aws-secret-manager"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -492,7 +492,7 @@ export const AwsSecretManagerConfigurePage = () => {
                             errorText={error?.message}
                             isError={Boolean(error)}
                           >
-                            <Input placeholder="infisical" {...field} />
+                            <Input placeholder="kms" {...field} />
                           </FormControl>
                         )}
                       />
@@ -508,7 +508,7 @@ export const AwsSecretManagerConfigurePage = () => {
                       isError={Boolean(error)}
                       className="mt-4"
                     >
-                      <Input placeholder="INFISICAL_" {...field} />
+                      <Input placeholder="KMS_" {...field} />
                     </FormControl>
                   )}
                 />
@@ -571,7 +571,7 @@ export const AwsSecretManagerConfigurePage = () => {
           <span className="mt-4 text-sm text-mineshaft-300">
             After creating an integration, your secrets will start syncing immediately. This might
             cause an unexpected override of current secrets in AWS Secrets Manager with secrets from
-            Infisical.
+            KMS.
           </span>
         </div>
       </form>
@@ -586,7 +586,7 @@ export const AwsSecretManagerConfigurePage = () => {
           src="/images/loading/loading.gif"
           height={70}
           width={120}
-          alt="infisical loading indicator"
+          alt="kms loading indicator"
         />
       ) : (
         <div className="flex h-max max-w-md flex-col rounded-md border border-mineshaft-600 bg-mineshaft-800 p-6 text-center text-mineshaft-200">
@@ -597,9 +597,9 @@ export const AwsSecretManagerConfigurePage = () => {
               className="inline cursor-pointer text-mineshaft-100 underline decoration-primary-500 underline-offset-4 opacity-80 duration-200 hover:opacity-100"
               target="_blank"
               rel="noopener noreferrer"
-              href="mailto:support@infisical.com"
+              href="mailto:support@lux.network"
             >
-              support@infisical.com
+              support@lux.network
             </a>{" "}
             if the issue persists.
           </p>

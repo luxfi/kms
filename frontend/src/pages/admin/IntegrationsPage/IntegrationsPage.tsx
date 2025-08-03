@@ -17,7 +17,7 @@ export const IntegrationsPage = () => {
         <div className="mx-auto mb-6 w-full max-w-7xl">
           <PageHeader
             title="Integrations"
-            description="Manage integrations for your Infisical instance."
+            description="Manage integrations for your KMS instance."
           />
           <IntegrationsPageForm />
         </div>

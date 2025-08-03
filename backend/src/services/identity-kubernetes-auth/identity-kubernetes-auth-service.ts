@@ -245,7 +245,7 @@ export const identityKubernetesAuthServiceFactory = ({
           {
             headers: {
               "Content-Type": "application/json",
-              "x-infisical-action": GatewayHttpProxyActions.UseGatewayK8sServiceAccount
+              "x-kms-action": GatewayHttpProxyActions.UseGatewayK8sServiceAccount
             },
             signal: AbortSignal.timeout(10000),
             timeout: 10000

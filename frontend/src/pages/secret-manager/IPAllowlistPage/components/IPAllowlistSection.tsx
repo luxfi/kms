@@ -105,7 +105,7 @@ export const IPAllowlistSection = () => {
       <UpgradePlanModal
         isOpen={popUp.upgradePlan.isOpen}
         onOpenChange={(isOpen) => handlePopUpToggle("upgradePlan", isOpen)}
-        text="You can use IP allowlisting if you switch to Infisical's Pro plan."
+        text="You can use IP allowlisting if you switch to KMS's Pro plan."
       />
     </div>
   );

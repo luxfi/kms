@@ -92,7 +92,7 @@ export const GcpSecretManagerAuthorizePage = () => {
       <Card className="mb-12 max-w-lg rounded-md border border-mineshaft-600">
         <CardTitle
           className="px-6 text-left text-xl"
-          subTitle="Connect Infisical to GCP Secret Manager to sync secrets."
+          subTitle="Connect KMS to GCP Secret Manager to sync secrets."
         >
           <div className="flex flex-row items-center">
             <div className="flex items-center pb-0.5">
@@ -107,7 +107,7 @@ export const GcpSecretManagerAuthorizePage = () => {
             <a
               target="_blank"
               rel="noopener noreferrer"
-              href="https://infisical.com/docs/integrations/cloud/gcp-secret-manager"
+              href="https://lux.network/docs/integrations/cloud/gcp-secret-manager"
             >
               <div className="mb-1 ml-2 inline-block cursor-default rounded-md bg-yellow/20 px-1.5 pb-[0.03rem] pt-[0.04rem] text-sm text-yellow opacity-80 hover:opacity-100">
                 <FontAwesomeIcon icon={faBookOpen} className="mr-1.5" />

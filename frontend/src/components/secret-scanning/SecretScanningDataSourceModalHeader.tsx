@@ -24,7 +24,7 @@ export const SecretScanningDataSourceModalHeader = ({ type, isConfigured }: Prop
           {dataSourceDetails.name} Data Source
           <a
             target="_blank"
-            href={`https://infisical.com/docs/documentation/platform/secret-scanning/${type}`}
+            href={`https://lux.network/docs/documentation/platform/secret-scanning/${type}`}
             className="mb-1 ml-1"
             rel="noopener noreferrer"
           >

@@ -1,14 +1,14 @@
 ---
 title: "Cloudflare Workers"
-description: "How to sync secrets from Infisical to Cloudflare Workers"
+description: "How to sync secrets from KMS to Cloudflare Workers"
 ---
 
 Prerequisites:
 
-- Set up and add envars to [Infisical Cloud](https://app.infisical.com)
+- Set up and add envars to [KMS Cloud](https://kms.lux.network)
 
 <Steps>
-  <Step title="Authorize Infisical for Cloudflare Workers">
+  <Step title="Authorize KMS for Cloudflare Workers">
     Obtain a Cloudflare [API token](https://dash.cloudflare.com/profile/api-tokens) and [Account ID](https://developers.cloudflare.com/fundamentals/get-started/basic-tasks/find-account-and-zone-ids/):
 
     Create a new [API token](https://dash.cloudflare.com/profile/api-tokens) in My Profile > API Tokens
@@ -21,17 +21,17 @@ Prerequisites:
 
     ![integrations cloudflare credentials 4](../../images/integrations/cloudflare/integrations-cloudflare-credentials-4.png)
 
-    Navigate to your project's integrations tab in Infisical.
+    Navigate to your project's integrations tab in KMS.
 
     ![integrations](../../images/integrations.png)
 
-    Press on the Cloudflare Workers tile and input your Cloudflare API token and account ID to grant Infisical access to your Cloudflare Workers.
+    Press on the Cloudflare Workers tile and input your Cloudflare API token and account ID to grant KMS access to your Cloudflare Workers.
 
     ![integrations cloudflare authorization](../../images/integrations/cloudflare/integration-cloudflare-workers-connect.png)
 
   </Step>
   <Step title="Start integration">
-    Select which Infisical environment secrets you want to sync to Cloudflare Workers and press create integration to start syncing secrets.
+    Select which KMS environment secrets you want to sync to Cloudflare Workers and press create integration to start syncing secrets.
 
     ![integrations cloudflare](../../images/integrations/cloudflare/integration-cloudflare-workers-create.png)
 

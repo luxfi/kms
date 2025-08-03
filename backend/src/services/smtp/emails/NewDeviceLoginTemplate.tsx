@@ -23,7 +23,7 @@ export const NewDeviceLoginTemplate = ({
   return (
     <BaseEmailWrapper
       title="Successful Login from New Device"
-      preview="New device login from Infisical."
+      preview="New device login from KMS."
       siteUrl={siteUrl}
     >
       <Heading className="text-black text-[18px] leading-[28px] text-center font-normal p-0 mx-0">
@@ -43,7 +43,7 @@ export const NewDeviceLoginTemplate = ({
         <Text className="mb-[0px]">
           If you believe that this login is suspicious, please contact{" "}
           {isCloud ? (
-            <BaseLink href="mailto:support@infisical.com">support@infisical.com</BaseLink>
+            <BaseLink href="mailto:support@lux.network">support@lux.network</BaseLink>
           ) : (
             "your administrator"
           )}{" "}
@@ -57,11 +57,11 @@ export const NewDeviceLoginTemplate = ({
 export default NewDeviceLoginTemplate;
 
 NewDeviceLoginTemplate.PreviewProps = {
-  email: "john@infisical.com",
+  email: "john@lux.network",
   ip: "127.0.0.1",
   userAgent:
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3.1 Safari/605.1.15",
   timestamp: "Tue Apr 29 2025 23:03:27 GMT+0000 (Coordinated Universal Time)",
   isCloud: true,
-  siteUrl: "https://infisical.com"
+  siteUrl: "https://lux.network"
 } as NewDeviceLoginTemplateProps;

@@ -46,7 +46,7 @@ export async function seed(knex: Knex): Promise<void> {
     .returning("*");
 
   const encKeys = await generateUserSrpKeys(seedData1.password);
-  // password: testInfisical@1
+  // password: testKMS@1
   await knex(TableName.UserEncryptionKey).insert([
     {
       encryptionVersion: 2,

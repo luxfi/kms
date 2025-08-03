@@ -15,7 +15,7 @@ import {
   PasswordGenerator
 } from "@app/components/v2";
 import { CreatableSelect } from "@app/components/v2/CreatableSelect";
-import { InfisicalSecretInput } from "@app/components/v2/InfisicalSecretInput";
+import { KMSSecretInput } from "@app/components/v2/KMSSecretInput";
 import {
   ProjectPermissionActions,
   ProjectPermissionSub,
@@ -233,7 +233,7 @@ export const CreateSecretForm = ({ secretPath = "/", onClose }: Props) => {
             errorText={errors?.value?.message}
           >
             <div className="flex items-center gap-2">
-              <InfisicalSecretInput
+              <KMSSecretInput
                 {...field}
                 containerClassName="text-bunker-300 hover:border-primary-400/50 border border-mineshaft-600 bg-mineshaft-900 px-2 py-1.5"
               />

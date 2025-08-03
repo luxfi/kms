@@ -53,7 +53,7 @@ export const ServiceTokenSection = withProjectPermission(
             <div className="flex items-center gap-1">
               <p className="text-xl font-semibold text-mineshaft-100">Service Tokens</p>
               <a
-                href="https://infisical.com/docs/documentation/platform/token"
+                href="https://lux.network/docs/documentation/platform/token"
                 target="_blank"
                 rel="noopener noreferrer"
               >

@@ -128,7 +128,7 @@ export const IdentityDetailsByIDPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.org.title") })}</title>
-        <link rel="icon" href="/infisical.ico" />
+        <link rel="icon" href="/kms.ico" />
       </Helmet>
       <OrgPermissionCan
         passThrough={false}

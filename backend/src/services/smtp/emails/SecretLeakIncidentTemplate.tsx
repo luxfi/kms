@@ -20,11 +20,11 @@ export const SecretLeakIncidentTemplate = ({
   return (
     <BaseEmailWrapper
       title="Incident Alert: Secret(s) Leaked"
-      preview="Infisical uncovered one or more leaked secrets."
+      preview="KMS uncovered one or more leaked secrets."
       siteUrl={siteUrl}
     >
       <Heading className="text-black text-[18px] leading-[28px] text-center font-normal p-0 mx-0">
-        Infisical has uncovered <strong>{numberOfSecrets}</strong> secret(s) from a recent commit
+        KMS has uncovered <strong>{numberOfSecrets}</strong> secret(s) from a recent commit
       </Heading>
       <Section className="px-[24px] mb-[28px] mt-[36px] pt-[8px] pb-[8px] text-[14px] border border-solid border-gray-200 rounded-md bg-gray-50">
         <Text className="text-[14px]">
@@ -43,7 +43,7 @@ export const SecretLeakIncidentTemplate = ({
           .
         </Text>
         <Text className="text-[14px]">
-          If these are test secrets, please add `infisical-scan:ignore` at the end of the line containing the secret as
+          If these are test secrets, please add `kms-scan:ignore` at the end of the line containing the secret as
           a comment in the given programming language. This will prevent future notifications from being sent out for
           these secrets.
         </Text>
@@ -52,7 +52,7 @@ export const SecretLeakIncidentTemplate = ({
         </Text>
         <Text className="text-[14px]">
           Once you have taken action, be sure to update the status of the risk in the{" "}
-          <BaseLink href={`${siteUrl}/organization/secret-scanning`}>Infisical Dashboard</BaseLink>.
+          <BaseLink href={`${siteUrl}/organization/secret-scanning`}>KMS Dashboard</BaseLink>.
         </Text>
       </Section>
       <Section className="text-center">
@@ -66,7 +66,7 @@ export default SecretLeakIncidentTemplate;
 
 SecretLeakIncidentTemplate.PreviewProps = {
   pusher_name: "Jim",
-  pusher_email: "jim@infisical.com",
+  pusher_email: "jim@lux.network",
   numberOfSecrets: 3,
-  siteUrl: "https://infisical.com"
+  siteUrl: "https://lux.network"
 } as SecretLeakIncidentTemplateProps;

@@ -43,7 +43,7 @@ export default {
         {
           directory: path.join(__dirname, "../src/db/migrations"),
           extension: "ts",
-          tableName: "infisical_migrations"
+          tableName: "kms_migrations"
         },
         true
       );
@@ -51,7 +51,7 @@ export default {
       await db.migrate.latest({
         directory: path.join(__dirname, "../src/db/migrations"),
         extension: "ts",
-        tableName: "infisical_migrations"
+        tableName: "kms_migrations"
       });
 
       await db.seed.run({
@@ -118,7 +118,7 @@ export default {
           {
             directory: path.join(__dirname, "../src/db/migrations"),
             extension: "ts",
-            tableName: "infisical_migrations"
+            tableName: "kms_migrations"
           },
           true
         );

@@ -151,7 +151,7 @@ export const CertAuthDetailsByIDPage = () => {
     <>
       <Helmet>
         <title>Certificate Authority</title>
-        <link rel="icon" href="/infisical.ico" />
+        <link rel="icon" href="/kms.ico" />
       </Helmet>
       <Page />
     </>

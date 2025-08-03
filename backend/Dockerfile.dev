@@ -54,10 +54,10 @@ RUN mkdir -p /etc/softhsm2/tokens && \
 
 # ? App setup
 
-# Install Infisical CLI
-RUN curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | bash && \
+# Install KMS CLI
+RUN curl -1sLf 'https://artifacts-cli.lux.network/setup.deb.sh' | bash && \
     apt-get update && \
-    apt-get install -y infisical=0.41.89
+    apt-get install -y kms=0.41.89
 
 WORKDIR /app
 

@@ -3,11 +3,11 @@ package util
 import (
 	"context"
 
-	infisicalSdk "github.com/infisical/go-sdk"
+	kmsSdk "github.com/kms/go-sdk"
 )
 
 type ResourceVariables struct {
-	InfisicalClient infisicalSdk.InfisicalClientInterface
+	KMSClient kmsSdk.KMSClientInterface
 	CancelCtx       context.CancelFunc
 	AuthDetails     AuthenticationDetails
 }

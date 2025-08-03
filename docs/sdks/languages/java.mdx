@@ -1,24 +1,24 @@
 ---
-title: "Infisical Java SDK"
+title: "KMS Java SDK"
 sidebarTitle: "Java"
-url: "https://github.com/Infisical/java-sdk?tab=readme-ov-file#infisical-java-sdk"
+url: "https://github.com/KMS/java-sdk?tab=readme-ov-file#kms-java-sdk"
 icon: "/images/sdks/languages/java.svg"
 ---
 
 {
 /*
-If you're working with Java, the official [Infisical Java SDK](https://github.com/Infisical/sdk/tree/main/languages/java) package is the easiest way to fetch and work with secrets for your application.
+If you're working with Java, the official [KMS Java SDK](https://github.com/KMS/sdk/tree/main/languages/java) package is the easiest way to fetch and work with secrets for your application.
 
-- [Maven Package](https://github.com/Infisical/sdk/packages/2019741)
-- [Github Repository](https://github.com/Infisical/sdk/tree/main/languages/java)
+- [Maven Package](https://github.com/KMS/sdk/packages/2019741)
+- [Github Repository](https://github.com/KMS/sdk/tree/main/languages/java)
 
 ## Basic Usage
 
 ```java
 package com.example.app;
 
-import com.infisical.sdk.InfisicalClient;
-import com.infisical.sdk.schema.*;
+import com.kms.sdk.KMSClient;
+import com.kms.sdk.schema.*;
 
 public class Example {
     public static void main(String[] args) {
@@ -34,8 +34,8 @@ public class Example {
         authOptions.setUniversalAuth(authMethod);
         settings.setAuth(authOptions);
 
-        // Create a new Infisical Client
-        InfisicalClient client = new InfisicalClient(settings);
+        // Create a new KMS Client
+        KMSClient client = new KMSClient(settings);
 
         // Create the options for fetching the secret
         GetSecretOptions options = new GetSecretOptions();
@@ -56,7 +56,7 @@ public class Example {
 }
 ```
 
-This example demonstrates how to use the Infisical Java SDK in a Java application. The application retrieves a secret named `TEST` from the `dev` environment of the `PROJECT_ID` project.
+This example demonstrates how to use the KMS Java SDK in a Java application. The application retrieves a secret named `TEST` from the `dev` environment of the `PROJECT_ID` project.
 
 <Warning>
     We do not recommend hardcoding your [Machine Identity Tokens](/platform/identities/overview). Setting it as an environment variable would be best.
@@ -64,17 +64,17 @@ This example demonstrates how to use the Infisical Java SDK in a Java applicatio
 
 # Installation
 
-The Infisical Java SDK is hosted on the GitHub Packages Apache Maven registry. Because of this you need to configure your environment properly so it's able to pull dependencies from the GitHub registry. Please check [this guide from GitHub](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-apache-maven-registry) on how to achieve this.
+The KMS Java SDK is hosted on the GitHub Packages Apache Maven registry. Because of this you need to configure your environment properly so it's able to pull dependencies from the GitHub registry. Please check [this guide from GitHub](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-apache-maven-registry) on how to achieve this.
 
-Our package is [located here](https://github.com/Infisical/sdk/packages/2019741). Please follow the installation guide on the page.
+Our package is [located here](https://github.com/KMS/sdk/packages/2019741). Please follow the installation guide on the page.
 
 # Configuration
 
 Import the SDK and create a client instance with your [Machine Identity](/platform/identities/universal-auth).
 
 ```java
-import com.infisical.sdk.InfisicalClient;
-import com.infisical.sdk.schema.*;
+import com.kms.sdk.KMSClient;
+import com.kms.sdk.schema.*;
 
 public class App {
     public static void main(String[] args) {
@@ -89,8 +89,8 @@ public class App {
         authOptions.setUniversalAuth(authMethod);
         settings.setAuth(authOptions);
 
-        // Create a new Infisical Client
-        InfisicalClient client = new InfisicalClient(settings); // Your client!
+        // Create a new KMS Client
+        KMSClient client = new KMSClient(settings); // Your client!
     }
 }
 ```
@@ -121,12 +121,12 @@ public class App {
             If manually set to 0, caching will be disabled, this is not recommended.
         </ParamField>
 
-        <ParamField query="setSiteURL()" type="string" default="https://app.infisical.com" optional>
-            Your self-hosted absolute site URL including the protocol (e.g. `https://app.infisical.com`)
+        <ParamField query="setSiteURL()" type="string" default="https://kms.lux.network" optional>
+            Your self-hosted absolute site URL including the protocol (e.g. `https://kms.lux.network`)
         </ParamField>
 
         <ParamField query="setSSLCertificatePath()">
-          Optionally provide a path to a custom SSL certificate file. This can be substituted by setting the `INFISICAL_SSL_CERTIFICATE` environment variable to the contents of the certificate.
+          Optionally provide a path to a custom SSL certificate file. This can be substituted by setting the `KMS_SSL_CERTIFICATE` environment variable to the contents of the certificate.
         </ParamField>
 
         <ParamField query="setAuth()" type="AuthenticationOptions">
@@ -143,8 +143,8 @@ The SDK supports a variety of authentication methods. The most common authentica
 #### Universal Auth
 
 **Using environment variables**
-- `INFISICAL_UNIVERSAL_AUTH_CLIENT_ID` - Your machine identity client ID.
-- `INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET` - Your machine identity client secret.
+- `KMS_UNIVERSAL_AUTH_CLIENT_ID` - Your machine identity client ID.
+- `KMS_UNIVERSAL_AUTH_CLIENT_SECRET` - Your machine identity client secret.
 
 **Using the SDK directly**
 ```java
@@ -158,7 +158,7 @@ The SDK supports a variety of authentication methods. The most common authentica
   authOptions.setUniversalAuth(authMethod);
   settings.setAuth(authOptions);
 
-  InfisicalClient client = new InfisicalClient(settings);
+  KMSClient client = new KMSClient(settings);
 ```
 
 #### GCP ID Token Auth
@@ -168,7 +168,7 @@ The SDK supports a variety of authentication methods. The most common authentica
 </Info>
 
 **Using environment variables**
-- `INFISICAL_GCP_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+- `KMS_GCP_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
 
 **Using the SDK directly**
 ```java
@@ -181,14 +181,14 @@ The SDK supports a variety of authentication methods. The most common authentica
   authOptions.setGcpIDToken(authMethod);
   settings.setAuth(authOptions);
 
-  InfisicalClient client = new InfisicalClient(settings);
+  KMSClient client = new KMSClient(settings);
 ```
 
 #### GCP IAM Auth
 
 **Using environment variables**
-- `INFISICAL_GCP_IAM_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
-- `INFISICAL_GCP_IAM_SERVICE_ACCOUNT_KEY_FILE_PATH` - The path to your GCP service account key file.
+- `KMS_GCP_IAM_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
+- `KMS_GCP_IAM_SERVICE_ACCOUNT_KEY_FILE_PATH` - The path to your GCP service account key file.
 
 **Using the SDK directly**
 ```java
@@ -202,7 +202,7 @@ The SDK supports a variety of authentication methods. The most common authentica
   authOptions.setGcpIam(authMethod);
   settings.setAuth(authOptions);
 
-  InfisicalClient client = new InfisicalClient(settings);
+  KMSClient client = new KMSClient(settings);
 ```
 
 #### AWS IAM Auth
@@ -212,7 +212,7 @@ The SDK supports a variety of authentication methods. The most common authentica
 </Info>
 
 **Using environment variables**
-- `INFISICAL_AWS_IAM_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+- `KMS_AWS_IAM_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
 
 **Using the SDK directly**
 ```java
@@ -225,7 +225,7 @@ The SDK supports a variety of authentication methods. The most common authentica
   authOptions.setAwsIam(authMethod);
   settings.setAuth(authOptions);
 
-  InfisicalClient client = new InfisicalClient(settings);
+  KMSClient client = new KMSClient(settings);
 ```
 
 #### Azure Auth
@@ -235,7 +235,7 @@ The SDK supports a variety of authentication methods. The most common authentica
 </Info>
 
 **Using environment variables**
-- `INFISICAL_AZURE_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+- `KMS_AZURE_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
 
 **Using the SDK directly**
 ```java
@@ -248,7 +248,7 @@ The SDK supports a variety of authentication methods. The most common authentica
   authOptions.setAzure(authMethod);
   settings.setAuth(authOptions);
 
-  InfisicalClient client = new InfisicalClient(settings);
+  KMSClient client = new KMSClient(settings);
 ```
 
 #### Kubernetes Auth
@@ -258,8 +258,8 @@ The SDK supports a variety of authentication methods. The most common authentica
 </Info>
 
 **Using environment variables**
-- `INFISICAL_KUBERNETES_IDENTITY_ID` - Your Infisical Machine Identity ID.
-- `INFISICAL_KUBERNETES_SERVICE_ACCOUNT_TOKEN_PATH_ENV_NAME` - The environment variable name that contains the path to the service account token. This is optional and will default to `/var/run/secrets/kubernetes.io/serviceaccount/token`.
+- `KMS_KUBERNETES_IDENTITY_ID` - Your KMS Machine Identity ID.
+- `KMS_KUBERNETES_SERVICE_ACCOUNT_TOKEN_PATH_ENV_NAME` - The environment variable name that contains the path to the service account token. This is optional and will default to `/var/run/secrets/kubernetes.io/serviceaccount/token`.
 
 **Using the SDK directly**
 ```java
@@ -273,7 +273,7 @@ The SDK supports a variety of authentication methods. The most common authentica
   authOptions.setKubernetes(authMethod);
   settings.setAuth(authOptions);
 
-  InfisicalClient client = new InfisicalClient(settings);
+  KMSClient client = new KMSClient(settings);
 ```
 
 
@@ -297,7 +297,7 @@ options.setExpandSecretReferences(true);
 SecretElement[] secrets = client.listSecrets(options);
 ```
 
-Retrieve all secrets within the Infisical project and environment that client is connected to
+Retrieve all secrets within the KMS project and environment that client is connected to
 
 #### Methods
 
@@ -347,7 +347,7 @@ GetSecretResponseSecret secret = client.getSecret(options);
 String secretValue = secret.getSecretValue();
 ```
 
-Retrieve a secret from Infisical.
+Retrieve a secret from KMS.
 
 By default, `getSecret()` fetches and returns a shared secret.
 
@@ -393,7 +393,7 @@ createOptions.setType("shared"); // Default
 CreateSecretResponseSecret newSecret = client.createSecret(createOptions);
 ```
 
-Create a new secret in Infisical.
+Create a new secret in KMS.
 
 #### Methods
 
@@ -435,7 +435,7 @@ options.setType("shared"); // Default
 UpdateSecretResponseSecret updatedSecret = client.updateSecret(options);
 ```
 
-Update an existing secret in Infisical.
+Update an existing secret in KMS.
 
 #### Methods
 
@@ -476,7 +476,7 @@ options.setType("shared"); // Default
 DeleteSecretResponseSecret deletedSecret = client.deleteSecret(options);
 ```
 
-Delete a secret in Infisical.
+Delete a secret in KMS.
 
 #### Methods
 
@@ -517,7 +517,7 @@ String key = client.createSymmetricKey();
 ```java
 EncryptSymmetricOptions options = new EncryptSymmetricOptions();
 options.setKey(key);
-options.setPlaintext("Infisical is awesome!");
+options.setPlaintext("KMS is awesome!");
 
 EncryptSymmetricResponse encryptedData = client.encryptSymmetric(options);
 ```

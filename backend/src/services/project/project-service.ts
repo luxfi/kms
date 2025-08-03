@@ -23,7 +23,7 @@ import {
   ProjectPermissionSub
 } from "@app/ee/services/permission/project-permission";
 import {
-  InfisicalProjectTemplate,
+  KMSProjectTemplate,
   TProjectTemplateServiceFactory
 } from "@app/ee/services/project-template/project-template-types";
 import { TSshCertificateAuthorityDALFactory } from "@app/ee/services/ssh/ssh-certificate-authority-dal";
@@ -249,7 +249,7 @@ export const projectServiceFactory = ({
     kmsKeyId,
     tx: trx,
     createDefaultEnvs = true,
-    template = InfisicalProjectTemplate.Default,
+    template = KMSProjectTemplate.Default,
     type = ProjectType.SecretManager
   }: TCreateProjectDTO) => {
     const organization = await orgDAL.findOne({ id: actorOrgId });
@@ -292,7 +292,7 @@ export const projectServiceFactory = ({
       let projectTemplate: Awaited<ReturnType<typeof projectTemplateService.findProjectTemplateByName>> | null = null;
 
       switch (template) {
-        case InfisicalProjectTemplate.Default:
+        case KMSProjectTemplate.Default:
           projectTemplate = null;
           break;
         default:
@@ -400,7 +400,7 @@ export const projectServiceFactory = ({
       // 5. Create & a bot for the project
       await projectBotDAL.create(
         {
-          name: "Infisical Bot (Ghost)",
+          name: "KMS Bot (Ghost)",
           projectId: project.id,
           tag,
           iv,
@@ -515,7 +515,7 @@ export const projectServiceFactory = ({
       };
     });
 
-    await keyStore.deleteItem(`infisical-cloud-plan-${actorOrgId}`);
+    await keyStore.deleteItem(`kms-cloud-plan-${actorOrgId}`);
     return results;
   };
 
@@ -582,7 +582,7 @@ export const projectServiceFactory = ({
       return delProject;
     });
 
-    await keyStore.deleteItem(`infisical-cloud-plan-${actorOrgId}`);
+    await keyStore.deleteItem(`kms-cloud-plan-${actorOrgId}`);
     return deletedProject;
   };
 

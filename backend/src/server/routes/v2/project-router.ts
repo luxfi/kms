@@ -8,7 +8,7 @@ import {
   ProjectType
 } from "@app/db/schemas";
 import { EventType } from "@app/ee/services/audit-log/audit-log-types";
-import { InfisicalProjectTemplate } from "@app/ee/services/project-template/project-template-types";
+import { KMSProjectTemplate } from "@app/ee/services/project-template/project-template-types";
 import { sanitizedSshCa } from "@app/ee/services/ssh/ssh-certificate-authority-schema";
 import { sanitizedSshCertificate } from "@app/ee/services/ssh-certificate/ssh-certificate-schema";
 import { sanitizedSshCertificateTemplate } from "@app/ee/services/ssh-certificate-template/ssh-certificate-template-schema";
@@ -168,7 +168,7 @@ export const registerProjectRouter = async (server: FastifyZodProvider) => {
         kmsKeyId: z.string().optional(),
         template: slugSchema({ field: "Template Name", max: 64 })
           .optional()
-          .default(InfisicalProjectTemplate.Default)
+          .default(KMSProjectTemplate.Default)
           .describe(PROJECTS.CREATE.template),
         type: z.nativeEnum(ProjectType).default(ProjectType.SecretManager),
         shouldCreateDefaultEnvs: z.boolean().optional().default(true)

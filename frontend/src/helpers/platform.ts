@@ -1,5 +1,5 @@
-export const isInfisicalCloud = () =>
-  window.location.origin.includes("https://app.infisical.com") ||
-  window.location.origin.includes("https://us.infisical.com") ||
-  window.location.origin.includes("https://eu.infisical.com") ||
-  window.location.origin.includes("https://gamma.infisical.com");
+export const isKMSCloud = () =>
+  window.location.origin.includes("https://kms.lux.network") ||
+  window.location.origin.includes("https://us.lux.network") ||
+  window.location.origin.includes("https://eu.lux.network") ||
+  window.location.origin.includes("https://gamma.lux.network");

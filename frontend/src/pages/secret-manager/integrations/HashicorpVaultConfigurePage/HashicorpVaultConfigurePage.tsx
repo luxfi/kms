@@ -132,7 +132,7 @@ export const HashicorpVaultConfigurePage = () => {
       <Card className="max-w-lg rounded-md border border-mineshaft-600">
         <CardTitle
           className="px-6 text-left text-xl"
-          subTitle="Select which environment or folder in Infisical you want to sync to which path in HashiCorp Vault."
+          subTitle="Select which environment or folder in KMS you want to sync to which path in HashiCorp Vault."
         >
           <div className="flex flex-row items-center">
             <div className="inline-flex items-center">
@@ -145,7 +145,7 @@ export const HashicorpVaultConfigurePage = () => {
             </div>
             <span className="ml-2.5">HashiCorp Vault Integration</span>
             <a
-              href="https://infisical.com/docs/integrations/cloud/hashicorp-vault"
+              href="https://lux.network/docs/integrations/cloud/hashicorp-vault"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -199,7 +199,7 @@ export const HashicorpVaultConfigurePage = () => {
                   isError={Boolean(error)}
                   isRequired
                   label="Secrets Path"
-                  helperText="A path to your secrets in Infisical."
+                  helperText="A path to your secrets in KMS."
                 >
                   <Input {...field} autoCorrect="off" spellCheck={false} placeholder="/" />
                 </FormControl>
@@ -257,7 +257,7 @@ export const HashicorpVaultConfigurePage = () => {
         </div>
         <span className="mt-4 text-sm text-mineshaft-300">
           After creating an integration, your secrets will start syncing immediately. This might
-          cause an unexpected override of current secrets in Vault with secrets from Infisical.
+          cause an unexpected override of current secrets in Vault with secrets from KMS.
         </span>
       </div>
     </div>
@@ -271,7 +271,7 @@ export const HashicorpVaultConfigurePage = () => {
           src="/images/loading/loading.gif"
           height={70}
           width={120}
-          alt="infisical loading indicator"
+          alt="kms loading indicator"
         />
       ) : (
         <div className="flex h-max max-w-md flex-col rounded-md border border-mineshaft-600 bg-mineshaft-800 p-6 text-center text-mineshaft-200">
@@ -282,9 +282,9 @@ export const HashicorpVaultConfigurePage = () => {
               className="inline cursor-pointer text-mineshaft-100 underline decoration-primary-500 underline-offset-4 opacity-80 duration-200 hover:opacity-100"
               target="_blank"
               rel="noopener noreferrer"
-              href="mailto:support@infisical.com"
+              href="mailto:support@lux.network"
             >
-              support@infisical.com
+              support@lux.network
             </a>{" "}
             if the issue persists.
           </p>

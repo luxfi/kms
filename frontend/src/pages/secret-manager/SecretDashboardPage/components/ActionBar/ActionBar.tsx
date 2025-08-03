@@ -1189,7 +1189,7 @@ export const ActionBar = ({
           text={
             subscription.slug === null
               ? "You can perform this action under an Enterprise license"
-              : "You can perform this action if you switch to Infisical's Team plan"
+              : "You can perform this action if you switch to KMS's Team plan"
           }
         />
       )}

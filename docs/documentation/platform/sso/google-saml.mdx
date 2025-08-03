@@ -1,18 +1,18 @@
 ---
 title: "Google SAML"
-description: "Learn how to configure Google SAML for Infisical SSO."
+description: "Learn how to configure Google SAML for KMS SSO."
 ---
 
 <Info>
-  Google SAML SSO feature is a paid feature. If you're using Infisical Cloud,
-  then it is available under the **Pro Tier**. If you're self-hosting Infisical,
-  then you should contact sales@infisical.com to purchase an enterprise license
+  Google SAML SSO feature is a paid feature. If you're using KMS Cloud,
+  then it is available under the **Pro Tier**. If you're self-hosting KMS,
+  then you should contact sales@lux.network to purchase an enterprise license
   to use it.
 </Info>
 
 <Steps>
-   <Step title="Prepare the SAML SSO configuration in Infisical">
-        In Infisical, head to the **Single Sign-On (SSO)** page and select the **General** tab. Click **Connect** for **SAML** under the Connect to an Identity Provider section. Select **Google**, then click **Connect** again.
+   <Step title="Prepare the SAML SSO configuration in KMS">
+        In KMS, head to the **Single Sign-On (SSO)** page and select the **General** tab. Click **Connect** for **SAML** under the Connect to an Identity Provider section. Select **Google**, then click **Connect** again.
 
         ![SSO connect section](../../../images/sso/connect-saml.png)
 
@@ -27,7 +27,7 @@ description: "Learn how to configure Google SAML for Infisical SSO."
 
         ![Google SAML app creation](../../../images/sso/google-saml/create-custom-saml-app.png)
 
-        2.2. In the **App details** tab, give the application a unique name like Infisical.
+        2.2. In the **App details** tab, give the application a unique name like KMS.
 
         ![Google SAML app naming](../../../images/sso/google-saml/name-custom-saml-app.png)
 
@@ -35,9 +35,9 @@ description: "Learn how to configure Google SAML for Infisical SSO."
 
         ![Google SAML custom app details](../../../images/sso/google-saml/custom-saml-app-config.png)
 
-        2.4. Back in Infisical, set **SSO URL** and **Certificate** to the corresponding items from step 2.3.
+        2.4. Back in KMS, set **SSO URL** and **Certificate** to the corresponding items from step 2.3.
 
-        ![Google SAML Infisical config](../../../images/sso/google-saml/infisical-config.png)
+        ![Google SAML KMS config](../../../images/sso/google-saml/kms-config.png)
 
         2.5. Back in the Google Admin console, in the **Service provider details** tab, set the **ACS URL** and **Entity ID** to the corresponding items from step 1.
 
@@ -67,16 +67,16 @@ description: "Learn how to configure Google SAML for Infisical SSO."
 
         ![Google SAML user access assignment](../../../images/sso/google-saml/user-access-assign.png)
     </Step>
-    <Step title="Enable SAML SSO in Infisical">
-        Enabling SAML SSO allows members in your organization to log into Infisical via Google Workspace.
+    <Step title="Enable SAML SSO in KMS">
+        Enabling SAML SSO allows members in your organization to log into KMS via Google Workspace.
 
         ![Google SAML enable](../../../images/sso/google-saml/enable-saml.png)
     </Step>
-    <Step title="Enforce SAML SSO in Infisical">
-        Enforcing SAML SSO ensures that members in your organization can only access Infisical
+    <Step title="Enforce SAML SSO in KMS">
+        Enforcing SAML SSO ensures that members in your organization can only access KMS
         by logging into the organization via Google.
 
-        To enforce SAML SSO, you're required to test out the SAML connection by successfully authenticating at least one Google user with Infisical;
+        To enforce SAML SSO, you're required to test out the SAML connection by successfully authenticating at least one Google user with KMS;
         Once you've completed this requirement, you can toggle the **Enforce SAML SSO** button to enforce SAML SSO.
 
         <Warning>
@@ -84,18 +84,18 @@ description: "Learn how to configure Google SAML for Infisical SSO."
             prior to enforcing SAML SSO to prevent any unintended issues.
         </Warning>
         <Info>
-            In case of a lockout, an organization admin can use the [Admin Login Portal](https://infisical.com/docs/documentation/platform/sso/overview#admin-login-portal) in the `/login/admin` path e.g. https://app.infisical.com/login/admin.
+            In case of a lockout, an organization admin can use the [Admin Login Portal](https://lux.network/docs/documentation/platform/sso/overview#admin-login-portal) in the `/login/admin` path e.g. https://kms.lux.network/login/admin.
         </Info>
     </Step>
 
 </Steps>
 
 <Tip>
-    If you are only using one organization on your Infisical instance, you can configure a default organization in the [Server Admin Console](../admin-panel/server-admin#default-organization) to expedite SAML login.
+    If you are only using one organization on your KMS instance, you can configure a default organization in the [Server Admin Console](../admin-panel/server-admin#default-organization) to expedite SAML login.
 </Tip>
 
 <Note>
-    If you're configuring SAML SSO on a self-hosted instance of Infisical, make
+    If you're configuring SAML SSO on a self-hosted instance of KMS, make
     sure to set the `AUTH_SECRET` and `SITE_URL` environment variable for it to
     work:
     <div class="height:1px;"/>
@@ -103,7 +103,7 @@ description: "Learn how to configure Google SAML for Infisical SSO."
     can be a random 32-byte base64 string generated with `openssl rand -base64
     32`.
     <div class="height:1px;"/>
-    - `SITE_URL`: The absolute URL of your self-hosted instance of Infisical including the protocol (e.g. https://app.infisical.com)
+    - `SITE_URL`: The absolute URL of your self-hosted instance of KMS including the protocol (e.g. https://kms.lux.network)
 </Note>
 
 References:

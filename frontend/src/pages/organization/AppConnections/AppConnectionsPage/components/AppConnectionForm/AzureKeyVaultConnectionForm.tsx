@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { Button, FormControl, Input, ModalClose, Select, SelectItem } from "@app/components/v2";
 import { APP_CONNECTION_MAP, getAppConnectionMethodDetails } from "@app/helpers/appConnections";
-import { isInfisicalCloud } from "@app/helpers/platform";
+import { isKMSCloud } from "@app/helpers/platform";
 import { useGetAppConnectionOption } from "@app/hooks/api/appConnections";
 import { AppConnection } from "@app/hooks/api/appConnections/enums";
 import {
@@ -174,8 +174,8 @@ export const AzureKeyVaultConnectionForm = ({ appConnection, onSubmit }: Props) 
               errorText={
                 !isLoading && isMissingConfig
                   ? `Environment variables have not been configured. ${
-                      isInfisicalCloud()
-                        ? "Please contact Infisical."
+                      isKMSCloud()
+                        ? "Please contact KMS."
                         : `See documentation to configure Azure ${methodDetails.name} Connections.`
                     }`
                   : error?.message

@@ -133,7 +133,7 @@ export const authPaswordServiceFactory = ({
         await smtpService.sendMail({
           template: SmtpTemplates.ResetPassword,
           recipients: [email],
-          subjectLine: "Infisical password reset",
+          subjectLine: "KMS password reset",
           substitutions: {
             email,
             token,
@@ -161,7 +161,7 @@ export const authPaswordServiceFactory = ({
 
     if (!userEnc) throw new BadRequestError({ message: "Failed to find user encryption data" });
 
-    // ignore as user is not found to avoid an outside entity to identify infisical registered accounts
+    // ignore as user is not found to avoid an outside entity to identify kms registered accounts
     if (!user || (user && !user.isAccepted)) {
       throw new Error("Failed email verification for pass reset");
     }
@@ -407,7 +407,7 @@ export const authPaswordServiceFactory = ({
     await smtpService.sendMail({
       template: SmtpTemplates.SetupPassword,
       recipients: [email],
-      subjectLine: "Infisical Password Setup",
+      subjectLine: "KMS Password Setup",
       substitutions: {
         email,
         token,

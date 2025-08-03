@@ -290,7 +290,7 @@ export const PkiTemplateListPage = () => {
       <UpgradePlanModal
         isOpen={popUp.estUpgradePlan.isOpen}
         onOpenChange={(isOpen) => handlePopUpToggle("estUpgradePlan", isOpen)}
-        text="You can only configure template enrollment methods if you switch to Infisical's Enterprise plan."
+        text="You can only configure template enrollment methods if you switch to KMS's Enterprise plan."
       />
     </>
   );

@@ -64,7 +64,7 @@ export const SecretScanningConfigForm = ({ config }: Props) => {
           <h2 className="text-xl font-semibold text-mineshaft-100">Project Configuration</h2>
           <a
             target="_blank"
-            href="https://infisical.com/docs/documentation/platform/secret-scanning/overview#configuration"
+            href="https://lux.network/docs/documentation/platform/secret-scanning/overview#configuration"
             className="mt-[0.02rem]"
             rel="noopener noreferrer"
           >

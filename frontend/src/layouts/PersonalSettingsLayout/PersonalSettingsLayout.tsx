@@ -26,8 +26,8 @@ export const PersonalSettingsLayout = () => {
                 </Link>
               </div>
               <div className="relative mt-10 flex w-full cursor-default flex-col items-center px-3 text-sm text-mineshaft-400">
-                {(window.location.origin.includes("https://app.infisical.com") ||
-                  window.location.origin.includes("https://gamma.infisical.com")) && <WishForm />}
+                {(window.location.origin.includes("https://kms.lux.network") ||
+                  window.location.origin.includes("https://gamma.lux.network")) && <WishForm />}
               </div>
               )
             </nav>

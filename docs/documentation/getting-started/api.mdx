@@ -2,9 +2,9 @@
 title: "REST API"
 ---
 
-Infisical's REST API is the most flexible way to read/write secrets for your application.
+KMS's REST API is the most flexible way to read/write secrets for your application.
 
-In this brief, we'll explore how to fetch a secret back from a project on [Infisical Cloud](https://app.infisical.com) via the REST API.
+In this brief, we'll explore how to fetch a secret back from a project on [KMS Cloud](https://kms.lux.network) via the REST API.
 
 <Steps>
     <Step title="Create a project with a secret">
@@ -42,7 +42,7 @@ In this brief, we'll explore how to fetch a secret back from a project on [Infis
     <Step title="Create a Client Secret">
         In order to use the identity, you'll need the non-sensitive **Client ID**
         of the identity and a **Client Secret** for it; you can think of these credentials akin to a username
-        and password used to authenticate with the Infisical API. With that, press on the key icon on the identity to generate a **Client Secret**
+        and password used to authenticate with the KMS API. With that, press on the key icon on the identity to generate a **Client Secret**
         for it.
 
         ![identities client secret create](../../images/platform/identities/identities-org-client-secret.png)
@@ -58,15 +58,15 @@ In this brief, we'll explore how to fetch a secret back from a project on [Infis
 
         ![identities project create](../../images/platform/identities/identities-project-create.png)
     </Step>
-    <Step title="Get an access token for the Infisical API">
-        To access the Infisical API as the identity, you should first perform a login operation
+    <Step title="Get an access token for the KMS API">
+        To access the KMS API as the identity, you should first perform a login operation
         that is to exchange the **Client ID** and **Client Secret** of the identity for an access token
         by making a request to the `/api/v1/auth/universal-auth/login` endpoint.
 
         #### Sample request
 
         ```
-        curl --location --request POST 'https://app.infisical.com/api/v1/auth/universal-auth/login' \
+        curl --location --request POST 'https://kms.lux.network/api/v1/auth/universal-auth/login' \
         --header 'Content-Type: application/x-www-form-urlencoded' \
         --data-urlencode 'clientSecret=<client_secret>' \
         --data-urlencode 'clientId=<client_id>'
@@ -82,13 +82,13 @@ In this brief, we'll explore how to fetch a secret back from a project on [Infis
         }
         ```
 
-        Next, we can use the access token to authenticate with the [Infisical API](/api-reference/overview/introduction) to read/write secrets
+        Next, we can use the access token to authenticate with the [KMS API](/api-reference/overview/introduction) to read/write secrets
 
         <Note>
         Each identity access token has a time-to-live (TTL) which you can infer from the response of the login operation;
         the default TTL is `7200` seconds which can be adjusted.
 
-        If an identity access token expires, it can no longer authenticate with the Infisical API. In this case,
+        If an identity access token expires, it can no longer authenticate with the KMS API. In this case,
         a new access token should be obtained from the aforementioned login operation.
         </Note>
     </Step>

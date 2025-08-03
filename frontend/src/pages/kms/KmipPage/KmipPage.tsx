@@ -19,7 +19,7 @@ export const KmipPage = () => {
         <div className="mx-auto mb-6 w-full max-w-7xl">
           <PageHeader
             title="KMIP"
-            description="Integrate with Infisical KMS via Key Management Interoperability Protocol."
+            description="Integrate with KMS KMS via Key Management Interoperability Protocol."
           />
           <ProjectPermissionCan
             renderGuardBanner

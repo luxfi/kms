@@ -2,22 +2,22 @@ name: Release standalone docker image
 on:
     push:
         tags:
-            - "infisical/v*.*.*-postgres"
+            - "kms/v*.*.*-postgres"
 
 jobs:
-    infisical-tests:
+    kms-tests:
         name: Run tests before deployment
         # https://docs.github.com/en/actions/using-workflows/reusing-workflows#overview
         uses: ./.github/workflows/run-backend-tests.yml
 
-    infisical-standalone:
-        name: Build infisical standalone image postgres
+    kms-standalone:
+        name: Build kms standalone image postgres
         runs-on: ubuntu-latest
-        needs: [infisical-tests]
+        needs: [kms-tests]
         steps:
             - name: Extract version from tag
               id: extract_version
-              run: echo "::set-output name=version::${GITHUB_REF_NAME#infisical/}"
+              run: echo "::set-output name=version::${GITHUB_REF_NAME#kms/}"
             - name: ☁️ Checkout source
               uses: actions/checkout@v3
               with:
@@ -53,23 +53,23 @@ jobs:
                   push: true
                   context: .
                   tags: |
-                      infisical/infisical:latest-postgres
-                      infisical/infisical:${{ steps.commit.outputs.short }}
-                      infisical/infisical:${{ steps.extract_version.outputs.version }}
+                      kms/kms:latest-postgres
+                      kms/kms:${{ steps.commit.outputs.short }}
+                      kms/kms:${{ steps.extract_version.outputs.version }}
                   platforms: linux/amd64,linux/arm64
-                  file: Dockerfile.standalone-infisical
+                  file: Dockerfile.standalone-kms
                   build-args: |
                       POSTHOG_API_KEY=${{ secrets.PUBLIC_POSTHOG_API_KEY }}
-                      INFISICAL_PLATFORM_VERSION=${{ steps.extract_version.outputs.version }}
+                      KMS_PLATFORM_VERSION=${{ steps.extract_version.outputs.version }}
 
-    infisical-fips-standalone:
-        name: Build infisical standalone image postgres
+    kms-fips-standalone:
+        name: Build kms standalone image postgres
         runs-on: ubuntu-latest
-        needs: [infisical-tests]
+        needs: [kms-tests]
         steps:
             - name: Extract version from tag
               id: extract_version
-              run: echo "::set-output name=version::${GITHUB_REF_NAME#infisical/}"
+              run: echo "::set-output name=version::${GITHUB_REF_NAME#kms/}"
             - name: ☁️ Checkout source
               uses: actions/checkout@v3
               with:
@@ -105,11 +105,11 @@ jobs:
                   push: true
                   context: .
                   tags: |
-                      infisical/infisical-fips:latest-postgres
-                      infisical/infisical-fips:${{ steps.commit.outputs.short }}
-                      infisical/infisical-fips:${{ steps.extract_version.outputs.version }}
+                      kms/kms-fips:latest-postgres
+                      kms/kms-fips:${{ steps.commit.outputs.short }}
+                      kms/kms-fips:${{ steps.extract_version.outputs.version }}
                   platforms: linux/amd64,linux/arm64
-                  file: Dockerfile.fips.standalone-infisical
+                  file: Dockerfile.fips.standalone-kms
                   build-args: |
                       POSTHOG_API_KEY=${{ secrets.PUBLIC_POSTHOG_API_KEY }}
-                      INFISICAL_PLATFORM_VERSION=${{ steps.extract_version.outputs.version }}
+                      KMS_PLATFORM_VERSION=${{ steps.extract_version.outputs.version }}

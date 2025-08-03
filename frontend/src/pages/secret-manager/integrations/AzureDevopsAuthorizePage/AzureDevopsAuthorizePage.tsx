@@ -60,7 +60,7 @@ export const AzureDevopsAuthorizePage = () => {
       <Card className="max-w-lg rounded-md border border-mineshaft-600">
         <CardTitle
           className="px-6 text-left text-xl"
-          subTitle="After adding the details below, you will be prompted to set up an integration for a particular Infisical project and environment."
+          subTitle="After adding the details below, you will be prompted to set up an integration for a particular KMS project and environment."
         >
           <div className="flex flex-row items-center">
             <div className="flex items-center">
@@ -74,7 +74,7 @@ export const AzureDevopsAuthorizePage = () => {
             <span className="ml-1.5">Azure DevOps Integration </span>
             <a
               target="_blank"
-              href="https://infisical.com/docs/integrations/cloud/azure-devops"
+              href="https://lux.network/docs/integrations/cloud/azure-devops"
               rel="noopener noreferrer"
             >
               <div className="mb-1 ml-2 inline-block cursor-default rounded-md bg-yellow/20 px-1.5 pb-[0.03rem] pt-[0.04rem] text-sm text-yellow opacity-80 hover:opacity-100">

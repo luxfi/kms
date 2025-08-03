@@ -45,7 +45,7 @@ export const SecretRotationFailedTemplate = ({
       </Section>
       <Section className="text-center">
         <BaseButton href={`${rotationUrl}?search=${rotationName}&secretPath=${secretPath}`}>
-          View in Infisical
+          View in KMS
         </BaseButton>
       </Section>
     </BaseEmailWrapper>
@@ -56,11 +56,11 @@ export default SecretRotationFailedTemplate;
 
 SecretRotationFailedTemplate.PreviewProps = {
   rotationType: "Auth0 Client Secret",
-  rotationUrl: "https://infisical.com",
+  rotationUrl: "https://lux.network",
   content: "See Rotation status for details",
   projectName: "Example Project",
   secretPath: "/api/secrets",
   environment: "Production",
   rotationName: "my-auth0-rotation",
-  siteUrl: "https://infisical.com"
+  siteUrl: "https://lux.network"
 } as SecretRotationFailedTemplateProps;

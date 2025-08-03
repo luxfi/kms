@@ -25,7 +25,7 @@ import {
   TextArea,
   Tooltip
 } from "@app/components/v2";
-import { InfisicalSecretInput } from "@app/components/v2/InfisicalSecretInput";
+import { KMSSecretInput } from "@app/components/v2/KMSSecretInput";
 import {
   ProjectPermissionActions,
   ProjectPermissionSub,
@@ -61,7 +61,7 @@ import { CollapsibleSecretImports } from "./CollapsibleSecretImports";
 import { useBatchModeActions } from "../../SecretMainPage.store";
 
 export const HIDDEN_SECRET_VALUE = "******";
-export const HIDDEN_SECRET_VALUE_API_MASK = "<hidden-by-infisical>";
+export const HIDDEN_SECRET_VALUE_API_MASK = "<hidden-by-kms>";
 
 type Props = {
   secret: SecretV3RawSanitized;
@@ -441,7 +441,7 @@ export const SecretItem = memo(
                   key="secret-value"
                   control={control}
                   render={({ field }) => (
-                    <InfisicalSecretInput
+                    <KMSSecretInput
                       isReadOnly={isReadOnlySecret}
                       key="secret-value"
                       isVisible={isVisible && !secretValueHidden}

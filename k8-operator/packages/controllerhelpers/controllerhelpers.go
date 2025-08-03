@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/Infisical/infisical/k8-operator/api/v1alpha1"
-	"github.com/Infisical/infisical/k8-operator/packages/constants"
+	"github.com/luxfi/kms/k8-operator/api/v1alpha1"
+	"github.com/luxfi/kms/k8-operator/packages/constants"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -16,8 +16,8 @@ import (
 	controllerClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const DEPLOYMENT_SECRET_NAME_ANNOTATION_PREFIX = "secrets.infisical.com/managed-secret"
-const AUTO_RELOAD_DEPLOYMENT_ANNOTATION = "secrets.infisical.com/auto-reload" // needs to be set to true for a deployment to start auto redeploying
+const DEPLOYMENT_SECRET_NAME_ANNOTATION_PREFIX = "secrets.lux.network/managed-secret"
+const AUTO_RELOAD_DEPLOYMENT_ANNOTATION = "secrets.lux.network/auto-reload" // needs to be set to true for a deployment to start auto redeploying
 
 func ReconcileDeploymentsWithManagedSecrets(ctx context.Context, client controllerClient.Client, logger logr.Logger, managedSecret v1alpha1.ManagedKubeSecretConfig) (int, error) {
 	listOfDeployments := &v1.DeploymentList{}
@@ -259,10 +259,10 @@ func ReconcileStatefulSet(ctx context.Context, client controllerClient.Client, l
 	return nil
 }
 
-func GetInfisicalConfigMap(ctx context.Context, client client.Client) (configMap map[string]string, errToReturn error) {
+func GetKMSConfigMap(ctx context.Context, client client.Client) (configMap map[string]string, errToReturn error) {
 	// default key values
 	defaultConfigMapData := make(map[string]string)
-	defaultConfigMapData["hostAPI"] = constants.INFISICAL_DOMAIN
+	defaultConfigMapData["hostAPI"] = constants.KMS_DOMAIN
 
 	kubeConfigMap := &corev1.ConfigMap{}
 	err := client.Get(ctx, types.NamespacedName{

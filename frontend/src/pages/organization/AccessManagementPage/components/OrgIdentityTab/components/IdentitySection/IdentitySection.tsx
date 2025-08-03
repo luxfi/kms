@@ -75,7 +75,7 @@ export const IdentitySection = withPermission(
           <div className="flex items-center gap-1">
             <p className="text-xl font-semibold text-mineshaft-100">Identities</p>
             <a
-              href="https://infisical.com/docs/documentation/platform/identities/overview"
+              href="https://lux.network/docs/documentation/platform/identities/overview"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -101,7 +101,7 @@ export const IdentitySection = withPermission(
                 onClick={() => {
                   if (!isMoreIdentitiesAllowed && !isEnterprise) {
                     handlePopUpOpen("upgradePlan", {
-                      description: "You can add more identities if you upgrade your Infisical plan."
+                      description: "You can add more identities if you upgrade your KMS plan."
                     });
                     return;
                   }

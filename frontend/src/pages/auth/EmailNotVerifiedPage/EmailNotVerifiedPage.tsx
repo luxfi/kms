@@ -6,11 +6,11 @@ export const EmailNotVerifiedPage = () => {
     <div className="flex min-h-screen flex-col justify-center bg-gradient-to-tr from-mineshaft-600 via-mineshaft-800 to-bunker-700 px-6 pb-28">
       <Helmet>
         <title>Request a New Invite</title>
-        <link rel="icon" href="/infisical.ico" />
+        <link rel="icon" href="/kms.ico" />
       </Helmet>
       <Link to="/">
         <div className="mb-4 mt-20 flex justify-center">
-          <img src="/images/gradientLogo.svg" className="h-[90px] w-[120px]" alt="Infisical Logo" />
+          <img src="/images/gradientLogo.svg" className="h-[90px] w-[120px]" alt="KMS Logo" />
         </div>
       </Link>
       <div className="mx-auto flex w-full flex-col items-center justify-center">
@@ -19,7 +19,7 @@ export const EmailNotVerifiedPage = () => {
         </h1>
         <p className="w-max justify-center text-center text-sm text-gray-400">
           Please try again. <br /> Note: If it still doesn&apos;t work, please reach out to us at
-          support@infisical.com
+          support@lux.network
         </p>
         <div className="mt-6 flex flex-row text-sm text-bunker-400">
           <Link to="/login">

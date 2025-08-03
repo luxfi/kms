@@ -9,7 +9,7 @@ import {
   useOrganization,
   useSubscription
 } from "@app/context";
-import { isInfisicalCloud } from "@app/helpers/platform";
+import { isKMSCloud } from "@app/helpers/platform";
 import {
   useCreateCustomerPortalSession,
   useGetOrgPlanBillingInfo,
@@ -58,8 +58,8 @@ export const PreviewSection = () => {
     try {
       if (!subscription || !currentOrg) return;
 
-      if (!isInfisicalCloud()) {
-        window.open("https://infisical.com/pricing", "_blank");
+      if (!isKMSCloud()) {
+        window.open("https://lux.network/pricing", "_blank");
         return;
       }
 
@@ -81,7 +81,7 @@ export const PreviewSection = () => {
   };
 
   const getUpgradePlanLabel = () => {
-    if (!isInfisicalCloud()) {
+    if (!isKMSCloud()) {
       return (
         <div>
           Go to Pricing
@@ -105,7 +105,7 @@ export const PreviewSection = () => {
                 <h2 className="text-xl font-medium text-mineshaft-100">
                   Unleash the full power of{" "}
                   <span className="bg-gradient-to-r from-primary-500 to-yellow bg-clip-text font-semibold text-transparent">
-                    Infisical
+                    KMS
                   </span>
                 </h2>
                 <p className="mt-4 text-gray-400">
@@ -133,7 +133,7 @@ export const PreviewSection = () => {
               </div>
               <div className="flex w-full justify-center">
                 <a
-                  href="https://infisical.com/schedule-demo"
+                  href="https://lux.network/schedule-demo"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -158,7 +158,7 @@ export const PreviewSection = () => {
                 subscription.status === "trialing" ? "(Trial)" : ""
               }`}
             </p>
-            {isInfisicalCloud() && (
+            {isKMSCloud() && (
               <OrgPermissionCan
                 I={OrgPermissionBillingActions.ManageBilling}
                 a={OrgPermissionSubjects.Billing}

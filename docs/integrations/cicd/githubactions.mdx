@@ -1,22 +1,22 @@
 ---
 title: "GitHub Actions"
-description: "How to sync secrets from Infisical to GitHub Actions"
+description: "How to sync secrets from KMS to GitHub Actions"
 ---
 
 <Note>
-  Alternatively, you can use Infisical's official GitHub Action
-  [here](https://github.com/Infisical/secrets-action).
+  Alternatively, you can use KMS's official GitHub Action
+  [here](https://github.com/KMS/secrets-action).
 </Note>
 
-Infisical lets you sync secrets to GitHub at the organization-level, repository-level, and repository environment-level.
+KMS lets you sync secrets to GitHub at the organization-level, repository-level, and repository environment-level.
 
 ## Connecting with GitHub App (Recommended)
 
 <Tabs>
   <Tab title="Usage">
     <Steps>
-      <Step title="Authorize GitHub Infisical App">
-        Navigate to your project's integrations tab in Infisical and press on the GitHub tile.
+      <Step title="Authorize GitHub KMS App">
+        Navigate to your project's integrations tab in KMS and press on the GitHub tile.
 
         ![integrations](../../images/integrations/github/app/integration-overview.png)
 
@@ -28,11 +28,11 @@ Infisical lets you sync secrets to GitHub at the organization-level, repository-
 
         ![integrations github app installation](../../images/integrations/github/app/github-app-installation.png)
 
-        Install and authorize the GitHub application. This will redirect you back to the Infisical integration page.
+        Install and authorize the GitHub application. This will redirect you back to the KMS integration page.
 
       </Step>
-      <Step title="Configure Infisical GitHub integration">
-        Select which Infisical environment secrets you want to sync to which GitHub organization, repository, or repository environment.
+      <Step title="Configure KMS GitHub integration">
+        Select which KMS environment secrets you want to sync to which GitHub organization, repository, or repository environment.
 
         <Tabs>
           <Tab title="Repository">
@@ -61,7 +61,7 @@ Infisical lets you sync secrets to GitHub at the organization-level, repository-
 
   </Tab>
   <Tab title="Self-Hosted Setup">
-    Using the GitHub integration with app authentication on a self-hosted instance of Infisical requires configuring an application on GitHub
+    Using the GitHub integration with app authentication on a self-hosted instance of KMS requires configuring an application on GitHub
     and registering your instance with it.
     <Steps>
       <Step title="Create an application on GitHub">
@@ -93,7 +93,7 @@ Infisical lets you sync secrets to GitHub at the organization-level, repository-
           in your organization Settings > Developer settings > GitHub Apps > New GitHub App.
         </Note>
       </Step>
-      <Step title="Add your application credentials to Infisical">
+      <Step title="Add your application credentials to KMS">
         Generate a new **Client Secret** for your GitHub application.
         ![integrations github app create secret](../../images/integrations/github/app/self-hosted-github-app-secret.png)
 
@@ -103,7 +103,7 @@ Infisical lets you sync secrets to GitHub at the organization-level, repository-
         Obtain the necessary Github application credentials. This would be the application slug, client ID, app ID, client secret, and private key.
         ![integrations github app credentials](../../images/integrations/github/app/self-hosted-github-app-credentials.png)
 
-        Back in your Infisical instance, add the five new environment variables for the credentials of your GitHub application:
+        Back in your KMS instance, add the five new environment variables for the credentials of your GitHub application:
 
         - `CLIENT_ID_GITHUB_APP`: The **Client ID** of your GitHub application.
         - `CLIENT_SECRET_GITHUB_APP`: The **Client Secret** of your GitHub application.
@@ -111,7 +111,7 @@ Infisical lets you sync secrets to GitHub at the organization-level, repository-
         - `CLIENT_APP_ID_GITHUB_APP`: The **App ID** of your GitHub application.
         - `CLIENT_PRIVATE_KEY_GITHUB_APP`: The **Private Key** of your GitHub application.
 
-        Once added, restart your Infisical instance and use the GitHub integration via app authentication.
+        Once added, restart your KMS instance and use the GitHub integration via app authentication.
       </Step>
     </Steps>
 
@@ -122,25 +122,25 @@ Infisical lets you sync secrets to GitHub at the organization-level, repository-
 
 Prerequisites:
 
-- Set up and add envars to [Infisical Cloud](https://app.infisical.com)
+- Set up and add envars to [KMS Cloud](https://kms.lux.network)
 - Ensure that you have admin privileges to the repository you want to sync secrets to.
 
 <Tabs>
   <Tab title="Usage">
     <Steps>
-      <Step title="Authorize Infisical for GitHub">
-        Navigate to your project's integrations tab in Infisical and press on the GitHub tile.
+      <Step title="Authorize KMS for GitHub">
+        Navigate to your project's integrations tab in KMS and press on the GitHub tile.
         ![integrations](../../images/integrations/github/integration-overview.png)
 
         Select OAuth as the authentication method and click **Connect to GitHub**.
         ![integrations github oauth auth selection](../../images/integrations/github/github-oauth-method-selection.png)
 
-        Grant Infisical access to your GitHub account (organization and repo privileges).
+        Grant KMS access to your GitHub account (organization and repo privileges).
         ![integrations github authorization](../../images/integrations/github/integrations-github-auth.png)
 
       </Step>
-      <Step title="Configure Infisical GitHub integration">
-        Select which Infisical environment secrets you want to sync to which GitHub organization, repository, or repository environment.
+      <Step title="Configure KMS GitHub integration">
+        Select which KMS environment secrets you want to sync to which GitHub organization, repository, or repository environment.
 
         <Tabs>
           <Tab title="Repository">
@@ -169,7 +169,7 @@ Prerequisites:
 
   </Tab>
   <Tab title="Self-Hosted Setup">
-    Using the GitHub integration on a self-hosted instance of Infisical requires configuring an OAuth application in GitHub
+    Using the GitHub integration on a self-hosted instance of KMS requires configuring an OAuth application in GitHub
     and registering your instance with it.
     <Steps>
       <Step title="Create an OAuth application in GitHub">
@@ -189,17 +189,17 @@ Prerequisites:
           in your organization Settings > Developer settings > OAuth Apps > New Org OAuth App.
         </Note>
       </Step>
-      <Step title="Add your OAuth application credentials to Infisical">
+      <Step title="Add your OAuth application credentials to KMS">
         Obtain the **Client ID** and generate a new **Client Secret** for your GitHub OAuth application.
 
         ![integrations github config](../../images/integrations/github/integrations-github-config-credentials.png)
 
-        Back in your Infisical instance, add two new environment variables for the credentials of your GitHub OAuth application:
+        Back in your KMS instance, add two new environment variables for the credentials of your GitHub OAuth application:
 
         - `CLIENT_ID_GITHUB`: The **Client ID** of your GitHub OAuth application.
         - `CLIENT_SECRET_GITHUB`: The **Client Secret** of your GitHub OAuth application.
 
-        Once added, restart your Infisical instance and use the GitHub integration.
+        Once added, restart your KMS instance and use the GitHub integration.
       </Step>
     </Steps>
 

@@ -67,10 +67,10 @@ RUN wget https://www.openssl.org/source/openssl-3.1.2.tar.gz \
 
 # ? App setup
 
-# Install Infisical CLI
-RUN curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | bash && \
+# Install KMS CLI
+RUN curl -1sLf 'https://artifacts-cli.lux.network/setup.deb.sh' | bash && \
     apt-get update && \
-    apt-get install -y infisical=0.41.89
+    apt-get install -y kms=0.41.89
 
 WORKDIR /app
 
@@ -84,7 +84,7 @@ COPY . .
 ENV HOST=0.0.0.0
 ENV OPENSSL_CONF=/app/nodejs.fips.cnf
 ENV OPENSSL_MODULES=/usr/local/lib/ossl-modules
-# ENV NODE_OPTIONS=--force-fips # Note(Daniel): We can't set this on the node options because it may break for existing folks using the infisical/infisical-fips image. Instead we call crypto.setFips(true) at runtime.
+# ENV NODE_OPTIONS=--force-fips # Note(Daniel): We can't set this on the node options because it may break for existing folks using the kms/kms-fips image. Instead we call crypto.setFips(true) at runtime.
 ENV FIPS_ENABLED=true
 
 CMD ["npm", "run", "dev:docker"]

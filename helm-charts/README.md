@@ -1,29 +1,29 @@
-# Infisical Helm Charts
+# KMS Helm Charts
 
-Welcome to Infisical Helm Charts repository! Find instructions below to setup and install our charts.
+Welcome to KMS Helm Charts repository! Find instructions below to setup and install our charts.
 
 ## Installation
 
 ```sh
-# Add the Infisical repository
-helm repo add infisical 'https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/' && helm repo update
+# Add the KMS repository
+helm repo add kms 'https://dl.cloudsmith.io/public/kms/helm-charts/helm/charts/' && helm repo update
 
-# Install Infisical (default values)
+# Install KMS (default values)
 helm upgrade --install --atomic \
-  -n infisical --create-namespace \
-  infisical infisical/infisical
+  -n kms --create-namespace \
+  kms kms/kms
   
-# Install Infisical Secrets Operator (default values)
+# Install KMS Secrets Operator (default values)
 helm upgrade --install --atomic \
-  -n infisical --create-namespace \
-  infisical-secrets-operator infisical/secrets-operator
+  -n kms --create-namespace \
+  kms-secrets-operator kms/secrets-operator
 ```
 
 ## Charts
 
 Here's the link to our charts corresponding documentation :
 
-- [**`infisical`**](./infisical/README.md)
+- [**`kms`**](./kms/README.md)
 - [**`secrets-operator`**](./secrets-operator/README.md)
 
 ## Documentation

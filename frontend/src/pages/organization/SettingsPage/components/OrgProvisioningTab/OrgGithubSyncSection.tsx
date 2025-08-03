@@ -94,7 +94,7 @@ export const OrgGithubSyncSection = () => {
       >
         <ModalContent
           title="Manage GitHub Organization Sync"
-          subTitle="Sync your GitHub teams to Infisical organization groups"
+          subTitle="Sync your GitHub teams to KMS organization groups"
         >
           <GithubOrgSyncConfigModal
             data={data}
@@ -107,7 +107,7 @@ export const OrgGithubSyncSection = () => {
       <UpgradePlanModal
         isOpen={popUp.upgradePlan.isOpen}
         onOpenChange={(isOpen) => handlePopUpToggle("upgradePlan", isOpen)}
-        text="You can use GitHub Organization Plan if you switch to Infisical's Enterprise plan."
+        text="You can use GitHub Organization Plan if you switch to KMS's Enterprise plan."
       />
     </div>
   );

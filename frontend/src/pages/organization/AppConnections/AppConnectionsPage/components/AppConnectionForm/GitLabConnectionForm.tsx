@@ -17,7 +17,7 @@ import {
   SelectItem
 } from "@app/components/v2";
 import { APP_CONNECTION_MAP, getAppConnectionMethodDetails } from "@app/helpers/appConnections";
-import { isInfisicalCloud } from "@app/helpers/platform";
+import { isKMSCloud } from "@app/helpers/platform";
 import { useGetAppConnectionOption } from "@app/hooks/api/appConnections";
 import { AppConnection } from "@app/hooks/api/appConnections/enums";
 import { GitLabAccessTokenType } from "@app/hooks/api/appConnections/gitlab";
@@ -212,8 +212,8 @@ export const GitLabConnectionForm = ({ appConnection, onSubmit: formSubmit }: Pr
               errorText={
                 !isLoading && isMissingConfig && selectedMethod === GitLabConnectionMethod.OAuth
                   ? `Environment variables have not been configured. ${
-                      isInfisicalCloud()
-                        ? "Please contact Infisical."
+                      isKMSCloud()
+                        ? "Please contact KMS."
                         : `See Docs to configure GitLab ${methodDetails.name} Connections.`
                     }`
                   : error?.message

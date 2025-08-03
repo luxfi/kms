@@ -56,7 +56,7 @@ export const SecretSyncFailedTemplate = ({
         )}
       </Section>
       <Section className="text-center">
-        <BaseButton href={syncUrl}>View in Infisical</BaseButton>
+        <BaseButton href={syncUrl}>View in KMS</BaseButton>
       </Section>
     </BaseEmailWrapper>
   );
@@ -66,11 +66,11 @@ export default SecretSyncFailedTemplate;
 
 SecretSyncFailedTemplate.PreviewProps = {
   syncDestination: "AWS Parameter Store",
-  syncUrl: "https://infisical.com",
+  syncUrl: "https://lux.network",
   failureMessage: "Key name cannot contain a colon (:) or a forward slash (/).",
   projectName: "Example Project",
   secretPath: "/api/secrets",
   environment: "Production",
   syncName: "my-aws-sync",
-  siteUrl: "https://infisical.com"
+  siteUrl: "https://lux.network"
 } as SecretSyncFailedTemplateProps;

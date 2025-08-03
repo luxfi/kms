@@ -1,12 +1,12 @@
 ---
 title: "Bitbucket Connection"
-description: "Learn how to configure a Bitbucket Connection for Infisical."
+description: "Learn how to configure a Bitbucket Connection for KMS."
 ---
 
-Infisical supports the use of [API Tokens](https://support.atlassian.com/bitbucket-cloud/docs/api-tokens/) to connect with Bitbucket.
+KMS supports the use of [API Tokens](https://support.atlassian.com/bitbucket-cloud/docs/api-tokens/) to connect with Bitbucket.
 
 <Tip>
-    Infisical recommends creating a dedicated Bitbucket account with access restricted to only the resources your use case requires.
+    KMS recommends creating a dedicated Bitbucket account with access restricted to only the resources your use case requires.
 </Tip>
 
 ## Create Bitbucket Access Token
@@ -72,13 +72,13 @@ Infisical supports the use of [API Tokens](https://support.atlassian.com/bitbuck
     </Step>
 </Steps>
 
-## Create Bitbucket Connection in Infisical
+## Create Bitbucket Connection in KMS
 
 <Tabs>
-    <Tab title="Infisical UI">
+    <Tab title="KMS UI">
         <Steps>
             <Step title="Navigate to App Connections">
-                In your Infisical dashboard, go to **Organization Settings** and select the [**App Connections**](https://app.infisical.com/organization/app-connections) tab.
+                In your KMS dashboard, go to **Organization Settings** and select the [**App Connections**](https://kms.lux.network/organization/app-connections) tab.
 
                 ![App Connections Tab](/images/app-connections/general/add-connection.png)
             </Step>
@@ -95,7 +95,7 @@ Infisical supports the use of [API Tokens](https://support.atlassian.com/bitbuck
                 ![Bitbucket Connection Modal](/images/app-connections/bitbucket/step-6.png)
             </Step>
             <Step title="Connection Created">
-                After clicking Create, your **Bitbucket Connection** is established and ready to use with your Infisical projects.
+                After clicking Create, your **Bitbucket Connection** is established and ready to use with your KMS projects.
 
                 ![Bitbucket Connection Created](/images/app-connections/bitbucket/step-7.png)
             </Step>
@@ -108,7 +108,7 @@ Infisical supports the use of [API Tokens](https://support.atlassian.com/bitbuck
 
         ```bash Request
         curl    --request POST \
-                --url https://app.infisical.com/api/v1/app-connections/bitbucket \
+                --url https://kms.lux.network/api/v1/app-connections/bitbucket \
                 --header 'Content-Type: application/json' \
                 --data '{
                     "name": "my-bitbucket-connection",

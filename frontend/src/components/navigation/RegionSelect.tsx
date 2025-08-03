@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useLocation } from "@tanstack/react-router";
 
 import { Modal, ModalContent, ModalTrigger, Select, SelectItem } from "@app/components/v2";
-import { isInfisicalCloud } from "@app/helpers/platform";
+import { isKMSCloud } from "@app/helpers/platform";
 
 enum Region {
   US = "us",
@@ -76,11 +76,11 @@ export const RegionSelect = () => {
   const location = useLocation();
 
   const handleRegionSelect = (value: Region) => {
-    window.location.assign(`https://${value}.infisical.com/${location.pathname}`);
+    window.location.assign(`https://${value}.lux.network/${location.pathname}`);
   };
 
   const shouldDisplay =
-    isInfisicalCloud() || window.location.origin.includes("http://localhost:8080");
+    isKMSCloud() || window.location.origin.includes("http://localhost:8080");
 
   // only display region select for cloud
   if (!shouldDisplay) return null;
@@ -113,8 +113,8 @@ export const RegionSelect = () => {
           </button>
         </ModalTrigger>
         <ModalContent
-          title="Infisical Cloud data regions"
-          subTitle="Select the closest region to you and your team. Contact Infisical if you need to migrate regions."
+          title="KMS Cloud data regions"
+          subTitle="Select the closest region to you and your team. Contact KMS if you need to migrate regions."
         >
           {regions.map(({ value, label, location: regionLocation, flag }) => (
             <div className="mb-6" key={value}>

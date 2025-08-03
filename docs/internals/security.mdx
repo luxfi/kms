@@ -1,67 +1,67 @@
 ---
 title: "Security"
-description: "Infisical's security model includes many considerations and initiatives."
+description: "KMS's security model includes many considerations and initiatives."
 ---
 
-As a security infrastructure platform dealing with highly-sensitive data, Infisical follows a robust security model with the goal of ensuring the security and integrity of all its managed data and associated components.
+As a security infrastructure platform dealing with highly-sensitive data, KMS follows a robust security model with the goal of ensuring the security and integrity of all its managed data and associated components.
 
 As part of the security model, data at rest and in transit must be secure from eavesdropping or tampering, clients must be authenticated and authorized to access data, and all operations in the platform are audited and can be traced back to their source.
 
-This page documents security measures used by [Infisical](https://github.com/Infisical/infisical), the software, and [Infisical Cloud](https://infisical.com/), a separate managed service offering for the software.
+This page documents security measures used by [KMS](https://github.com/luxfi/kms), the software, and [KMS Cloud](https://lux.network/), a separate managed service offering for the software.
 
 ## Threat model
 
-Infisical’s (the software) threat model spans communication, storage, response mechanisms, and more.
+KMS’s (the software) threat model spans communication, storage, response mechanisms, and more.
 
-- Eavesdropping on communications: Infisical secures client communication with the server and from the server to the storage backend.
-- Tampering with data (at rest or in transit): Infisical implements data integrity checks to detect tampering. If inconsistencies are found, Infisical aborts transactions and raises alerts.
-- Unauthorized access (lacking authentication/authorization): Infisical mandates rigorous authentication and authorization checks for all inbound requests; it also offers multi-factor authentication and role/attribute-based access controls.
-- Actions without accountability: Infisical logs events, including policy updates, queries/mutations applied to secrets, certificates, and more. Every event is timestamped and information about actor, source (i.e. IP address, user-agent, etc.), and relevant metadata is included.
-- Breach of data storage confidentiality: Infisical encrypts all stored secrets using proven cryptographic techniques for symmetric encryption.
-- Unrecognized suspicious activities: Infisical monitors for any anomalous activities such as authentication attempts from previously unseen sources.
-- Unidentified system vulnerabilities: Infisical undergoes penetration tests and vulnerability assessments twice a year; we act on findings to bolster the system’s defense mechanisms.
+- Eavesdropping on communications: KMS secures client communication with the server and from the server to the storage backend.
+- Tampering with data (at rest or in transit): KMS implements data integrity checks to detect tampering. If inconsistencies are found, KMS aborts transactions and raises alerts.
+- Unauthorized access (lacking authentication/authorization): KMS mandates rigorous authentication and authorization checks for all inbound requests; it also offers multi-factor authentication and role/attribute-based access controls.
+- Actions without accountability: KMS logs events, including policy updates, queries/mutations applied to secrets, certificates, and more. Every event is timestamped and information about actor, source (i.e. IP address, user-agent, etc.), and relevant metadata is included.
+- Breach of data storage confidentiality: KMS encrypts all stored secrets using proven cryptographic techniques for symmetric encryption.
+- Unrecognized suspicious activities: KMS monitors for any anomalous activities such as authentication attempts from previously unseen sources.
+- Unidentified system vulnerabilities: KMS undergoes penetration tests and vulnerability assessments twice a year; we act on findings to bolster the system’s defense mechanisms.
 
-Infisical (the software) does not consider the following as part of its threat model:
+KMS (the software) does not consider the following as part of its threat model:
 
 - Uncontrolled access to the storage mechanism: An attacker with unfettered access to the storage system can manipulate data in unpredictable ways, including erasing or tampering with stored secrets. Furthermore, the attacker could potentially implement state rollbacks to favor their objectives.
 - Disclosure of secret presence: If an adversary gains read access to the storage backend, they might discern the existence of certain secrets, even if the actual contents remain encrypted and concealed.
-- Runtime memory intrusion: An attacker with capabilities to probe the memory state of a live instance of Infisical can potentially compromise data confidentiality.
+- Runtime memory intrusion: An attacker with capabilities to probe the memory state of a live instance of KMS can potentially compromise data confidentiality.
 - Vulnerabilities in affiliated systems: Some functionality may rely on third-party services and dependencies. Security lapses in these dependencies can indirectly jeopardize the confidentiality or integrity of the secrets.
-- Breaches via compromised clients: If a system or application accessing Infisical is compromised, and its credentials to the platform are exposed, an attacker might gain access at the privilege level of that compromised entity.
+- Breaches via compromised clients: If a system or application accessing KMS is compromised, and its credentials to the platform are exposed, an attacker might gain access at the privilege level of that compromised entity.
 - Configuration tampering by administrators: Any configuration data, whether supplied through admin interfaces or configuration files, needs scrutiny. If an attacker can manipulate these configurations, it poses risks to data confidentiality and integrity.
-- Physical access to deployment infrastructure: An attacker with physical access to the servers or infrastructure where Infisical is deployed can potentially compromise the system in ways that are challenging to guard against, such as direct hardware tampering or booting from malicious media.
+- Physical access to deployment infrastructure: An attacker with physical access to the servers or infrastructure where KMS is deployed can potentially compromise the system in ways that are challenging to guard against, such as direct hardware tampering or booting from malicious media.
 - Social engineering attacks on personnel: Attacks that target personnel, tricking them into divulging sensitive information or performing compromising actions, fall outside the platform’s direct defensive purview.
 
-Note that while these points fall outside the Infisical’s threat model, they remain considerations in the broader platform architecture.
+Note that while these points fall outside the KMS’s threat model, they remain considerations in the broader platform architecture.
 
 ## External threat overview
 
-Infisical’s architecture consists of various systems which together we refer to as the Infisical platform:
+KMS’s architecture consists of various systems which together we refer to as the KMS platform:
 
-- Server: The Infisical API that serves requests.
+- Server: The KMS API that serves requests.
 - Clients: The Web UI and other applications that send requests to the server.
 - Storage backend: PostgreSQL used by the server to persist data.
-- Redis: Used by Infisical for caching, queueing and cron job scheduling.
+- Redis: Used by KMS for caching, queueing and cron job scheduling.
 
-The server requires clients to be authenticated and authorized for every inbound request. If using [Infisical Cloud](https://infisical.com/), all traffic is routed through [Cloudflare](https://www.cloudflare.com/) which enforces TLS and requires a minimum of TLS 1.2.
+The server requires clients to be authenticated and authorized for every inbound request. If using [KMS Cloud](https://lux.network/), all traffic is routed through [Cloudflare](https://www.cloudflare.com/) which enforces TLS and requires a minimum of TLS 1.2.
 
-The server mandates that each request includes a valid token (issued for a user or machine identity) used to identify the client before performing any actions on the platform. Clients without a valid token can only access login endpoints with the exception of a few intentionally unauthenticated endpoints. For tokens issued for machine identities, Infisical provides significant configuration, including support for native authentication methods (e.g. [AWS](https://infisical.com/docs/documentation/platform/identities/aws-auth), [Azure](https://infisical.com/docs/documentation/platform/identities/azure-auth), [Kubernetes](https://infisical.com/docs/documentation/platform/identities/kubernetes-auth), etc.); custom TTLs to restrict token lifespan; IP restrictions to enforce network-based access controls; and usage caps to limit the maximum number of times that a token can be used.
+The server mandates that each request includes a valid token (issued for a user or machine identity) used to identify the client before performing any actions on the platform. Clients without a valid token can only access login endpoints with the exception of a few intentionally unauthenticated endpoints. For tokens issued for machine identities, KMS provides significant configuration, including support for native authentication methods (e.g. [AWS](https://lux.network/docs/documentation/platform/identities/aws-auth), [Azure](https://lux.network/docs/documentation/platform/identities/azure-auth), [Kubernetes](https://lux.network/docs/documentation/platform/identities/kubernetes-auth), etc.); custom TTLs to restrict token lifespan; IP restrictions to enforce network-based access controls; and usage caps to limit the maximum number of times that a token can be used.
 
-When accessing Infisical via web browser, JWT tokens are stored in browser memory and appended to outbound requests requiring authentication; refresh tokens are stored in HttpOnly cookies and included in requests as part of token renewal. Note also that Infisical utilizes the latest HTTP security headers and employs a strict Content-Security-Policy to mitigate XSS.
+When accessing KMS via web browser, JWT tokens are stored in browser memory and appended to outbound requests requiring authentication; refresh tokens are stored in HttpOnly cookies and included in requests as part of token renewal. Note also that KMS utilizes the latest HTTP security headers and employs a strict Content-Security-Policy to mitigate XSS.
 
 To mitigate abuse and enhance system stability, the server enforces configurable rate limiting on read, write, and secrets operations. This prevents excessive API requests from impacting system performance while ensuring fair usage across clients.
 
-Once traffic enters the server, any sensitive data (e.g. secrets, certificates entering the server), where applicable, is encrypted using a 256-bit [Advanced Encryption Standard (AES)](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) cipher in the [Galois Counter Mode (GCM)](https://en.wikipedia.org/wiki/Galois/Counter_Mode) with 96-bit nonces prior to being persisted in the storage backend. Encryption is an integral part of Infisical’s platform-wide cryptographic architecture, which also supports seal-wrapping with external KMS and HSMs. Before responding to a client request, the server securely retrieves and decrypts requested data from the storage backend. Each decryption operation includes integrity verification to ensure data has not been altered or tampered with.
+Once traffic enters the server, any sensitive data (e.g. secrets, certificates entering the server), where applicable, is encrypted using a 256-bit [Advanced Encryption Standard (AES)](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) cipher in the [Galois Counter Mode (GCM)](https://en.wikipedia.org/wiki/Galois/Counter_Mode) with 96-bit nonces prior to being persisted in the storage backend. Encryption is an integral part of KMS’s platform-wide cryptographic architecture, which also supports seal-wrapping with external KMS and HSMs. Before responding to a client request, the server securely retrieves and decrypts requested data from the storage backend. Each decryption operation includes integrity verification to ensure data has not been altered or tampered with.
 
 ## Internal threat overview
 
-Within Infisical, an internal threat and critical security concern is an attacker gaining access to sensitive data that they are not permitted to, especially if they are able to authenticate with some degree of access to the system.
+Within KMS, an internal threat and critical security concern is an attacker gaining access to sensitive data that they are not permitted to, especially if they are able to authenticate with some degree of access to the system.
 
 Before a client can perform any actions on the platform, it must authenticate with the server using a supported authentication method such as username-password, SAML, SSO, LDAP, AWS/GCP/Azure, OIDC, or Kubernetes authentication. A successful authentication results in the issuance of a client (JWT) token containing a reference to the user or machine identity bound to it.
 
-When a client uses the token to make authenticated requests against the server, Infisical validates the token and maps the bound-identity to access control policies that exist at the organization and project level, both types of namespaces within the platform. The access control policies are configured by operators of Infisical ahead of time and may involve role-based, attribute-based, and one-off “additional privilege” resource constraints. Given the robustness of the access control system, we recommend reading the full documentation for it.
+When a client uses the token to make authenticated requests against the server, KMS validates the token and maps the bound-identity to access control policies that exist at the organization and project level, both types of namespaces within the platform. The access control policies are configured by operators of KMS ahead of time and may involve role-based, attribute-based, and one-off “additional privilege” resource constraints. Given the robustness of the access control system, we recommend reading the full documentation for it.
 
-For example, an operator of Infisical may define the following constraints to restrict client access to particular resources:
+For example, an operator of KMS may define the following constraints to restrict client access to particular resources:
 
 - Read and write access to a secret resource via an additional privilege attached to the bound-identity.
 - Read-only access to a secret resource via one or multiple roles attached to the bound-identity.
@@ -69,51 +69,51 @@ For example, an operator of Infisical may define the following constraints to re
 
 ## Cryptography
 
-All symmetric encryption operations, with the exception of those proxied through external KMS and HSM systems, in Infisical use a software-backed, 256-bit Advanced Encryption Standard (AES) cipher in the Galois Counter Mode (GCM) with 96-bit nonces — AES-256-GCM.
+All symmetric encryption operations, with the exception of those proxied through external KMS and HSM systems, in KMS use a software-backed, 256-bit Advanced Encryption Standard (AES) cipher in the Galois Counter Mode (GCM) with 96-bit nonces — AES-256-GCM.
 
-Infisical employs a multilayer approach to its encryption architecture with components that can be optionally linked to external KMS or HSM systems. At a high-level, a master key, backed by an operator-provided key, is used to encrypt (internal) “KMS” keys that are used to then encrypt data keys; the data keys are used to protect sensitive data stored in Infisical. The keys in the architecture are stored encrypted in the storage backend, retrieved, decrypted, and only then used as part of server operations when needed. Since server configuration is needed to decrypt any keys as part of the encryption architecture, accessing any sensitive data in Infisical requires access to both server configuration and data in the storage backend. Note that the platform’s encryption architecture has components that can be linked to external KMS and HSM systems; opting for these make the use of the software more FIPS aligned.
+KMS employs a multilayer approach to its encryption architecture with components that can be optionally linked to external KMS or HSM systems. At a high-level, a master key, backed by an operator-provided key, is used to encrypt (internal) “KMS” keys that are used to then encrypt data keys; the data keys are used to protect sensitive data stored in KMS. The keys in the architecture are stored encrypted in the storage backend, retrieved, decrypted, and only then used as part of server operations when needed. Since server configuration is needed to decrypt any keys as part of the encryption architecture, accessing any sensitive data in KMS requires access to both server configuration and data in the storage backend. Note that the platform’s encryption architecture has components that can be linked to external KMS and HSM systems; opting for these make the use of the software more FIPS aligned.
 
 To be specific:
 
-- The architecture starts with a 256-bit master key that can be secured by a root key which can either be a 128-bit key, passed into the server by an operator of Infisical as an environment variable, or an external key from an HSM module such as [Thales Luna HSM](https://cpl.thalesgroup.com/encryption/data-protection-on-demand/services/luna-cloud-hsm) or [AWS Cloud HSM](https://aws.amazon.com/cloudhsm/) linked via specified configuration parameters.
-- The master key secures 256-bit keys in Infisical henceforth referred to as KMS keys.
-- Each organization in Infisical has its own KMS key and a separate data key; the KMS key is used to secure the data key which encrypts organization-level data.
-- Each project in Infisical has a designated KMS key and a separate data key; the KMS key is used to secure the data key which encrypts project-level data. Note that a project KMS key can be substituted for an external key from a KMS such as [AWS KMS](https://infisical.com/docs/documentation/platform/kms-configuration/aws-kms), [AWS Cloud HSM](https://infisical.com/docs/documentation/platform/kms-configuration/aws-hsm), and [GCP KMS](https://infisical.com/docs/documentation/platform/kms-configuration/gcp-kms). We recommend reading the fuller [documentation](https://infisical.com/docs/documentation/platform/kms-configuration/overview) or integrating with an external KMS
+- The architecture starts with a 256-bit master key that can be secured by a root key which can either be a 128-bit key, passed into the server by an operator of KMS as an environment variable, or an external key from an HSM module such as [Thales Luna HSM](https://cpl.thalesgroup.com/encryption/data-protection-on-demand/services/luna-cloud-hsm) or [AWS Cloud HSM](https://aws.amazon.com/cloudhsm/) linked via specified configuration parameters.
+- The master key secures 256-bit keys in KMS henceforth referred to as KMS keys.
+- Each organization in KMS has its own KMS key and a separate data key; the KMS key is used to secure the data key which encrypts organization-level data.
+- Each project in KMS has a designated KMS key and a separate data key; the KMS key is used to secure the data key which encrypts project-level data. Note that a project KMS key can be substituted for an external key from a KMS such as [AWS KMS](https://lux.network/docs/documentation/platform/kms-configuration/aws-kms), [AWS Cloud HSM](https://lux.network/docs/documentation/platform/kms-configuration/aws-hsm), and [GCP KMS](https://lux.network/docs/documentation/platform/kms-configuration/gcp-kms). We recommend reading the fuller [documentation](https://lux.network/docs/documentation/platform/kms-configuration/overview) or integrating with an external KMS
 
-## Infrastructure & High availability (Infisical Cloud)
+## Infrastructure & High availability (KMS Cloud)
 
-Infisical Cloud uses a number of strategies to keep services running smoothly and ensure data stays available, even during failures; we document these strategies below:
+KMS Cloud uses a number of strategies to keep services running smoothly and ensure data stays available, even during failures; we document these strategies below:
 
-- Multi-AZ AWS RDS: Infisical Cloud runs AWS Relational Database Service (RDS) with Multi-AZ deployments to improve availability and durability. This setup keeps a standby replica in a different Availability Zone (AZ) and automatically fails over if the primary instance goes down. Continuous backups and replication help protect data and minimize interruptions.
-- Multi-AZ ElastiCache (Redis): For caching, Infisical Cloud runs Amazon ElastiCache (Redis) in a Multi-AZ setup. This means data is replicated across different AZs, so if one goes down, the system can automatically fail over to a healthy node. This helps keep response times low and ensures caching stays reliable.
-- Multi-AZ ECS for Container Orchestration: Infisical Cloud runs on Amazon Elastic Container Service (ECS) across multiple availability zones, making sure containers stay available even if an AZ fails. If one zone has an issue, traffic automatically shifts to healthy instances in other zones, keeping downtime to a minimum.
+- Multi-AZ AWS RDS: KMS Cloud runs AWS Relational Database Service (RDS) with Multi-AZ deployments to improve availability and durability. This setup keeps a standby replica in a different Availability Zone (AZ) and automatically fails over if the primary instance goes down. Continuous backups and replication help protect data and minimize interruptions.
+- Multi-AZ ElastiCache (Redis): For caching, KMS Cloud runs Amazon ElastiCache (Redis) in a Multi-AZ setup. This means data is replicated across different AZs, so if one goes down, the system can automatically fail over to a healthy node. This helps keep response times low and ensures caching stays reliable.
+- Multi-AZ ECS for Container Orchestration: KMS Cloud runs on Amazon Elastic Container Service (ECS) across multiple availability zones, making sure containers stay available even if an AZ fails. If one zone has an issue, traffic automatically shifts to healthy instances in other zones, keeping downtime to a minimum.
 
-Infisical Cloud utilizes several strategies to ensure high availability, leveraging AWS services to maintain continuous operation and data integrity.
+KMS Cloud utilizes several strategies to ensure high availability, leveraging AWS services to maintain continuous operation and data integrity.
 
-## Cross-Region Replication for Disaster Recovery (Infisical Cloud)
+## Cross-Region Replication for Disaster Recovery (KMS Cloud)
 
-To handle regional failures, Infisical Cloud keeps standby regions updated and ready to take over when needed.
+To handle regional failures, KMS Cloud keeps standby regions updated and ready to take over when needed.
 
 - ElastiCache (Redis): Data is replicated across regions using AWS Global Datastore, keeping cached data consistent and available even if a primary region goes down.
 - RDS (PostgreSQL): Cross-region read replicas ensure database data is available in multiple locations, allowing for failover in case of a regional outage.
 
-With standby regions and automated failovers in place, Infisical Cloud faces minimal service disruptions even during large-scale outages.
+With standby regions and automated failovers in place, KMS Cloud faces minimal service disruptions even during large-scale outages.
 
 ## Penetration testing
 
-Infisical hires external third parties to perform regular security assessment and penetration testing of the platform.
+KMS hires external third parties to perform regular security assessment and penetration testing of the platform.
 
-Most recently, Infisical commissioned cybersecurity firm [Cure53](https://cure53.de/) to perform a full-coverage, gray box penetration test against the platform's entire attack surface to identify vulnerabilities according to industry standards (OWASP, ASVS, WSTG, TOP-10, etc.).
+Most recently, KMS commissioned cybersecurity firm [Cure53](https://cure53.de/) to perform a full-coverage, gray box penetration test against the platform's entire attack surface to identify vulnerabilities according to industry standards (OWASP, ASVS, WSTG, TOP-10, etc.).
 
-Please email security@infisical.com to request any reports including a letter of attestation for the conducted penetration test.
+Please email security@lux.network to request any reports including a letter of attestation for the conducted penetration test.
 
 ## Employee data access
 
-Whether or not Infisical or your employees can access data in the Infisical instance and/or storage backend depends on many factors how you use Infisical:
+Whether or not KMS or your employees can access data in the KMS instance and/or storage backend depends on many factors how you use KMS:
 
-- Infisical Self-Hosted: Self-hosting Infisical is common amongst organizations that prefer to keep data on their own infrastructure usually to adhere to strict regulatory and compliance requirements. In this option, organizations retain full control over their data and therefore govern the data access policy of their Infisical instance and storage backend.
-- Infisical Cloud: Using Infisical's managed service, [Infisical Cloud](https://app.infisical.com) means delegating data oversight and management to Infisical. Under our policy controls, employees are only granted access to parts of infrastructure according to principle of least privilege; this is especially relevant to customer data can only be accessed currently by executive management of Infisical. Moreover, any changes to sensitive customer data is prohibited without explicit customer approval.
+- KMS Self-Hosted: Self-hosting KMS is common amongst organizations that prefer to keep data on their own infrastructure usually to adhere to strict regulatory and compliance requirements. In this option, organizations retain full control over their data and therefore govern the data access policy of their KMS instance and storage backend.
+- KMS Cloud: Using KMS's managed service, [KMS Cloud](https://kms.lux.network) means delegating data oversight and management to KMS. Under our policy controls, employees are only granted access to parts of infrastructure according to principle of least privilege; this is especially relevant to customer data can only be accessed currently by executive management of KMS. Moreover, any changes to sensitive customer data is prohibited without explicit customer approval.
 
-It should be noted that, even on Infisical Cloud, it is physically impossible for employees of Infisical to view the values of secrets if users have not explicitly granted Infisical access to their project (i.e. opted out of zero-knowledge).
+It should be noted that, even on KMS Cloud, it is physically impossible for employees of KMS to view the values of secrets if users have not explicitly granted KMS access to their project (i.e. opted out of zero-knowledge).
 
-Please email security@infisical.com if you have any specific inquiries about employee data and security policies.
+Please email security@lux.network if you have any specific inquiries about employee data and security policies.

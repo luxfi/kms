@@ -1,7 +1,7 @@
 ---
 title: "Secret Rotation"
 sidebarTitle: "Overview"
-description: "Learn how to set up automated secret rotation in Infisical."
+description: "Learn how to set up automated secret rotation in KMS."
 ---
 
 ## Introduction
@@ -50,7 +50,7 @@ Each set of credentials transitions through three distinct states:
     <Note>
         Some rotation providers utilize a single credential set due to technical constraints. As a result, inactive credentials for these providers will immediately become invalid once rotated.
 
-        To avoid service interruptions, Infisical recommends manually rotating these credentials to prevent downtime.
+        To avoid service interruptions, KMS recommends manually rotating these credentials to prevent downtime.
     </Note>
 - **Revoked**: Permanently invalidated and deleted from the system
 
@@ -96,7 +96,7 @@ Using a __30-Day__ rotation interval as an example, here's how the process unfol
 - Ensure your applications can handle credential updates gracefully
 - Monitor for applications still using credentials nearing revocation
 
-## Infisical Secret Rotation Strategies
+## KMS Secret Rotation Strategies
 
 - [PostgreSQL Credentials](./postgres)
 - [Microsoft SQL Server Credentials](./mssql)
@@ -110,6 +110,6 @@ Using a __30-Day__ rotation interval as an example, here's how the process unfol
         - The third-party provider's API only supports managing one active credential set at a time
         - The specific use-case (such as personal login accounts) is inherently limited to a single active credential
 
-        In either scenario, when service continuity is critical, Infisical recommends disabling auto-rotation and performing manual credential rotation during scheduled maintenance windows.
+        In either scenario, when service continuity is critical, KMS recommends disabling auto-rotation and performing manual credential rotation during scheduled maintenance windows.
     </Accordion>
 </AccordionGroup>

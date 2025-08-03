@@ -1,33 +1,33 @@
 ---
 title: "Netlify"
-description: "How to sync secrets from Infisical to Netlify"
+description: "How to sync secrets from KMS to Netlify"
 ---
 
 <Tabs>
   <Tab title="Usage">
     <Warning>
-      Infisical integrates with Netlify's new environment variable experience. If
+      KMS integrates with Netlify's new environment variable experience. If
       your site uses Netlify's old environment variable experience, you'll have to
       upgrade it to the new one to use this integration.
     </Warning>
     
     Prerequisites:
 
-    - Set up and add envars to [Infisical Cloud](https://app.infisical.com)
+    - Set up and add envars to [KMS Cloud](https://kms.lux.network)
 
     <Steps>
-      <Step title="Authorize Infisical for Netlify">
-        Navigate to your project's integrations tab in Infisical.
+      <Step title="Authorize KMS for Netlify">
+        Navigate to your project's integrations tab in KMS.
         
         ![integrations](../../images/integrations.png)
 
-        Press on the Netlify tile and grant Infisical access to your Netlify account.
+        Press on the Netlify tile and grant KMS access to your Netlify account.
 
         ![integrations netlify authorization](../../images/integrations/netlify/integrations-netlify-auth.png)
 
       </Step>
       <Step title="Start integration">
-        Select which Infisical environment secrets you want to sync to which Netlify app and context. Lastly, press create integration to start syncing secrets to Netlify.
+        Select which KMS environment secrets you want to sync to which Netlify app and context. Lastly, press create integration to start syncing secrets to Netlify.
 
         ![integrations netlify](../../images/integrations/netlify/integrations-netlify-create.png)
         ![integrations netlify](../../images/integrations/netlify/integrations-netlify.png)
@@ -35,7 +35,7 @@ description: "How to sync secrets from Infisical to Netlify"
     </Steps>
   </Tab>
   <Tab title="Self-Hosted Setup">
-    Using the Netlify integration on a self-hosted instance of Infisical requires configuring an OAuth application in Netlify
+    Using the Netlify integration on a self-hosted instance of KMS requires configuring an OAuth application in Netlify
   and registering your instance with it.
     <Steps>
       <Step title="Create an OAuth application in Netlify">
@@ -48,17 +48,17 @@ description: "How to sync secrets from Infisical to Netlify"
 
         ![integrations Netlify config](../../images/integrations/netlify/integrations-netlify-config-new-app-form.png) 
       </Step>
-      <Step title="Add your Netlify OAuth application credentials to Infisical">
+      <Step title="Add your Netlify OAuth application credentials to KMS">
         Obtain the **Client ID** and **Secret** for your Netlify OAuth application.
         
         ![integrations Netlify config](../../images/integrations/netlify/integrations-netlify-config-credentials.png) 
         
-        Back in your Infisical instance, add two new environment variables for the credentials of your Netlify OAuth application.
+        Back in your KMS instance, add two new environment variables for the credentials of your Netlify OAuth application.
 
         - `CLIENT_ID_NETLIFY`: The **Client ID** of your Netlify OAuth application.
         - `CLIENT_SECRET_NETLIFY`: The **Secret** of your Netlify OAuth application.
         
-        Once added, restart your Infisical instance and use the Netlify integration.
+        Once added, restart your KMS instance and use the Netlify integration.
       </Step>
     </Steps>
   </Tab>

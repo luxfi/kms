@@ -170,7 +170,7 @@ export const PkiCollectionDetailsByIDPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: "PKI Collection" })}</title>
-        <link rel="icon" href="/infisical.ico" />
+        <link rel="icon" href="/kms.ico" />
       </Helmet>
       <ProjectPermissionCan
         renderGuardBanner

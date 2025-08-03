@@ -17,7 +17,7 @@ export const UpgradePlanModal = ({ text, isOpen, onOpenChange }: Props): JSX.Ele
   const link =
     subscription && subscription.slug !== null
       ? ("/organization/billing" as const)
-      : "https://infisical.com/scheduledemo";
+      : "https://lux.network/scheduledemo";
 
   const handleUpgradeBtnClick = async () => {
     try {
@@ -43,7 +43,7 @@ export const UpgradePlanModal = ({ text, isOpen, onOpenChange }: Props): JSX.Ele
 
   return (
     <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
-      <ModalContent title="Unleash Infisical's Full Power">
+      <ModalContent title="Unleash KMS's Full Power">
         <p className="mb-2 text-bunker-300">{text}</p>
         <p className="text-bunker-300">
           Upgrade and get access to this, as well as to other powerful enhancements.

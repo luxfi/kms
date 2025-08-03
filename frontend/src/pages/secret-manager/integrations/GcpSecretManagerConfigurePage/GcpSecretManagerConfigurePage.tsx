@@ -68,7 +68,7 @@ export const GcpSecretManagerConfigurePage = () => {
       secretSuffix: "",
       shouldLabel: false,
       labelName: "managed-by",
-      labelValue: "infisical",
+      labelValue: "kms",
       selectedSourceEnvironment: currentWorkspace.environments[0].slug
     }
   });
@@ -93,7 +93,7 @@ export const GcpSecretManagerConfigurePage = () => {
   useEffect(() => {
     if (shouldLabel) {
       setValue("labelName", "managed-by");
-      setValue("labelValue", "infisical");
+      setValue("labelValue", "kms");
       return;
     }
 
@@ -183,7 +183,7 @@ export const GcpSecretManagerConfigurePage = () => {
         </Helmet>
         <CardTitle
           className="mb-2 px-6 text-left text-xl"
-          subTitle="Select which environment or folder in Infisical you want to sync to GCP Secret Manager."
+          subTitle="Select which environment or folder in KMS you want to sync to GCP Secret Manager."
         >
           <div className="flex flex-row items-center">
             <div className="flex items-center pb-0.5">
@@ -198,7 +198,7 @@ export const GcpSecretManagerConfigurePage = () => {
             <a
               target="_blank"
               rel="noopener noreferrer"
-              href="https://infisical.com/docs/integrations/cloud/gcp-secret-manager"
+              href="https://lux.network/docs/integrations/cloud/gcp-secret-manager"
             >
               <div className="mb-1 ml-2 inline-block cursor-default rounded-md bg-yellow/20 px-1.5 pb-[0.03rem] pt-[0.04rem] text-sm text-yellow opacity-80 hover:opacity-100">
                 <FontAwesomeIcon icon={faBookOpen} className="mr-1.5" />
@@ -327,7 +327,7 @@ export const GcpSecretManagerConfigurePage = () => {
                     isError={Boolean(error)}
                     errorText={error?.message}
                   >
-                    <Input {...field} placeholder="INFISICAL_" />
+                    <Input {...field} placeholder="KMS_" />
                   </FormControl>
                 )}
               />
@@ -340,7 +340,7 @@ export const GcpSecretManagerConfigurePage = () => {
                     isError={Boolean(error)}
                     errorText={error?.message}
                   >
-                    <Input {...field} placeholder="_INFISICAL" />
+                    <Input {...field} placeholder="_KMS" />
                   </FormControl>
                 )}
               />
@@ -383,7 +383,7 @@ export const GcpSecretManagerConfigurePage = () => {
                         isError={Boolean(error)}
                         errorText={error?.message}
                       >
-                        <Input {...field} placeholder="infisical" />
+                        <Input {...field} placeholder="kms" />
                       </FormControl>
                     )}
                   />
@@ -455,7 +455,7 @@ export const GcpSecretManagerConfigurePage = () => {
           src="/images/loading/loading.gif"
           height={70}
           width={120}
-          alt="infisical loading indicator"
+          alt="kms loading indicator"
         />
       ) : (
         <div className="flex h-max max-w-md flex-col rounded-md border border-mineshaft-600 bg-mineshaft-800 p-6 text-center text-mineshaft-200">
@@ -466,9 +466,9 @@ export const GcpSecretManagerConfigurePage = () => {
               className="inline cursor-pointer text-mineshaft-100 underline decoration-primary-500 underline-offset-4 opacity-80 duration-200 hover:opacity-100"
               target="_blank"
               rel="noopener noreferrer"
-              href="mailto:support@infisical.com"
+              href="mailto:support@lux.network"
             >
-              support@infisical.com
+              support@lux.network
             </a>{" "}
             if the issue persists.
           </p>

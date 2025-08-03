@@ -16,7 +16,7 @@ import { ProjectPermissionCan } from "@app/components/permissions";
 import { SecretRotationV2StatusBadge } from "@app/components/secret-rotations-v2/SecretRotationV2StatusBadge";
 import { IconButton, Modal, ModalContent, TableContainer, Tag, Tooltip } from "@app/components/v2";
 import { Blur } from "@app/components/v2/Blur";
-import { InfisicalSecretInput } from "@app/components/v2/InfisicalSecretInput";
+import { KMSSecretInput } from "@app/components/v2/KMSSecretInput";
 import { ProjectPermissionSub } from "@app/context";
 import { ProjectPermissionSecretRotationActions } from "@app/context/ProjectPermissionContext/types";
 import { SECRET_ROTATION_MAP } from "@app/helpers/secretRotationsV2";
@@ -235,7 +235,7 @@ export const SecretRotationItem = ({
                               tooltipText="You do not have permission to read the value of this secret."
                             />
                           ) : (
-                            <InfisicalSecretInput
+                            <KMSSecretInput
                               isReadOnly
                               value={secret.value}
                               secretPath={secretRotation.folder.path}

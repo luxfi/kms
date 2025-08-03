@@ -27,11 +27,11 @@ export const SecretScanningSecretsDetectedTemplate = ({
   return (
     <BaseEmailWrapper
       title="Incident Alert: Secret(s) Leaked"
-      preview="Infisical uncovered one or more leaked secrets."
+      preview="KMS uncovered one or more leaked secrets."
       siteUrl={siteUrl}
     >
       <Heading className="text-black text-[18px] leading-[28px] text-center font-normal p-0 mx-0">
-        Infisical has uncovered <strong>{numberOfSecrets}</strong> secret(s)
+        KMS has uncovered <strong>{numberOfSecrets}</strong> secret(s)
         {isDiffScan ? " from a recent commit to" : " in"} <strong>{resourceName}</strong>
       </Heading>
       <Section className="px-[24px] mb-[28px] mt-[36px] pt-[8px] pb-[8px] text-[14px] border border-solid border-gray-200 rounded-md bg-gray-50">
@@ -59,7 +59,7 @@ export const SecretScanningSecretsDetectedTemplate = ({
           .
         </Text>
         <Text className="text-[14px]">
-          If these are test secrets, please add `infisical-scan:ignore` at the end of the line containing the secret as
+          If these are test secrets, please add `kms-scan:ignore` at the end of the line containing the secret as
           a comment in the given programming language. This will prevent future notifications from being sent out for
           these secrets.
         </Text>
@@ -68,7 +68,7 @@ export const SecretScanningSecretsDetectedTemplate = ({
         </Text>
         <Text className="text-[14px]">
           Once you have taken action, be sure to update the finding status in the{" "}
-          <BaseLink href={url}>Infisical Dashboard</BaseLink>.
+          <BaseLink href={url}>KMS Dashboard</BaseLink>.
         </Text>
       </Section>
       <Section className="text-center">
@@ -82,10 +82,10 @@ export default SecretScanningSecretsDetectedTemplate;
 
 SecretScanningSecretsDetectedTemplate.PreviewProps = {
   authorName: "Jim",
-  authorEmail: "jim@infisical.com",
+  authorEmail: "jim@lux.network",
   resourceName: "my-resource",
   numberOfSecrets: 3,
-  url: "https://infisical.com",
+  url: "https://lux.network",
   isDiffScan: true,
-  siteUrl: "https://infisical.com"
+  siteUrl: "https://lux.network"
 } as SecretScanningSecretsDetectedTemplateProps;

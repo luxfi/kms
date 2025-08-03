@@ -9,9 +9,9 @@ import { CommitType } from "@app/services/folder-commit/folder-commit-service";
 import { KmsDataKey } from "@app/services/kms/kms-types";
 import { fnSecretBulkInsert, getAllSecretReferences } from "@app/services/secret-v2-bridge/secret-v2-bridge-fns";
 
-import { TImportDataIntoInfisicalDTO } from "./envkey";
+import { TImportDataIntoKMSDTO } from "./envkey";
 
-export const importDataIntoInfisicalFn = async ({
+export const importDataIntoKMSFn = async ({
   projectService,
   projectEnvDAL,
   projectDAL,
@@ -25,8 +25,8 @@ export const importDataIntoInfisicalFn = async ({
   folderVersionDAL,
   folderCommitService,
   input: { data, actor, actorId, actorOrgId, actorAuthMethod }
-}: TImportDataIntoInfisicalDTO) => {
-  // Import data to infisical
+}: TImportDataIntoKMSDTO) => {
+  // Import data to kms
   if (!data || !data.projects) {
     throw new BadRequestError({ message: "No projects found in data" });
   }
@@ -191,7 +191,7 @@ export const importDataIntoInfisicalFn = async ({
 
         // Skip if we can't find either an environment or folder mapping for this secret
         if (!originalToNewEnvironmentId.get(secret.environmentId) && !originalToNewFolderId.get(targetId)) {
-          logger.info({ secret }, "[importDataIntoInfisicalFn]: Could not find environment or folder for secret");
+          logger.info({ secret }, "[importDataIntoKMSFn]: Could not find environment or folder for secret");
 
           // eslint-disable-next-line no-continue
           continue;
@@ -221,7 +221,7 @@ export const importDataIntoInfisicalFn = async ({
 
       // for each of the mappedEnvironmentId
       for await (const [targetId, secrets] of mappedToEnvironmentId) {
-        logger.info("[importDataIntoInfisicalFn]: Processing secrets for targetId", targetId);
+        logger.info("[importDataIntoKMSFn]: Processing secrets for targetId", targetId);
 
         let selectedFolder: TSecretFolders | undefined;
         let selectedProjectId: string | undefined;
@@ -229,18 +229,18 @@ export const importDataIntoInfisicalFn = async ({
         // Case 1: Secret belongs to a folder / branch / branch of a block
         const foundFolder = originalToNewFolderId.get(targetId);
         if (foundFolder) {
-          logger.info("[importDataIntoInfisicalFn]: Processing secrets for folder");
+          logger.info("[importDataIntoKMSFn]: Processing secrets for folder");
           selectedFolder = await folderDAL.findById(foundFolder.folderId, tx);
           selectedProjectId = foundFolder.projectId;
         } else {
-          logger.info("[importDataIntoInfisicalFn]: Processing secrets for normal environment");
+          logger.info("[importDataIntoKMSFn]: Processing secrets for normal environment");
           const environment = data.environments.find((env) => env.id === targetId);
           if (!environment) {
             logger.info(
               {
                 targetId
               },
-              "[importDataIntoInfisicalFn]: Could not find environment for secret"
+              "[importDataIntoKMSFn]: Could not find environment for secret"
             );
             // eslint-disable-next-line no-continue
             continue;
@@ -258,7 +258,7 @@ export const importDataIntoInfisicalFn = async ({
               {
                 targetId
               },
-              "[importDataIntoInfisicalFn]: Could not find environment for secret"
+              "[importDataIntoKMSFn]: Could not find environment for secret"
             );
 
             // eslint-disable-next-line no-continue

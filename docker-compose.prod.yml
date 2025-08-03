@@ -2,14 +2,14 @@ version: "3"
 
 services:
   backend:
-    container_name: infisical-backend
+    container_name: kms-backend
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_started
-    image: infisical/infisical:latest-postgres
+    image: kms/kms:latest-postgres
     pull_policy: always
     env_file: .env
     ports:
@@ -17,11 +17,11 @@ services:
     environment:
       - NODE_ENV=production
     networks:
-      - infisical
+      - kms
 
   redis:
     image: redis
-    container_name: infisical-dev-redis
+    container_name: kms-dev-redis
     env_file: .env
     restart: always
     environment:
@@ -29,19 +29,19 @@ services:
     ports:
       - 6379:6379
     networks:
-      - infisical
+      - kms
     volumes:
       - redis_data:/data
 
   db:
-    container_name: infisical-db
+    container_name: kms-db
     image: postgres:14-alpine
     restart: always
     env_file: .env
     volumes:
       - pg_data:/var/lib/postgresql/data
     networks:
-      - infisical
+      - kms
     healthcheck:
       test: "pg_isready --username=${POSTGRES_USER} && psql --username=${POSTGRES_USER} --list"
       interval: 5s
@@ -55,4 +55,4 @@ volumes:
     driver: local
 
 networks:
-  infisical:
+  kms:

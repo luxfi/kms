@@ -57,7 +57,7 @@ const initialSyncBehaviors = [
     label: "Import - Prefer values from Azure App Configuration",
     value: IntegrationSyncBehavior.PREFER_TARGET
   },
-  { label: "Import - Prefer values from Infisical", value: IntegrationSyncBehavior.PREFER_SOURCE }
+  { label: "Import - Prefer values from KMS", value: IntegrationSyncBehavior.PREFER_SOURCE }
 ];
 
 export const AzureAppConfigurationConfigurePage = () => {
@@ -155,7 +155,7 @@ export const AzureAppConfigurationConfigurePage = () => {
       <Card className="max-w-lg rounded-md border border-mineshaft-600">
         <CardTitle
           className="text-left text-xl"
-          subTitle="Choose which environment in Infisical you want to sync to your Azure App Configuration."
+          subTitle="Choose which environment in KMS you want to sync to your Azure App Configuration."
         >
           <div className="flex flex-row items-center">
             <div className="flex items-center">
@@ -168,7 +168,7 @@ export const AzureAppConfigurationConfigurePage = () => {
             </div>
             <span className="ml-1.5">Azure App Configuration</span>
             <a
-              href="https://infisical.com/docs/integrations/cloud/azure-app-configuration"
+              href="https://lux.network/docs/integrations/cloud/azure-app-configuration"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -267,7 +267,7 @@ export const AzureAppConfigurationConfigurePage = () => {
                 isError={Boolean(error)}
               >
                 <Input
-                  placeholder="https://infisical-configuration-integration-test.azconfig.io"
+                  placeholder="https://kms-configuration-integration-test.azconfig.io"
                   {...field}
                 />
               </FormControl>

@@ -60,7 +60,7 @@ export const ProjectTemplatesSection = () => {
                   <a
                     target="_blank"
                     rel="noopener noreferrer"
-                    href="https://infisical.com/docs/documentation/platform/project-templates"
+                    href="https://lux.network/docs/documentation/platform/project-templates"
                   >
                     <div className="ml-2 mt-[0.32rem] inline-block rounded-md bg-yellow/20 px-1.5 text-sm text-yellow opacity-80 hover:opacity-100">
                       <FontAwesomeIcon icon={faBookOpen} className="mr-1.5" />
@@ -105,7 +105,7 @@ export const ProjectTemplatesSection = () => {
                 <UpgradePlanModal
                   isOpen={popUp.upgradePlan.isOpen}
                   onOpenChange={(isOpen) => handlePopUpToggle("upgradePlan", isOpen)}
-                  text="You can create project templates if you switch to Infisical's Enterprise plan."
+                  text="You can create project templates if you switch to KMS's Enterprise plan."
                 />
               </div>
             </div>

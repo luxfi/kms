@@ -124,7 +124,7 @@ export const MemberRoleModify = ({ projectMember, onOpenUpgradeModal }: Props) =
 
     if (hasCustomRoleSelected && subscription && !subscription?.rbac) {
       onOpenUpgradeModal(
-        "You can assign custom roles to members if you upgrade your Infisical plan."
+        "You can assign custom roles to members if you upgrade your KMS plan."
       );
       return;
     }

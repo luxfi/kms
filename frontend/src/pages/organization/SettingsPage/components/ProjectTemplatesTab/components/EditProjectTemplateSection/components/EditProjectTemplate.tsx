@@ -17,10 +17,10 @@ import { ProjectTemplateRolesSection } from "./ProjectTemplateRolesSection";
 type Props = {
   projectTemplate: TProjectTemplate;
   onBack: () => void;
-  isInfisicalTemplate: boolean;
+  isKMSTemplate: boolean;
 };
 
-export const EditProjectTemplate = ({ isInfisicalTemplate, projectTemplate, onBack }: Props) => {
+export const EditProjectTemplate = ({ isKMSTemplate, projectTemplate, onBack }: Props) => {
   const { handlePopUpToggle, popUp, handlePopUpOpen, handlePopUpClose } = usePopUp([
     "removeTemplate",
     "editDetails"
@@ -60,7 +60,7 @@ export const EditProjectTemplate = ({ isInfisicalTemplate, projectTemplate, onBa
             {description || "Project Template"}
           </h2>
         </div>
-        {!isInfisicalTemplate && (
+        {!isKMSTemplate && (
           <div className="flex gap-2">
             <OrgPermissionCan
               I={OrgPermissionActions.Edit}
@@ -101,12 +101,12 @@ export const EditProjectTemplate = ({ isInfisicalTemplate, projectTemplate, onBa
       </div>
       {type === ProjectType.SecretManager && (
         <ProjectTemplateEnvironmentsForm
-          isInfisicalTemplate={isInfisicalTemplate}
+          isKMSTemplate={isKMSTemplate}
           projectTemplate={projectTemplate}
         />
       )}
       <ProjectTemplateRolesSection
-        isInfisicalTemplate={isInfisicalTemplate}
+        isKMSTemplate={isKMSTemplate}
         projectTemplate={projectTemplate}
       />
       <ProjectTemplateDetailsModal

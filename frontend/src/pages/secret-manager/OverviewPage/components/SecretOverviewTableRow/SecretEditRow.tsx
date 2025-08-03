@@ -26,7 +26,7 @@ import {
   ModalTrigger,
   Tooltip
 } from "@app/components/v2";
-import { InfisicalSecretInput } from "@app/components/v2/InfisicalSecretInput";
+import { KMSSecretInput } from "@app/components/v2/KMSSecretInput";
 import { ProjectPermissionActions, ProjectPermissionSub, useProjectPermission } from "@app/context";
 import { ProjectPermissionSecretActions } from "@app/context/ProjectPermissionContext/types";
 import { usePopUp, useToggle } from "@app/hooks";
@@ -225,7 +225,7 @@ export const SecretEditRow = ({
           control={control}
           name="value"
           render={({ field }) => (
-            <InfisicalSecretInput
+            <KMSSecretInput
               {...field}
               isReadOnly={isImportedSecret || (isRotatedSecret && !isOverride)}
               value={field.value as string}

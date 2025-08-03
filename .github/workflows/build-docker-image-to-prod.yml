@@ -2,8 +2,8 @@ name: Release production images (frontend, backend)
 on:
   push:
     tags:
-      - "infisical/v*.*.*"
-      - "!infisical/v*.*.*-postgres"
+      - "kms/v*.*.*"
+      - "!kms/v*.*.*-postgres"
 
 jobs:
   backend-image:
@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Extract version from tag
         id: extract_version
-        run: echo "::set-output name=version::${GITHUB_REF_NAME#infisical/}"
+        run: echo "::set-output name=version::${GITHUB_REF_NAME#kms/}"
       - name: ☁️ Checkout source
         uses: actions/checkout@v3
       - name: 📦 Install dependencies to test all dependencies
@@ -40,14 +40,14 @@ jobs:
           token: ${{ secrets.DEPOT_PROJECT_TOKEN }}
           load: true
           context: backend
-          tags: infisical/infisical:test
+          tags: kms/kms:test
           platforms: linux/amd64,linux/arm64
       - name: ⏻ Spawn backend container and dependencies
         run: |
           docker compose -f .github/resources/docker-compose.be-test.yml up --wait --quiet-pull
       - name: 🧪 Test backend image
         run: |
-          ./.github/resources/healthcheck.sh infisical-backend-test
+          ./.github/resources/healthcheck.sh kms-backend-test
       - name: ⏻ Shut down backend container and dependencies
         run: |
           docker compose -f .github/resources/docker-compose.be-test.yml down
@@ -59,9 +59,9 @@ jobs:
           push: true
           context: backend
           tags: |
-            infisical/backend:${{ steps.commit.outputs.short }}
-            infisical/backend:latest
-            infisical/backend:${{ steps.extract_version.outputs.version }}
+            kms/backend:${{ steps.commit.outputs.short }}
+            kms/backend:latest
+            kms/backend:${{ steps.extract_version.outputs.version }}
           platforms: linux/amd64,linux/arm64
 
   frontend-image:
@@ -70,7 +70,7 @@ jobs:
     steps:
       - name: Extract version from tag
         id: extract_version
-        run: echo "::set-output name=version::${GITHUB_REF_NAME#infisical/}"
+        run: echo "::set-output name=version::${GITHUB_REF_NAME#kms/}"
       - name: ☁️ Checkout source
         uses: actions/checkout@v3
       - name: Save commit hashes for tag
@@ -92,20 +92,20 @@ jobs:
           token: ${{ secrets.DEPOT_PROJECT_TOKEN }}
           project: 64mmf0n610
           context: frontend
-          tags: infisical/frontend:test
+          tags: kms/frontend:test
           platforms: linux/amd64,linux/arm64
           build-args: |
             POSTHOG_API_KEY=${{ secrets.PUBLIC_POSTHOG_API_KEY }}
-            NEXT_INFISICAL_PLATFORM_VERSION=${{ steps.extract_version.outputs.version }}
+            NEXT_KMS_PLATFORM_VERSION=${{ steps.extract_version.outputs.version }}
       - name: ⏻ Spawn frontend container
         run: |
-          docker run -d --rm --name infisical-frontend-test infisical/frontend:test
+          docker run -d --rm --name kms-frontend-test kms/frontend:test
       - name: 🧪 Test frontend image
         run: |
-          ./.github/resources/healthcheck.sh infisical-frontend-test
+          ./.github/resources/healthcheck.sh kms-frontend-test
       - name: ⏻ Shut down frontend container
         run: |
-          docker stop infisical-frontend-test
+          docker stop kms-frontend-test
       - name: 🏗️ Build frontend and push
         uses: depot/build-push-action@v1
         with:
@@ -114,10 +114,10 @@ jobs:
           token: ${{ secrets.DEPOT_PROJECT_TOKEN }}
           context: frontend
           tags: |
-            infisical/frontend:${{ steps.commit.outputs.short }}
-            infisical/frontend:latest
-            infisical/frontend:${{ steps.extract_version.outputs.version }}
+            kms/frontend:${{ steps.commit.outputs.short }}
+            kms/frontend:latest
+            kms/frontend:${{ steps.extract_version.outputs.version }}
           platforms: linux/amd64,linux/arm64
           build-args: |
             POSTHOG_API_KEY=${{ secrets.PUBLIC_POSTHOG_API_KEY }}
-            NEXT_INFISICAL_PLATFORM_VERSION=${{ steps.extract_version.outputs.version }}
+            NEXT_KMS_PLATFORM_VERSION=${{ steps.extract_version.outputs.version }}

@@ -26,7 +26,7 @@ export const ProjectAccessRequestTemplate = ({
   return (
     <BaseEmailWrapper
       title="Project Access Request"
-      preview="A user has requested access to an Infisical project."
+      preview="A user has requested access to an KMS project."
       siteUrl={siteUrl}
     >
       <Heading className="text-black text-[18px] leading-[28px] text-center font-normal p-0 mx-0">
@@ -52,10 +52,10 @@ export default ProjectAccessRequestTemplate;
 
 ProjectAccessRequestTemplate.PreviewProps = {
   requesterName: "Abigail Williams",
-  requesterEmail: "abigail@infisical.com",
+  requesterEmail: "abigail@lux.network",
   orgName: "Example Org",
-  siteUrl: "https://infisical.com",
+  siteUrl: "https://lux.network",
   projectName: "Example Project",
   note: "I need access to the project for the new initiative for HR.",
-  callback_url: "https://infisical.com"
+  callback_url: "https://lux.network"
 } as ProjectAccessRequestTemplateProps;

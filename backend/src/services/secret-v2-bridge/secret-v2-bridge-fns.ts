@@ -11,7 +11,7 @@ import { ActorType } from "../auth/auth-type";
 import { CommitType } from "../folder-commit/folder-commit-service";
 import { TProjectEnvDALFactory } from "../project-env/project-env-dal";
 import { ResourceMetadataDTO } from "../resource-metadata/resource-metadata-schema";
-import { INFISICAL_SECRET_VALUE_HIDDEN_MASK } from "../secret/secret-fns";
+import { KMS_SECRET_VALUE_HIDDEN_MASK } from "../secret/secret-fns";
 import { TSecretFolderDALFactory } from "../secret-folder/secret-folder-dal";
 import { TSecretReminderRecipient } from "../secret-reminder-recipients/secret-reminder-recipients-types";
 import { TSecretV2BridgeDALFactory } from "./secret-v2-bridge-dal";
@@ -813,7 +813,7 @@ export const reshapeBridgeSecret = (
   secretReminderRecipients: secret.secretReminderRecipients || [],
   ...(secretValueHidden
     ? {
-        secretValue: secret.type === SecretType.Personal ? secret.value : INFISICAL_SECRET_VALUE_HIDDEN_MASK,
+        secretValue: secret.type === SecretType.Personal ? secret.value : KMS_SECRET_VALUE_HIDDEN_MASK,
         secretValueHidden: true
       }
     : {

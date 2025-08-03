@@ -313,7 +313,7 @@ export const AccessApprovalRequest = ({
               <div className="flex items-start gap-1">
                 <p className="text-xl font-semibold text-mineshaft-100">Access Requests</p>
                 <a
-                  href="https://infisical.com/docs/documentation/platform/access-controls/access-requests"
+                  href="https://lux.network/docs/documentation/platform/access-controls/access-requests"
                   target="_blank"
                   rel="noopener noreferrer"
                 >

@@ -43,7 +43,7 @@ export const SecretScanningDataSourcesSection = () => {
             <div className="flex items-center gap-1">
               <p className="text-xl font-semibold text-mineshaft-100">Data Sources</p>
               <a
-                href="https://infisical.com/docs/documentation/platform/secret-scanning/overview"
+                href="https://lux.network/docs/documentation/platform/secret-scanning/overview"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -94,7 +94,7 @@ export const SecretScanningDataSourcesSection = () => {
       <UpgradePlanModal
         isOpen={popUp.upgradePlan.isOpen}
         onOpenChange={(isOpen) => handlePopUpToggle("upgradePlan", isOpen)}
-        text="You can create Data Sources by upgrading to Infisical's Enterprise plan."
+        text="You can create Data Sources by upgrading to KMS's Enterprise plan."
       />
     </>
   );

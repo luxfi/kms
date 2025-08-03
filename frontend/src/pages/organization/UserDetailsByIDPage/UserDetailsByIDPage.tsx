@@ -178,7 +178,7 @@ const Page = withPermission(
                             onClick={async () => {
                               if (currentOrg?.scimEnabled) {
                                 createNotification({
-                                  text: "You cannot manage users from Infisical when SCIM is enabled for your organization",
+                                  text: "You cannot manage users from KMS when SCIM is enabled for your organization",
                                   type: "error"
                                 });
                                 return;
@@ -221,7 +221,7 @@ const Page = withPermission(
                             onClick={() => {
                               if (currentOrg?.scimEnabled) {
                                 createNotification({
-                                  text: "You cannot manage users from Infisical when SCIM is enabled for your organization",
+                                  text: "You cannot manage users from KMS when SCIM is enabled for your organization",
                                   type: "error"
                                 });
                                 return;
@@ -310,7 +310,7 @@ export const UserDetailsByIDPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.org.title") })}</title>
-        <link rel="icon" href="/infisical.ico" />
+        <link rel="icon" href="/kms.ico" />
       </Helmet>
       <Page />
     </>

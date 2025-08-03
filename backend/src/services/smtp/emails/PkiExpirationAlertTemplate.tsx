@@ -17,8 +17,8 @@ export const PkiExpirationAlertTemplate = ({
 }: PkiExpirationAlertTemplateProps) => {
   return (
     <BaseEmailWrapper
-      title="Infisical CA/Certificate Expiration Notice"
-      preview="One or more of your Infisical certificates is about to expire."
+      title="KMS CA/Certificate Expiration Notice"
+      preview="One or more of your KMS certificates is about to expire."
       siteUrl={siteUrl}
     >
       <Heading className="text-black text-[18px] leading-[28px] text-center font-normal p-0 mx-0">
@@ -49,7 +49,7 @@ export const PkiExpirationAlertTemplate = ({
           Please take the necessary actions to renew these items before they expire.
         </Text>
         <Text className="text-[14px] leading-[24px]">
-          For more details, please log in to your Infisical account and check your PKI management section.
+          For more details, please log in to your KMS account and check your PKI management section.
         </Text>
       </Section>
     </BaseEmailWrapper>
@@ -65,5 +65,5 @@ PkiExpirationAlertTemplate.PreviewProps = {
     { type: "Certificate", friendlyName: "Example Certificate", serialNumber: "2345678901", expiryDate: "2032-01-01" }
   ],
   alertName: "My PKI Alert",
-  siteUrl: "https://infisical.com"
+  siteUrl: "https://lux.network"
 } as PkiExpirationAlertTemplateProps;

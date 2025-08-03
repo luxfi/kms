@@ -10,7 +10,7 @@ export const PersonalSettingsPage = () => {
     <div className="h-full bg-bunker-800 text-white">
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.personal.title") })}</title>
-        <link rel="icon" href="/infisical.ico" />
+        <link rel="icon" href="/kms.ico" />
       </Helmet>
       <div className="flex w-full justify-center bg-bunker-800 px-6 text-white">
         <div className="w-full max-w-6xl">

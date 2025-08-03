@@ -17,7 +17,7 @@ export const GeneralPage = () => {
         <div className="mx-auto mb-6 w-full max-w-7xl">
           <PageHeader
             title="General"
-            description="Manage general settings for your Infisical instance."
+            description="Manage general settings for your KMS instance."
           />
           <GeneralPageForm />
         </div>

@@ -8,8 +8,8 @@ export const AuditLogsPage = () => {
   return (
     <div className="h-full bg-bunker-800">
       <Helmet>
-        <title>Infisical | Audit Logs</title>
-        <link rel="icon" href="/infisical.ico" />
+        <title>KMS | Audit Logs</title>
+        <link rel="icon" href="/kms.ico" />
         <meta property="og:image" content="/images/message.png" />
       </Helmet>
 

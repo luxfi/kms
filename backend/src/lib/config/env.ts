@@ -29,7 +29,7 @@ const databaseReadReplicaSchema = z
 
 const envSchema = z
   .object({
-    INFISICAL_PLATFORM_VERSION: zpStr(z.string().optional()),
+    KMS_PLATFORM_VERSION: zpStr(z.string().optional()),
     KUBERNETES_AUTO_FETCH_SERVICE_ACCOUNT_TOKEN: zodStrBool.default("false"),
     PORT: z.coerce.number().default(IS_PACKAGED ? 8080 : 4000),
     DISABLE_SECRET_SCANNING: z
@@ -88,7 +88,7 @@ const envSchema = z
     SMTP_USERNAME: zpStr(z.string().optional()),
     SMTP_PASSWORD: zpStr(z.string().optional()),
     SMTP_FROM_ADDRESS: zpStr(z.string().optional()),
-    SMTP_FROM_NAME: zpStr(z.string().optional().default("Infisical")),
+    SMTP_FROM_NAME: zpStr(z.string().optional().default("KMS")),
     SMTP_CUSTOM_CA_CERT: zpStr(
       z.string().optional().describe("Base64 encoded custom CA certificate PEM(s) for the SMTP server")
     ),
@@ -169,9 +169,9 @@ const envSchema = z
     SECRET_SCANNING_GIT_APP_ID: zpStr(z.string().optional()),
     SECRET_SCANNING_PRIVATE_KEY: zpStr(z.string().optional()),
     SECRET_SCANNING_ORG_WHITELIST: zpStr(z.string().optional()),
-    SECRET_SCANNING_GIT_APP_SLUG: zpStr(z.string().default("infisical-radar")),
+    SECRET_SCANNING_GIT_APP_SLUG: zpStr(z.string().default("kms-radar")),
     // LICENSE
-    LICENSE_SERVER_URL: zpStr(z.string().optional().default("https://portal.infisical.com")),
+    LICENSE_SERVER_URL: zpStr(z.string().optional().default("https://portal.lux.network")),
     LICENSE_SERVER_KEY: zpStr(z.string().optional()),
     LICENSE_KEY: zpStr(z.string().optional()),
     LICENSE_KEY_OFFLINE: zpStr(z.string().optional()),
@@ -181,7 +181,7 @@ const envSchema = z
       .enum(["true", "false"])
       .transform((val) => val === "true" || IS_PACKAGED)
       .optional(),
-    INFISICAL_CLOUD: zodStrBool.default("false"),
+    KMS_CLOUD: zodStrBool.default("false"),
     MAINTENANCE_MODE: zodStrBool.default("false"),
     CAPTCHA_SECRET: zpStr(z.string().optional()),
     CAPTCHA_SITE_KEY: zpStr(z.string().optional()),
@@ -226,7 +226,7 @@ const envSchema = z
     SHOULD_INIT_PG_QUEUE: zodStrBool.default("false"),
 
     /* Gateway----------------------------------------------------------------------------- */
-    GATEWAY_INFISICAL_STATIC_IP_ADDRESS: zpStr(z.string().optional()),
+    GATEWAY_KMS_STATIC_IP_ADDRESS: zpStr(z.string().optional()),
     GATEWAY_RELAY_ADDRESS: zpStr(z.string().optional()),
     GATEWAY_RELAY_REALM: zpStr(z.string().optional()),
     GATEWAY_RELAY_AUTH_SECRET: zpStr(z.string().optional()),
@@ -297,7 +297,7 @@ const envSchema = z
     SHOULD_USE_DATADOG_TRACER: zodStrBool.default("false"),
     DATADOG_PROFILING_ENABLED: zodStrBool.default("false"),
     DATADOG_ENV: zpStr(z.string().optional().default("prod")),
-    DATADOG_SERVICE: zpStr(z.string().optional().default("infisical-core")),
+    DATADOG_SERVICE: zpStr(z.string().optional().default("kms-core")),
     DATADOG_HOSTNAME: zpStr(z.string().optional()),
 
     // PIT
@@ -450,7 +450,7 @@ export const getTelemetryConfig = () => {
     },
     TRACER: {
       profiling: parsedEnv.data.DATADOG_PROFILING_ENABLED,
-      version: parsedEnv.data.INFISICAL_PLATFORM_VERSION,
+      version: parsedEnv.data.KMS_PLATFORM_VERSION,
       env: parsedEnv.data.DATADOG_ENV,
       service: parsedEnv.data.DATADOG_SERVICE,
       hostname: parsedEnv.data.DATADOG_HOSTNAME

@@ -28,7 +28,7 @@ export const registerServiceTokenRouter = async (server: FastifyZodProvider) => 
     schema: {
       hide: false,
       tags: [ApiDocsTags.ServiceTokens],
-      description: "Return Infisical Token data",
+      description: "Return KMS Token data",
       security: [
         {
           bearerAuth: []

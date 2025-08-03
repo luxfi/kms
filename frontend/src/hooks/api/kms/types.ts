@@ -69,7 +69,7 @@ export const ExternalKmsAwsSchema = z.object({
             .string()
             .trim()
             .min(1)
-            .describe("AWS user role to be assumed by infisical"),
+            .describe("AWS user role to be assumed by kms"),
           externalId: z
             .string()
             .trim()

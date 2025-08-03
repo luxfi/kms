@@ -155,7 +155,7 @@ export const slackServiceFactory = ({
       throw new BadRequestError({
         message: `Invalid Slack configuration. ${
           appCfg.isCloud
-            ? "Please contact the Infisical team."
+            ? "Please contact the KMS team."
             : "Contact your instance admin to setup Slack integration in the Admin settings. Your configuration is missing Slack client ID and secret."
         }`
       });

@@ -1,29 +1,29 @@
 ---
 title: "Rundeck"
-description: "How to sync secrets from Infisical to Rundeck"
+description: "How to sync secrets from KMS to Rundeck"
 ---
 
 Prerequisites:
 
-- Set up and add envars to [Infisical Cloud](https://app.infisical.com)
+- Set up and add envars to [KMS Cloud](https://kms.lux.network)
 
 <Steps>
-  <Step title="Authorize Infisical for Rundeck">
+  <Step title="Authorize KMS for Rundeck">
     Obtain a User API Token in the Profile settings of Rundeck
 
     ![integrations rundeck token](../../images/integrations/rundeck/integrations-rundeck-token.png)
 
-    Navigate to your project's integrations tab in Infisical.
+    Navigate to your project's integrations tab in KMS.
 
     ![integrations](../../images/integrations.png)
 
-    Press on the Rundeck tile and input your Rundeck instance Base URL and User API token to grant Infisical access to manage Rundeck keys
+    Press on the Rundeck tile and input your Rundeck instance Base URL and User API token to grant KMS access to manage Rundeck keys
 
     ![integrations rundeck authorization](../../images/integrations/rundeck/integrations-rundeck-auth.png)
 
   </Step>
   <Step title="Start integration">
-    Select which Infisical environment secrets you want to sync to a Rundeck Key Storage Path and press create integration to start syncing secrets to Rundeck.
+    Select which KMS environment secrets you want to sync to a Rundeck Key Storage Path and press create integration to start syncing secrets to Rundeck.
 
     ![create integration rundeck](../../images/integrations/rundeck/integrations-rundeck-create.png)
     ![integrations rundeck](../../images/integrations/rundeck/integrations-rundeck.png)

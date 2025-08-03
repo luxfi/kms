@@ -33,7 +33,7 @@ export const registerServeUI = async (
         INTERCOM_ID: appCfg.INTERCOM_ID,
         TELEMETRY_CAPTURING_ENABLED: appCfg.TELEMETRY_ENABLED
       };
-      const js = `window.__INFISICAL_RUNTIME_ENV__ = Object.freeze(${JSON.stringify(config)});`;
+      const js = `window.__KMS_RUNTIME_ENV__ = Object.freeze(${JSON.stringify(config)});`;
       return res.send(js);
     }
   });

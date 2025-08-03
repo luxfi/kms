@@ -216,7 +216,7 @@ export const EnvironmentPageForm = () => {
           <div className="flex items-start gap-1">
             <p className="text-xl font-semibold text-mineshaft-100">Overrides</p>
             <a
-              href="https://infisical.com/docs/self-hosting/configuration/envars#environment-variable-overrides"
+              href="https://lux.network/docs/self-hosting/configuration/envars#environment-variable-overrides"
               target="_blank"
               rel="noopener noreferrer"
             >

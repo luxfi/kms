@@ -15,7 +15,7 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as OAuth2Strategy } from "passport-oauth2";
 import { z } from "zod";
 
-import { INFISICAL_PROVIDER_GITHUB_ACCESS_TOKEN } from "@app/lib/config/const";
+import { KMS_PROVIDER_GITHUB_ACCESS_TOKEN } from "@app/lib/config/const";
 import { getConfig } from "@app/lib/config/env";
 import { BadRequestError, NotFoundError } from "@app/lib/errors";
 import { logger } from "@app/lib/logger";
@@ -201,7 +201,7 @@ export const registerSsoRouter = async (server: FastifyZodProvider) => {
     store: redisStore,
     cookie: {
       secure: appCfg.HTTPS_ENABLED,
-      sameSite: "lax" // we want cookies to be sent to Infisical in redirects originating from IDP server
+      sameSite: "lax" // we want cookies to be sent to KMS in redirects originating from IDP server
     }
   });
   await server.register(passport.initialize());
@@ -359,7 +359,7 @@ export const registerSsoRouter = async (server: FastifyZodProvider) => {
       await req.session.destroy();
 
       if (req.passportUser.externalProviderAccessToken) {
-        void res.cookie(INFISICAL_PROVIDER_GITHUB_ACCESS_TOKEN, req.passportUser.externalProviderAccessToken, {
+        void res.cookie(KMS_PROVIDER_GITHUB_ACCESS_TOKEN, req.passportUser.externalProviderAccessToken, {
           httpOnly: true,
           path: "/",
           sameSite: "strict",

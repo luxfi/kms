@@ -59,7 +59,7 @@ export const SecretSyncAuditLogsSection = ({ secretSync }: Props) => {
                 </Link>
               ) : (
                 <a
-                  href="https://infisical.com/scheduledemo"
+                  href="https://lux.network/scheduledemo"
                   target="_blank"
                   rel="noopener noreferrer"
                 >

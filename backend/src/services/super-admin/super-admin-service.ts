@@ -103,7 +103,7 @@ export const getInstanceIntegrationsConfig = () => {
   return adminIntegrationsConfig;
 };
 
-const ADMIN_CONFIG_KEY = "infisical-admin-cfg";
+const ADMIN_CONFIG_KEY = "kms-admin-cfg";
 const ADMIN_CONFIG_KEY_EXP = 60; // 60s
 export const ADMIN_CONFIG_DB_UUID = "00000000-0000-0000-0000-000000000000";
 
@@ -834,7 +834,7 @@ export const superAdminServiceFactory = ({
   const grantServerAdminAccessToUser = async (userId: string) => {
     if (!licenseService.onPremFeatures?.instanceUserManagement) {
       throw new BadRequestError({
-        message: "Failed to grant server admin access to user due to plan restriction. Upgrade to Infisical's Pro plan."
+        message: "Failed to grant server admin access to user due to plan restriction. Upgrade to KMS's Pro plan."
       });
     }
     await userDAL.updateById(userId, { superAdmin: true });
@@ -877,7 +877,7 @@ export const superAdminServiceFactory = ({
   const updateRootEncryptionStrategy = async (strategy: RootKeyEncryptionStrategy) => {
     if (!licenseService.onPremFeatures.hsm) {
       throw new BadRequestError({
-        message: "Failed to update encryption strategy due to plan restriction. Upgrade to Infisical's Enterprise plan."
+        message: "Failed to update encryption strategy due to plan restriction. Upgrade to KMS's Enterprise plan."
       });
     }
 

@@ -60,10 +60,10 @@ export default SecretApprovalRequestBypassedTemplate;
 
 SecretApprovalRequestBypassedTemplate.PreviewProps = {
   requesterFullName: "Abigail Williams",
-  requesterEmail: "abigail@infisical.com",
+  requesterEmail: "abigail@lux.network",
   secretPath: "/api/secrets",
   environment: "Production",
-  siteUrl: "https://infisical.com",
+  siteUrl: "https://lux.network",
   projectName: "Example Project",
   bypassReason: "I needed urgent access for a production misconfiguration."
 } as SecretApprovalRequestBypassedTemplateProps;

@@ -90,7 +90,7 @@ export const SecretSyncOptionsFields = ({ hideInitialSync }: Props) => {
                   syncOption?.canImportSecrets ? (
                     <div className="flex flex-col gap-3">
                       <p>
-                        Specify how Infisical should resolve the initial sync to {destinationName}.
+                        Specify how KMS should resolve the initial sync to {destinationName}.
                         The following options are available:
                       </p>
                       <ul className="flex list-disc flex-col gap-3 pl-4">
@@ -141,7 +141,7 @@ export const SecretSyncOptionsFields = ({ hideInitialSync }: Props) => {
               <FontAwesomeIcon className="mr-1" size="xs" icon={faTriangleExclamation} />
               {destinationName} only supports overwriting destination secrets.{" "}
               {!currentSyncOption.disableSecretDeletion &&
-                "Secrets not present in Infisical will be removed from the destination."}
+                "Secrets not present in KMS will be removed from the destination."}
             </p>
           )}
         </>
@@ -182,14 +182,14 @@ export const SecretSyncOptionsFields = ({ hideInitialSync }: Props) => {
                   <span>
                     We highly recommend using a{" "}
                     <a
-                      href="https://infisical.com/docs/integrations/secret-syncs/overview#key-schemas"
+                      href="https://lux.network/docs/integrations/secret-syncs/overview#key-schemas"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="underline"
                     >
                       Key Schema
                     </a>{" "}
-                    to ensure that Infisical only manages the specific keys you intend, keeping
+                    to ensure that KMS only manages the specific keys you intend, keeping
                     everything else untouched.
                     <br />
                     <br />
@@ -198,13 +198,13 @@ export const SecretSyncOptionsFields = ({ hideInitialSync }: Props) => {
                 }
               >
                 <div>
-                  <span>Infisical strongly advises setting a Key Schema</span>{" "}
+                  <span>KMS strongly advises setting a Key Schema</span>{" "}
                   <FontAwesomeIcon icon={faCircleInfo} className="text-mineshaft-400" />
                 </div>
               </Tooltip>
             }
           >
-            <Input value={value} onChange={onChange} placeholder="INFISICAL_{{secretKey}}" />
+            <Input value={value} onChange={onChange} placeholder="KMS_{{secretKey}}" />
           </FormControl>
         )}
         control={control}
@@ -231,12 +231,12 @@ export const SecretSyncOptionsFields = ({ hideInitialSync }: Props) => {
                     content={
                       <>
                         <p>
-                          When enabled, Infisical will <span className="font-semibold">not</span>{" "}
+                          When enabled, KMS will <span className="font-semibold">not</span>{" "}
                           remove secrets from the destination during a sync.
                         </p>
                         <p className="mt-4">
                           Enable this option if you intend to manage some secrets manually outside
-                          of Infisical.
+                          of KMS.
                         </p>
                       </>
                     }

@@ -82,7 +82,7 @@ rules:
   verbs:
   - create
 - apiGroups:
-  - secrets.infisical.com
+  - secrets.lux.network
   resources:
   - clustergenerators
   verbs:
@@ -94,9 +94,9 @@ rules:
   - update
   - watch
 - apiGroups:
-  - secrets.infisical.com
+  - secrets.lux.network
   resources:
-  - infisicaldynamicsecrets
+  - kmsdynamicsecrets
   verbs:
   - create
   - delete
@@ -106,23 +106,23 @@ rules:
   - update
   - watch
 - apiGroups:
-  - secrets.infisical.com
+  - secrets.lux.network
   resources:
-  - infisicaldynamicsecrets/finalizers
+  - kmsdynamicsecrets/finalizers
   verbs:
   - update
 - apiGroups:
-  - secrets.infisical.com
+  - secrets.lux.network
   resources:
-  - infisicaldynamicsecrets/status
+  - kmsdynamicsecrets/status
   verbs:
   - get
   - patch
   - update
 - apiGroups:
-  - secrets.infisical.com
+  - secrets.lux.network
   resources:
-  - infisicalpushsecrets
+  - kmspushsecrets
   verbs:
   - create
   - delete
@@ -132,23 +132,23 @@ rules:
   - update
   - watch
 - apiGroups:
-  - secrets.infisical.com
+  - secrets.lux.network
   resources:
-  - infisicalpushsecrets/finalizers
+  - kmspushsecrets/finalizers
   verbs:
   - update
 - apiGroups:
-  - secrets.infisical.com
+  - secrets.lux.network
   resources:
-  - infisicalpushsecrets/status
+  - kmspushsecrets/status
   verbs:
   - get
   - patch
   - update
 - apiGroups:
-  - secrets.infisical.com
+  - secrets.lux.network
   resources:
-  - infisicalsecrets
+  - kmssecrets
   verbs:
   - create
   - delete
@@ -158,15 +158,15 @@ rules:
   - update
   - watch
 - apiGroups:
-  - secrets.infisical.com
+  - secrets.lux.network
   resources:
-  - infisicalsecrets/finalizers
+  - kmssecrets/finalizers
   verbs:
   - update
 - apiGroups:
-  - secrets.infisical.com
+  - secrets.lux.network
   resources:
-  - infisicalsecrets/status
+  - kmssecrets/status
   verbs:
   - get
   - patch

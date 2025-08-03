@@ -1,18 +1,18 @@
 ---
 title: "External CA"
 sidebarTitle: "External CA"
-description: "Learn how to connect External Certificate Authorities with Infisical."
+description: "Learn how to connect External Certificate Authorities with KMS."
 ---
 
 ## Concept
 
-In addition to creating a Private CA hierarchy, Infisical allows you to integrate with External Certificate Authorities (CAs) to issue digital certificates for your [subscribers](/documentation/platform/pki/subscribers). This integration enables you to leverage established certificate authority infrastructure while centralizing your certificate management within Infisical.
+In addition to creating a Private CA hierarchy, KMS allows you to integrate with External Certificate Authorities (CAs) to issue digital certificates for your [subscribers](/documentation/platform/pki/subscribers). This integration enables you to leverage established certificate authority infrastructure while centralizing your certificate management within KMS.
 
 <div align="center">
 
 ```mermaid
 graph TD
-    B[Infisical] -->|Manages Certificates| D[Subscribers]
+    B[KMS] -->|Manages Certificates| D[Subscribers]
 
     A1[Public CAs<br>Let's Encrypt, ZeroSSL] -->|ACME Protocol| B
     A2[Enterprise CAs<br>Vault PKI, Step CA] -->|ACME Protocol| B
@@ -24,33 +24,33 @@ graph TD
 
 </div>
 
-When you integrate an External CA with Infisical, you benefit from:
+When you integrate an External CA with KMS, you benefit from:
 
 1. **Trust by Default**: Certificates issued by public CAs are trusted by default in browsers and operating systems.
 2. **Unified Management**: Manage all certificates—both internally and externally issued—from a single platform.
-3. **Automation**: Leverage Infisical's automation capabilities for certificate lifecycle management.
+3. **Automation**: Leverage KMS's automation capabilities for certificate lifecycle management.
 4. **Compliance**: Meet requirements for publicly trusted certificates, especially for public-facing services.
 5. **Flexibility**: Choose the most appropriate CA for different use cases while maintaining consistent management.
 
 ## General Workflow
 
-A typical workflow for integrating an External CA with Infisical consists of the following steps:
+A typical workflow for integrating an External CA with KMS consists of the following steps:
 
 1. **Select External CA Type**: Choose the appropriate external CA based on your requirements and supported protocols.
 2. **Configure Prerequisites**: Set up any required credentials, connections, or configurations specific to your chosen CA type.
-3. **Register External CA**: Add the External CA configuration to your Infisical project.
+3. **Register External CA**: Add the External CA configuration to your KMS project.
 4. **Create Subscribers**: Set up subscribers that use the External CA as their issuing authority.
-5. **Manage Certificate Lifecycle**: Handle certificate issuance, renewal, and revocation through Infisical's unified interface.
+5. **Manage Certificate Lifecycle**: Handle certificate issuance, renewal, and revocation through KMS's unified interface.
 
 The specific steps and requirements vary depending on the External CA type you choose to integrate.
 
 ## Supported Integration Methods
 
-Infisical currently supports integration with External Certificate Authorities through the following protocol:
+KMS currently supports integration with External Certificate Authorities through the following protocol:
 
 ### ACME Protocol Integration
 
-ACME (Automatic Certificate Management Environment) is a widely adopted protocol for automated certificate issuance and management. Infisical can integrate with any CA that supports the ACME protocol, including:
+ACME (Automatic Certificate Management Environment) is a widely adopted protocol for automated certificate issuance and management. KMS can integrate with any CA that supports the ACME protocol, including:
 
 **Public Certificate Authorities:**
 - Let's Encrypt - Free, automated SSL/TLS certificates
@@ -96,7 +96,7 @@ Integrate with existing enterprise PKI infrastructure:
 
 ## Benefits of Centralized Management
 
-Managing External CAs through Infisical provides several advantages over direct CA management:
+Managing External CAs through KMS provides several advantages over direct CA management:
 
 ### Unified Certificate Inventory
 - Single dashboard for all certificates
@@ -135,8 +135,8 @@ Get started with External CA integration:
 ## FAQ
 
 <AccordionGroup>
-  <Accordion title="Which External CAs does Infisical currently support?">
-    Currently, Infisical supports any Certificate Authority that implements the ACME protocol, including:
+  <Accordion title="Which External CAs does KMS currently support?">
+    Currently, KMS supports any Certificate Authority that implements the ACME protocol, including:
 
     - **Public CAs**: Let's Encrypt, ZeroSSL, Buypass
     - **Enterprise CAs**: HashiCorp Vault PKI, Step CA
@@ -164,12 +164,12 @@ Get started with External CA integration:
     Certificate capabilities vary by provider and integration method.
   </Accordion>
   <Accordion title="How does certificate renewal work with External CAs?">
-    Certificate reissuance is handled automatically by Infisical based on the CA type:
+    Certificate reissuance is handled automatically by KMS based on the CA type:
 
     - **Public CAs**: Automatic reissuance using ACME protocol with the same certificate extensions before expiration
     - **Other CA types**: Certificate management methods depend on the specific integration (when available)
 
-    All certificate lifecycle events are tracked and managed through Infisical's unified interface, ensuring continuous certificate validity.
+    All certificate lifecycle events are tracked and managed through KMS's unified interface, ensuring continuous certificate validity.
   </Accordion>
   <Accordion title="What authentication methods are supported for External CAs?">
     Authentication methods vary by CA type:
@@ -178,10 +178,10 @@ Get started with External CA integration:
     - **Enterprise CAs**: Client certificates, username/password, or domain authentication (when available)
     - **Cloud CAs**: API keys, OAuth tokens, or service account authentication (when available)
 
-    Infisical securely stores and manages all authentication credentials.
+    KMS securely stores and manages all authentication credentials.
   </Accordion>
   <Accordion title="Can I enforce policies on certificates from External CAs?">
-    Yes, Infisical provides policy enforcement capabilities:
+    Yes, KMS provides policy enforcement capabilities:
 
     - Certificate template constraints
     - Monitoring and alerting policies

@@ -1,19 +1,19 @@
 ---
 
-title: "Upgrade Infisical Instance"
-description: "How to upgrade Infisical self-hosted instance"
+title: "Upgrade KMS Instance"
+description: "How to upgrade KMS self-hosted instance"
 
 ---
 
-Keeping your Infisical instance up to date is key to making sure you receive the latest performance improvements, security patches, and feature updates. 
+Keeping your KMS instance up to date is key to making sure you receive the latest performance improvements, security patches, and feature updates. 
 We release updates approximately once a week, which may include new features, bug fixes, performance enhancements, and critical security patches.
 
 Since secrets management is a critical component of your infrastructure, we aim to avoid disruptive changes that will impact fetching secrets in downstream clients.
-If a release requires specific attention, a note will be attached to the corresponding [release](https://github.com/Infisical/infisical/releases) version.
+If a release requires specific attention, a note will be attached to the corresponding [release](https://github.com/luxfi/kms/releases) version.
 
 During an upgrade, two key components are updated:
 
-- **Infisical Application:** The core application code is updated.
+- **KMS Application:** The core application code is updated.
 - **PostgreSQL Database Schema:** Schema migrations run automatically to ensure your database remains in sync with the updated application.
 
 > **Before You Upgrade:**  
@@ -42,12 +42,12 @@ Now, migrations run automatically during boot-up. This improvement streamlines t
    - Verify that your backup is current and accessible.
 
 2. **Select the Upgrade Version:**  
-   - Visit the [Infisical releases page](https://github.com/Infisical/infisical/releases) for a list of available versions.
-   - Look for releases with the prefix `infisical/` as there are other releases that are not related to the Infisical instance.
+   - Visit the [KMS releases page](https://github.com/luxfi/kms/releases) for a list of available versions.
+   - Look for releases with the prefix `kms/` as there are other releases that are not related to the KMS instance.
 
 3. **Start the Upgrade Process:**  
-   - Launch the new version of Infisical. During startup, the application will automatically compare the current database schema with the updated schema in the code.
-   - If any differences are detected, Infisical will apply the necessary migrations automatically.
+   - Launch the new version of KMS. During startup, the application will automatically compare the current database schema with the updated schema in the code.
+   - If any differences are detected, KMS will apply the necessary migrations automatically.
 
 4. **Multi-Instance Coordination:**  
    - In environments with multiple instances, one instance will acquire a lock and perform the migration while the other instances wait.

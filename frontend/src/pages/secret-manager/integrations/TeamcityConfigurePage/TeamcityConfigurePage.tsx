@@ -115,7 +115,7 @@ export const TeamcityConfigurePage = () => {
       <Card className="mb-12 max-w-lg rounded-md border border-mineshaft-600">
         <CardTitle
           className="px-6 text-left text-xl"
-          subTitle="Choose which environment or folders in Infisical you want to sync to which project in TeamCity."
+          subTitle="Choose which environment or folders in KMS you want to sync to which project in TeamCity."
         >
           <div className="flex flex-row items-center">
             <div className="flex items-center pb-0.5">
@@ -128,7 +128,7 @@ export const TeamcityConfigurePage = () => {
             </div>
             <span className="ml-2">TeamCity Integration</span>
             <a
-              href="https://infisical.com/docs/integrations/cloud/teamcity"
+              href="https://lux.network/docs/integrations/cloud/teamcity"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -234,7 +234,7 @@ export const TeamcityConfigurePage = () => {
           src="/images/loading/loading.gif"
           height={70}
           width={120}
-          alt="infisical loading indicator"
+          alt="kms loading indicator"
         />
       ) : (
         <div className="flex h-max max-w-md flex-col rounded-md border border-mineshaft-600 bg-mineshaft-800 p-6 text-center text-mineshaft-200">
@@ -245,9 +245,9 @@ export const TeamcityConfigurePage = () => {
               className="inline cursor-pointer text-mineshaft-100 underline decoration-primary-500 underline-offset-4 opacity-80 duration-200 hover:opacity-100"
               target="_blank"
               rel="noopener noreferrer"
-              href="mailto:support@infisical.com"
+              href="mailto:support@lux.network"
             >
-              support@infisical.com
+              support@lux.network
             </a>{" "}
             if the issue persists.
           </p>

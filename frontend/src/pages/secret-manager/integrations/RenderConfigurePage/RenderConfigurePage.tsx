@@ -128,7 +128,7 @@ export const RenderConfigurePage = () => {
       <Card className="max-w-lg rounded-md border border-mineshaft-600">
         <CardTitle
           className="px-6 text-left text-xl"
-          subTitle="Choose which environment or folder in Infisical you want to sync to Render environment variables."
+          subTitle="Choose which environment or folder in KMS you want to sync to Render environment variables."
         >
           <div className="flex flex-row items-center">
             <div className="flex items-center pb-0.5">
@@ -136,7 +136,7 @@ export const RenderConfigurePage = () => {
             </div>
             <span className="ml-2.5">Render Integration </span>
             <a
-              href="https://infisical.com/docs/integrations/cloud/render"
+              href="https://lux.network/docs/integrations/cloud/render"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -266,7 +266,7 @@ export const RenderConfigurePage = () => {
         </div>
         <span className="mt-4 text-sm text-mineshaft-300">
           After creating an integration, your secrets will start syncing immediately. This might
-          cause an unexpected override of current secrets in Render with secrets from Infisical.
+          cause an unexpected override of current secrets in Render with secrets from KMS.
         </span>
       </div>
     </form>
@@ -280,7 +280,7 @@ export const RenderConfigurePage = () => {
           src="/images/loading/loading.gif"
           height={70}
           width={120}
-          alt="infisical loading indicator"
+          alt="kms loading indicator"
         />
       ) : (
         <div className="flex h-max max-w-md flex-col rounded-md border border-mineshaft-600 bg-mineshaft-800 p-6 text-center text-mineshaft-200">
@@ -291,9 +291,9 @@ export const RenderConfigurePage = () => {
               className="inline cursor-pointer text-mineshaft-100 underline decoration-primary-500 underline-offset-4 opacity-80 duration-200 hover:opacity-100"
               target="_blank"
               rel="noopener noreferrer"
-              href="mailto:support@infisical.com"
+              href="mailto:support@lux.network"
             >
-              support@infisical.com
+              support@lux.network
             </a>{" "}
             if the issue persists.
           </p>

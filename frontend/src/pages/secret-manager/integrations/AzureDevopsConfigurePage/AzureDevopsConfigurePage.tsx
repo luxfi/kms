@@ -105,7 +105,7 @@ export const AzureDevopsConfigurePage = () => {
       <Card className="max-w-lg rounded-md border border-mineshaft-600">
         <CardTitle
           className="px-6 text-left text-xl"
-          subTitle="Choose which environment in Infisical you want to sync to secrets in Azure DevOps."
+          subTitle="Choose which environment in KMS you want to sync to secrets in Azure DevOps."
         >
           <div className="flex flex-row items-center">
             <div className="flex items-center">
@@ -118,7 +118,7 @@ export const AzureDevopsConfigurePage = () => {
             </div>
             <span className="ml-1.5">Azure DevOps Integration </span>
             <a
-              href="https://infisical.com/docs/integrations/cloud/azure-devops"
+              href="https://lux.network/docs/integrations/cloud/azure-devops"
               target="_blank"
               rel="noopener noreferrer"
             >

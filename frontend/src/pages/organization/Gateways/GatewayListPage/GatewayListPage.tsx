@@ -82,7 +82,7 @@ export const GatewayListPage = withPermission(
     return (
       <div className="bg-bunker-800">
         <Helmet>
-          <title>Infisical | Gateways</title>
+          <title>KMS | Gateways</title>
           <meta property="og:image" content="/images/message.png" />
         </Helmet>
         <div className="flex w-full justify-center bg-bunker-800 text-white">
@@ -94,7 +94,7 @@ export const GatewayListPage = withPermission(
                   <span>Gateways</span>
                   <a
                     className="-mt-1.5"
-                    href="https://infisical.com/docs/documentation/platform/gateways/overview"
+                    href="https://lux.network/docs/documentation/platform/gateways/overview"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -109,7 +109,7 @@ export const GatewayListPage = withPermission(
                   </a>
                 </div>
               }
-              description="Create and configure gateway to access private network resources from Infisical"
+              description="Create and configure gateway to access private network resources from KMS"
             />
             <div className="mb-6 rounded-lg border border-mineshaft-600 bg-mineshaft-900 p-4">
               <div>

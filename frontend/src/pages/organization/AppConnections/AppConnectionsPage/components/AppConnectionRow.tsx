@@ -115,7 +115,7 @@ export const AppConnectionRow = ({
       <Td>
         <div className="flex items-center justify-end gap-2">
           {isPlatformManagedCredentials && (
-            <Tooltip side="left" content="This connection's credentials are managed by Infisical.">
+            <Tooltip side="left" content="This connection's credentials are managed by KMS.">
               <div>
                 <Badge className="flex h-5 w-min items-center gap-1.5 whitespace-nowrap">
                   <FontAwesomeIcon icon={faServer} />

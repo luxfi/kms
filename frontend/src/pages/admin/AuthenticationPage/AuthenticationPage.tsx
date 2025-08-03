@@ -17,7 +17,7 @@ export const AuthenticationPage = () => {
         <div className="mx-auto mb-6 w-full max-w-7xl">
           <PageHeader
             title="Authentication"
-            description="Manage authentication settings for your Infisical instance."
+            description="Manage authentication settings for your KMS instance."
           />
           <AuthenticationPageForm />
         </div>

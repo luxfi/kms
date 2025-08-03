@@ -59,7 +59,7 @@ export const IntegrationAuditLogsSection = ({ integration }: Props) => {
                 </Link>
               ) : (
                 <a
-                  href="https://infisical.com/scheduledemo"
+                  href="https://lux.network/scheduledemo"
                   target="_blank"
                   rel="noopener noreferrer"
                 >

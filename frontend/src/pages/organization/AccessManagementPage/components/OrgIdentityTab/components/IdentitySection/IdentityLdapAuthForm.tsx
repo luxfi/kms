@@ -293,7 +293,7 @@ export const IdentityLdapAuthForm = ({
                 isError={Boolean(error)}
                 errorText={error?.message}
               >
-                <Input {...field} placeholder="cn=infisical,ou=Users,dc=example,dc=com" />
+                <Input {...field} placeholder="cn=kms,ou=Users,dc=example,dc=com" />
               </FormControl>
             )}
           />

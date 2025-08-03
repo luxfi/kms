@@ -1,15 +1,15 @@
 {
-  "name": "infisical",
+  "name": "lux-kms",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/infisical/infisical.git"
+    "url": "git+https://github.com/lux-network/kms.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/infisical/infisical/issues"
+    "url": "https://github.com/lux-network/kms/issues"
   },
-  "homepage": "https://github.com/infisical/infisical#readme",
+  "homepage": "https://github.com/lux-network/kms#readme",
   "scripts": {
     "prepare": "husky install"
   },

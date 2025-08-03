@@ -1,11 +1,11 @@
 ---
 title: "GitHub Team Sync"
-description: "Learn how to automatically synchronize your GitHub teams with Infisical Groups."
+description: "Learn how to automatically synchronize your GitHub teams with KMS Groups."
 ---
 
 ## Overview
 
-The GitHub Organization Synchronization feature streamlines user and group management by automatically syncing users belonging to your specified GitHub organization with corresponding groups within Infisical. This integration ensures that users logging in via GitHub are automatically added to or removed from Infisical groups based on their team memberships within your GitHub organization.
+The GitHub Organization Synchronization feature streamlines user and group management by automatically syncing users belonging to your specified GitHub organization with corresponding groups within KMS. This integration ensures that users logging in via GitHub are automatically added to or removed from KMS groups based on their team memberships within your GitHub organization.
 
 ## Configuration
 
@@ -22,17 +22,17 @@ To enable and configure GitHub Organization Synchronization, follow these steps:
         Toggle ON GitHub Organization sync to activate sync.
         ![toggle-on](../../images/platform/external-syncs/github-org-sync-active.png)
     </Step>
-    <Step title="Approve the Infisical OAuth application on your organization">
-        Connecting the Infisical OAuth application grants it permission to **read:org** details. This approval is done by selecting your organization during the GitHub OAuth login process.
+    <Step title="Approve the KMS OAuth application on your organization">
+        Connecting the KMS OAuth application grants it permission to **read:org** details. This approval is done by selecting your organization during the GitHub OAuth login process.
 
         1. Initiate the login process via the GitHub OAuth flow.
         ![oauth-flow-start](../../images/platform/external-syncs/github-org-sync-oauth-flow-start.png)
         2. Select the organization you have connected.
-        3. Grant access to Infisical oauth application to your configured organization.  Infisical shown here is an organization, just for walkthrough.
+        3. Grant access to KMS oauth application to your configured organization.  KMS shown here is an organization, just for walkthrough.
         ![grant-access](../../images/platform/external-syncs/github-org-sync-oauth.png)
 
         <Info>
-          This action only needs to be done once and authorizes the Infisical OAuth app to read organization details, including team information.
+          This action only needs to be done once and authorizes the KMS OAuth app to read organization details, including team information.
           The following users don't need to select organization in GitHub on login anymore.
         </Info>
     </Step>
@@ -43,12 +43,12 @@ To enable and configure GitHub Organization Synchronization, follow these steps:
 
 Once configured, the GitHub Organization Synchronization feature functions as follows:
 
-When a user logs in via the GitHub OAuth flow and selects the configured organization, the system will then automatically synchronize the teams they are a part of in GitHub with corresponding groups in Infisical.
+When a user logs in via the GitHub OAuth flow and selects the configured organization, the system will then automatically synchronize the teams they are a part of in GitHub with corresponding groups in KMS.
 
 ## Troubleshooting
 
-<Accordion title="Please check if your organization has approved the Infisical OAuth application.">
-    If you encounter an error related to this, it indicates that you need to approve the Infisical OAuth application within your GitHub organization.
+<Accordion title="Please check if your organization has approved the KMS OAuth application.">
+    If you encounter an error related to this, it indicates that you need to approve the KMS OAuth application within your GitHub organization.
 
     You can verify the application's approval status by navigating to **https://github.com/organizations/__your-organization__/settings/oauth_application_policy**. Replace `__your-organization__` with the actual name of your GitHub organization.
 

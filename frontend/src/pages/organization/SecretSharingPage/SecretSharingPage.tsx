@@ -14,7 +14,7 @@ export const SecretSharingPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("approval.title") })}</title>
-        <link rel="icon" href="/infisical.ico" />
+        <link rel="icon" href="/kms.ico" />
         <meta property="og:image" content="/images/message.png" />
         <meta property="og:title" content={String(t("approval.og-title"))} />
         <meta name="og:description" content={String(t("approval.og-description"))} />
@@ -28,7 +28,7 @@ export const SecretSharingPage = () => {
             <a
               target="_blank"
               rel="noopener noreferrer"
-              href="https://infisical.com/docs/documentation/platform/secret-sharing"
+              href="https://lux.network/docs/documentation/platform/secret-sharing"
             >
               <div className="flex w-max cursor-pointer items-center rounded-md border border-mineshaft-500 bg-mineshaft-600 px-4 py-2 text-mineshaft-200 duration-200 hover:border-primary/40 hover:bg-primary/10 hover:text-white">
                 Documentation{" "}

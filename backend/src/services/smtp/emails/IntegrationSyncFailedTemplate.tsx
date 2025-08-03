@@ -54,8 +54,8 @@ IntegrationSyncFailedTemplate.PreviewProps = {
   projectName: "Example Project",
   secretPath: "/api/secrets",
   environment: "Production",
-  siteUrl: "https://infisical.com",
-  integrationUrl: "https://infisical.com",
+  siteUrl: "https://lux.network",
+  integrationUrl: "https://lux.network",
   count: 2,
   syncMessage: "Secret key cannot contain a colon (:)"
 } as IntegrationSyncFailedTemplateProps;

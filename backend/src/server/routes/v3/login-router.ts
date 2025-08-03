@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { INFISICAL_PROVIDER_GITHUB_ACCESS_TOKEN } from "@app/lib/config/const";
+import { KMS_PROVIDER_GITHUB_ACCESS_TOKEN } from "@app/lib/config/const";
 import { getConfig } from "@app/lib/config/env";
 import { authRateLimit } from "@app/server/config/rateLimiter";
 import { addAuthOriginDomainCookie } from "@app/server/lib/cookie";
@@ -72,12 +72,12 @@ export const registerLoginRouter = async (server: FastifyZodProvider) => {
         };
       }
 
-      const githubOauthAccessToken = req.cookies[INFISICAL_PROVIDER_GITHUB_ACCESS_TOKEN];
+      const githubOauthAccessToken = req.cookies[KMS_PROVIDER_GITHUB_ACCESS_TOKEN];
       if (githubOauthAccessToken) {
         await server.services.githubOrgSync
           .syncUserGroups(req.body.organizationId, tokens.user.userId, githubOauthAccessToken)
           .finally(() => {
-            void res.setCookie(INFISICAL_PROVIDER_GITHUB_ACCESS_TOKEN, "", {
+            void res.setCookie(KMS_PROVIDER_GITHUB_ACCESS_TOKEN, "", {
               httpOnly: true,
               path: "/",
               sameSite: "strict",
@@ -96,7 +96,7 @@ export const registerLoginRouter = async (server: FastifyZodProvider) => {
 
       addAuthOriginDomainCookie(res);
 
-      void res.cookie("infisical-project-assume-privileges", "", {
+      void res.cookie("kms-project-assume-privileges", "", {
         httpOnly: true,
         path: "/",
         sameSite: "strict",
@@ -160,7 +160,7 @@ export const registerLoginRouter = async (server: FastifyZodProvider) => {
 
       addAuthOriginDomainCookie(res);
 
-      void res.cookie("infisical-project-assume-privileges", "", {
+      void res.cookie("kms-project-assume-privileges", "", {
         httpOnly: true,
         path: "/",
         sameSite: "strict",

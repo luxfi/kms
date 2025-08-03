@@ -401,7 +401,7 @@ export const OIDCModal = ({ popUp, handlePopUpClose, handlePopUpToggle, hideDele
                   errorText={error?.message}
                   isError={Boolean(error)}
                 >
-                  <Input {...field} placeholder="infisical.com, google.com" autoComplete="off" />
+                  <Input {...field} placeholder="lux.network, google.com" autoComplete="off" />
                 </FormControl>
               )}
             />

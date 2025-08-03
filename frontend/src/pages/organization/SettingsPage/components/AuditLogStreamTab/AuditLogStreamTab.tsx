@@ -91,7 +91,7 @@ export const AuditLogStreamsTab = withPermission(
           </OrgPermissionCan>
         </div>
         <p className="mb-8 text-gray-400">
-          Send audit logs from Infisical to external logging providers via HTTP
+          Send audit logs from KMS to external logging providers via HTTP
         </p>
         <div>
           <TableContainer>
@@ -169,7 +169,7 @@ export const AuditLogStreamsTab = withPermission(
         >
           <ModalContent
             title={`${popUp?.auditLogStreamForm?.data ? "Update" : "Create"} Audit Log Stream `}
-            subTitle="Continuously stream logs from Infisical to third-party logging providers."
+            subTitle="Continuously stream logs from KMS to third-party logging providers."
           >
             <AuditLogStreamForm
               id={popUp?.auditLogStreamForm?.data as string}
@@ -180,7 +180,7 @@ export const AuditLogStreamsTab = withPermission(
         <UpgradePlanModal
           isOpen={popUp.upgradePlan.isOpen}
           onOpenChange={(isOpen) => handlePopUpToggle("upgradePlan", isOpen)}
-          text="You can add audit log streams if you switch to Infisical's Enterprise  plan."
+          text="You can add audit log streams if you switch to KMS's Enterprise  plan."
         />
         <DeleteActionModal
           isOpen={popUp.deleteAuditLogStream.isOpen}

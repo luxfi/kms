@@ -104,7 +104,7 @@ export const CertificateTemplatesSection = ({ caId }: Props) => {
       <UpgradePlanModal
         isOpen={popUp.upgradePlan.isOpen}
         onOpenChange={(isOpen) => handlePopUpToggle("upgradePlan", isOpen)}
-        text="Managing template enrollment options for EST is only available on Infisical's Enterprise plan."
+        text="Managing template enrollment options for EST is only available on KMS's Enterprise plan."
       />
     </div>
   );

@@ -1,9 +1,9 @@
 ---
 title: "Networking"
-description: "Network configuration and firewall requirements for Infisical Gateway"
+description: "Network configuration and firewall requirements for KMS Gateway"
 ---
 
-The Infisical Gateway requires outbound network connectivity to establish secure communication with Infisical's relay infrastructure. 
+The KMS Gateway requires outbound network connectivity to establish secure communication with KMS's relay infrastructure. 
 This page outlines the required ports, protocols, and firewall configurations needed for optimal gateway usage.
 
 ## Network Architecture
@@ -11,7 +11,7 @@ This page outlines the required ports, protocols, and firewall configurations ne
 The gateway uses a relay-based architecture to establish secure connections:
 
 1. **Gateway** connects outbound to **Relay Servers** using UDP/QUIC protocol
-2. **Relay Servers** facilitate secure communication between Gateway and Infisical Cloud
+2. **Relay Servers** facilitate secure communication between Gateway and KMS Cloud
 3. All traffic is end-to-end encrypted using mutual TLS over QUIC
 
 ## Required Network Connectivity
@@ -23,14 +23,14 @@ The gateway requires the following outbound connectivity:
 | Protocol | Destination | Ports | Purpose |
 |----------|-------------|-------|---------|
 | UDP | Relay Servers | 49152-65535 | Allocated relay communication (TLS) |
-| TCP | app.infisical.com / eu.infisical.com | 443 | API communication and relay allocation |
+| TCP | kms.lux.network / eu.lux.network | 443 | API communication and relay allocation |
 
 ### Relay Server IP Addresses
 
-Your firewall must allow outbound connectivity to the following Infisical relay servers on dynamically allocated ports.
+Your firewall must allow outbound connectivity to the following KMS relay servers on dynamically allocated ports.
 
 <Tabs>
-  <Tab title="Infisical cloud (US)">
+  <Tab title="KMS cloud (US)">
     ```
     54.235.197.91:49152-65535
     18.215.196.229:49152-65535
@@ -38,20 +38,20 @@ Your firewall must allow outbound connectivity to the following Infisical relay 
     34.196.115.157:49152-65535
     ```
   </Tab>
-  <Tab title="Infisical cloud (EU)">
+  <Tab title="KMS cloud (EU)">
     ```
     3.125.237.40:49152-65535
     52.28.157.98:49152-65535
     3.125.176.90:49152-65535
     ```
   </Tab>
-  <Tab title="Infisical dedicated">
-    Please contact your Infisical account manager for dedicated relay server IP addresses.
+  <Tab title="KMS dedicated">
+    Please contact your KMS account manager for dedicated relay server IP addresses.
   </Tab>
 </Tabs>
 
 <Warning>
-    These IP addresses are static and managed by Infisical. Any changes will be communicated with 60-day advance notice.
+    These IP addresses are static and managed by KMS. Any changes will be communicated with 60-day advance notice.
 </Warning>
 
 ## Protocol Details
@@ -95,7 +95,7 @@ For corporate environments with strict egress filtering:
 
 Configure security groups to allow:
 - **Outbound UDP** to relay IPs on port 5349
-- **Outbound HTTPS** to app.infisical.com/eu.infisical.com on port 443
+- **Outbound HTTPS** to kms.lux.network/eu.lux.network on port 443
 - **Inbound UDP** on ephemeral ports (if not using stateful rules)
 
 ## Frequently Asked Questions
@@ -129,7 +129,7 @@ While TCP is stateful and easier for firewalls to track, QUIC's performance bene
 No inbound ports need to be opened. The gateway only makes outbound connections:
 
 - **Outbound UDP** to relay servers on ports 49152-65535
-- **Outbound HTTPS** to Infisical API endpoints
+- **Outbound HTTPS** to KMS API endpoints
 - **Return responses** are handled by connection tracking or explicit IP whitelisting
 
 This design maintains security by avoiding the need for inbound firewall rules that could expose your network to external threats.
@@ -152,14 +152,14 @@ The gateway connects to **one relay server at a time**:
 - **Single active connection**: Only one relay connection is established per gateway instance
 - **Automatic failover**: If the current relay becomes unavailable, the gateway will connect to an alternative relay
 - **Load distribution**: Different gateway instances may connect to different relay servers for load balancing
-- **No manual selection**: The Infisical API automatically assigns the optimal relay server based on availability and proximity
+- **No manual selection**: The KMS API automatically assigns the optimal relay server based on availability and proximity
 
 You should whitelist all relay IP addresses to ensure proper failover functionality.
 </Accordion>
 <Accordion title="Can the relay servers decrypt traffic going through them?">
 No, relay servers cannot decrypt any traffic passing through them:
 
-- **End-to-end encryption**: All traffic between the gateway and Infisical Cloud is encrypted using mutual TLS with certificate pinning
+- **End-to-end encryption**: All traffic between the gateway and KMS Cloud is encrypted using mutual TLS with certificate pinning
 - **Relay acts as a tunnel**: The relay server only forwards encrypted packets - it has no access to encryption keys
 - **No data storage**: Relay servers do not store any traffic or network-identifiable information  
 - **Certificate isolation**: Each organization has its own private PKI system, ensuring complete tenant isolation

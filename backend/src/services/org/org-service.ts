@@ -266,7 +266,7 @@ export const orgServiceFactory = ({
   };
 
   const addGhostUser = async (orgId: string, tx?: Knex) => {
-    const email = `sudo-${alphaNumericNanoId(16)}-${orgId}@infisical.com`; // We add a nanoid because the email is unique. And we have to create a new ghost user each time, so we can have access to the private key.
+    const email = `sudo-${alphaNumericNanoId(16)}-${orgId}@lux.network`; // We add a nanoid because the email is unique. And we have to create a new ghost user each time, so we can have access to the private key.
 
     const password = crypto.randomBytes(128).toString("hex");
 
@@ -765,7 +765,7 @@ export const orgServiceFactory = ({
 
     await smtpService.sendMail({
       template: SmtpTemplates.OrgInvite,
-      subjectLine: "Infisical organization invitation",
+      subjectLine: "KMS organization invitation",
       recipients: [inviteeOrgMembership.email as string],
       substitutions: {
         inviterFirstName: invitingUser.firstName,
@@ -1229,7 +1229,7 @@ export const orgServiceFactory = ({
 
         return smtpService.sendMail({
           template: SmtpTemplates.OrgInvite,
-          subjectLine: "Infisical organization invitation",
+          subjectLine: "KMS organization invitation",
           recipients: [el.email],
           substitutions: {
             inviterFirstName: invitingUser?.firstName,
@@ -1250,7 +1250,7 @@ export const orgServiceFactory = ({
         .map(async (el) => {
           return smtpService.sendMail({
             template: SmtpTemplates.WorkspaceInvite,
-            subjectLine: "Infisical project invitation",
+            subjectLine: "KMS project invitation",
             recipients: el.email,
             substitutions: {
               workspaceName: el.projectName,
@@ -1518,7 +1518,7 @@ export const orgServiceFactory = ({
           try {
             await smtpService.sendMail({
               template: SmtpTemplates.OrgInvite,
-              subjectLine: `Reminder: You have been invited to ${org.name} on Infisical`,
+              subjectLine: `Reminder: You have been invited to ${org.name} on KMS`,
               recipients: [invitedUser.inviteEmail],
               substitutions: {
                 organizationName: org.name,

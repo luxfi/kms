@@ -176,7 +176,7 @@ export const Page = () => {
             onOpenUpgradeModal={() =>
               handlePopUpOpen("upgradePlan", {
                 description:
-                  "You can assign custom roles to members if you upgrade your Infisical plan."
+                  "You can assign custom roles to members if you upgrade your KMS plan."
               })
             }
           />
@@ -217,7 +217,7 @@ export const MemberDetailsByIDPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.members.title") })}</title>
-        <link rel="icon" href="/infisical.ico" />
+        <link rel="icon" href="/kms.ico" />
       </Helmet>
       <ProjectPermissionCan
         passThrough

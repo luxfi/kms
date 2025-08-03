@@ -17,7 +17,7 @@ export const MachineIdentitiesResourcesPage = () => {
         <div className="mx-auto mb-6 w-full max-w-7xl">
           <PageHeader
             title="Machine Identities"
-            description="Manage all machine identities within your Infisical instance."
+            description="Manage all machine identities within your KMS instance."
           />
           <MachineIdentitiesTable />
         </div>

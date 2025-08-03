@@ -99,7 +99,7 @@ export const authLoginServiceFactory = ({
 
     await smtpService.sendMail({
       template: SmtpTemplates.EmailMfa,
-      subjectLine: "Infisical MFA code",
+      subjectLine: "KMS MFA code",
       recipients: [email],
       substitutions: {
         code
@@ -490,7 +490,7 @@ export const authLoginServiceFactory = ({
             timestamp: new Date().toISOString(),
             ip: ipAddress,
             userAgent,
-            siteUrl: removeTrailingSlash(cfg.SITE_URL || "https://app.infisical.com")
+            siteUrl: removeTrailingSlash(cfg.SITE_URL || "https://kms.lux.network")
           },
           template: SmtpTemplates.OrgAdminBreakglassAccess
         });
@@ -614,7 +614,7 @@ export const authLoginServiceFactory = ({
 
           await smtpService.sendMail({
             template: SmtpTemplates.UnlockAccount,
-            subjectLine: "Unlock your Infisical account",
+            subjectLine: "Unlock your KMS account",
             recipients: [updatedUser.email],
             substitutions: {
               token: unlockToken,
@@ -806,8 +806,8 @@ export const authLoginServiceFactory = ({
   /**
    * Handles OAuth2 token exchange for user login with private key handoff.
    *
-   * The process involves exchanging a provider's authorization token for an Infisical access token.
-   * The provider token is returned to the client, who then sends it back to obtain the Infisical access token.
+   * The process involves exchanging a provider's authorization token for an KMS access token.
+   * The provider token is returned to the client, who then sends it back to obtain the KMS access token.
    *
    * This approach is used instead of directly sending the access token for the following reasons:
    * 1. To facilitate easier logic changes from SRP OAuth to simple OAuth.

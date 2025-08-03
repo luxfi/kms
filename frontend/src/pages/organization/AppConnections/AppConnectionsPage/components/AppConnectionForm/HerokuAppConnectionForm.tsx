@@ -16,7 +16,7 @@ import {
   SelectItem
 } from "@app/components/v2";
 import { APP_CONNECTION_MAP, getAppConnectionMethodDetails } from "@app/helpers/appConnections";
-import { isInfisicalCloud } from "@app/helpers/platform";
+import { isKMSCloud } from "@app/helpers/platform";
 import { useGetAppConnectionOption } from "@app/hooks/api/appConnections";
 import { AppConnection } from "@app/hooks/api/appConnections/enums";
 import {
@@ -164,8 +164,8 @@ export const HerokuConnectionForm = ({ appConnection, onSubmit: formSubmit }: Pr
               errorText={
                 !isLoading && isMissingConfig && selectedMethod === HerokuConnectionMethod.OAuth
                   ? `Environment variables have not been configured. ${
-                      isInfisicalCloud()
-                        ? "Please contact Infisical."
+                      isKMSCloud()
+                        ? "Please contact KMS."
                         : `See Docs to configure Heroku ${methodDetails.name} Connections.`
                     }`
                   : error?.message

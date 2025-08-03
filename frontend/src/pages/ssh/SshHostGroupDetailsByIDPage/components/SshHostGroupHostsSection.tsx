@@ -30,7 +30,7 @@ export const SshHostGroupHostsSection = ({ sshHostGroupId }: Props) => {
     if (!subscription?.sshHostGroups) {
       handlePopUpOpen("upgradePlan", {
         description:
-          "You can manage hosts more efficiently with SSH host groups if you upgrade your Infisical plan to an Enterprise license."
+          "You can manage hosts more efficiently with SSH host groups if you upgrade your KMS plan to an Enterprise license."
       });
     } else {
       handlePopUpOpen("addHostGroupMembers", {

@@ -15,7 +15,7 @@ export const createIntegrationMissingEnvVarsNotification = (
     type: "error",
     text: (
       <a
-        href={`https://infisical.com/docs/integrations/${type}/${slug}${
+        href={`https://lux.network/docs/integrations/${type}/${slug}${
           hashtag ? `#${hashtag}` : ""
         }`}
         target="_blank"

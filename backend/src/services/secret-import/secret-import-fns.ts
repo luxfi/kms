@@ -3,7 +3,7 @@ import { groupBy, unique } from "@app/lib/fn";
 
 import { ResourceMetadataDTO } from "../resource-metadata/resource-metadata-schema";
 import { TSecretDALFactory } from "../secret/secret-dal";
-import { INFISICAL_SECRET_VALUE_HIDDEN_MASK } from "../secret/secret-fns";
+import { KMS_SECRET_VALUE_HIDDEN_MASK } from "../secret/secret-fns";
 import { TSecretFolderDALFactory } from "../secret-folder/secret-folder-dal";
 import { TSecretV2BridgeDALFactory } from "../secret-v2-bridge/secret-v2-bridge-dal";
 import { TSecretImportDALFactory } from "./secret-import-dal";
@@ -248,7 +248,7 @@ export const fnSecretsV2FromImports = async ({
         .map((item) => ({
           ...item,
           secretKey: item.key,
-          secretValue: viewSecretValue ? decryptor(item.encryptedValue) : INFISICAL_SECRET_VALUE_HIDDEN_MASK,
+          secretValue: viewSecretValue ? decryptor(item.encryptedValue) : KMS_SECRET_VALUE_HIDDEN_MASK,
           secretValueHidden: !viewSecretValue,
           secretTags: item.tags,
           secretComment: decryptor(item.encryptedComment),

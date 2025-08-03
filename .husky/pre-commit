@@ -1,12 +1,12 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# Check if infisical is installed
-if ! command -v infisical >/dev/null 2>&1; then
-    echo "\nError: Infisical CLI is not installed. Please install the Infisical CLI before comitting.\n You can refer to the documentation at https://infisical.com/docs/cli/overview\n\n"
+# Check if kms is installed
+if ! command -v kms >/dev/null 2>&1; then
+    echo "\nError: KMS CLI is not installed. Please install the KMS CLI before comitting.\n You can refer to the documentation at https://lux.network/docs/cli/overview\n\n"
     exit 1
 fi
 
 npx lint-staged
 
-infisical scan git-changes --staged -v
+kms scan git-changes --staged -v

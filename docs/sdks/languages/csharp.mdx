@@ -1,25 +1,25 @@
 ---
-title: "Infisical .NET SDK"
+title: "KMS .NET SDK"
 sidebarTitle: ".NET"
-url: "https://github.com/Infisical/infisical-dotnet-sdk?tab=readme-ov-file#infisical-net-sdk"
+url: "https://github.com/luxfi/kms-dotnet-sdk?tab=readme-ov-file#kms-net-sdk"
 icon: "/images/sdks/languages/dotnet.svg"
 ---
 {/* 
-If you're working with C#, the official [Infisical C# SDK](https://github.com/Infisical/sdk/tree/main/languages/csharp) package is the easiest way to fetch and work with secrets for your application.
+If you're working with C#, the official [KMS C# SDK](https://github.com/KMS/sdk/tree/main/languages/csharp) package is the easiest way to fetch and work with secrets for your application.
 
-- [Nuget Package](https://www.nuget.org/packages/Infisical.Sdk)
-- [Github Repository](https://github.com/Infisical/sdk/tree/main/languages/csharp)
+- [Nuget Package](https://www.nuget.org/packages/KMS.Sdk)
+- [Github Repository](https://github.com/KMS/sdk/tree/main/languages/csharp)
 
 <Warning>
   **Deprecation Notice**
 
-  All versions prior to **2.3.9** should be considered deprecated and are no longer supported by Infisical. Please update to version **2.3.9** or newer. All changes are fully backwards compatible with older versions.
+  All versions prior to **2.3.9** should be considered deprecated and are no longer supported by KMS. Please update to version **2.3.9** or newer. All changes are fully backwards compatible with older versions.
 </Warning>
 
 ## Basic Usage
 
 ```cs
-using Infisical.Sdk;
+using KMS.Sdk;
 
 namespace Example
 {
@@ -41,7 +41,7 @@ namespace Example
           };
 
 
-          var infisicalClient = new InfisicalClient(settings);
+          var kmsClient = new KMSClient(settings);
 
             var getSecretOptions = new GetSecretOptions
             {
@@ -49,7 +49,7 @@ namespace Example
                 ProjectId = "PROJECT_ID",
                 Environment = "dev",
             };
-            var secret = infisicalClient.GetSecret(getSecretOptions);
+            var secret = kmsClient.GetSecret(getSecretOptions);
 
 
             Console.WriteLine($"The value of secret '{secret.SecretKey}', is: {secret.SecretValue}");
@@ -58,7 +58,7 @@ namespace Example
 }
 ```
 
-This example demonstrates how to use the Infisical C# SDK in a C# application. The application retrieves a secret named `TEST` from the `dev` environment of the `PROJECT_ID` project.
+This example demonstrates how to use the KMS C# SDK in a C# application. The application retrieves a secret named `TEST` from the `dev` environment of the `PROJECT_ID` project.
 
 <Warning>
     We do not recommend hardcoding your [Machine Identity Tokens](/platform/identities/overview). Setting it as an environment variable would be best.
@@ -67,14 +67,14 @@ This example demonstrates how to use the Infisical C# SDK in a C# application. T
 # Installation
 
 ```console
-$ dotnet add package Infisical.Sdk
+$ dotnet add package KMS.Sdk
 ```
 # Configuration
 
 Import the SDK and create a client instance with your [Machine Identity](/platform/identities/universal-auth).
 
 ```cs
-using Infisical.Sdk;
+using KMS.Sdk;
 
 namespace Example
 {
@@ -95,7 +95,7 @@ namespace Example
           };
 
 
-          var infisicalClient = new InfisicalClient(settings); // <-- Your SDK client is now ready to use
+          var kmsClient = new KMSClient(settings); // <-- Your SDK client is now ready to use
         }
     }
 }
@@ -121,12 +121,12 @@ namespace Example
             If manually set to 0, caching will be disabled, this is not recommended.
         </ParamField>
 
-        <ParamField query="SiteUrl" type="string" default="https://app.infisical.com" optional>
-            Your self-hosted absolute site URL including the protocol (e.g. `https://app.infisical.com`)
+        <ParamField query="SiteUrl" type="string" default="https://kms.lux.network" optional>
+            Your self-hosted absolute site URL including the protocol (e.g. `https://kms.lux.network`)
         </ParamField>
 
         <ParamField query="SslCertificatePath" optional>
-          Optionally provide a path to a custom SSL certificate file. This can be substituted by setting the `INFISICAL_SSL_CERTIFICATE` environment variable to the contents of the certificate.
+          Optionally provide a path to a custom SSL certificate file. This can be substituted by setting the `KMS_SSL_CERTIFICATE` environment variable to the contents of the certificate.
         </ParamField>
         
         <ParamField query="Auth" type="AuthenticationOptions">
@@ -143,8 +143,8 @@ The SDK supports a variety of authentication methods. The most common authentica
 #### Universal Auth
 
 **Using environment variables**
-- `INFISICAL_UNIVERSAL_AUTH_CLIENT_ID` - Your machine identity client ID.
-- `INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET` - Your machine identity client secret.
+- `KMS_UNIVERSAL_AUTH_CLIENT_ID` - Your machine identity client ID.
+- `KMS_UNIVERSAL_AUTH_CLIENT_SECRET` - Your machine identity client secret.
 
 **Using the SDK directly**
 ```csharp
@@ -160,7 +160,7 @@ The SDK supports a variety of authentication methods. The most common authentica
       }
     };
 
-    var infisicalClient = new InfisicalClient(settings);
+    var kmsClient = new KMSClient(settings);
 ```
 
 #### GCP ID Token Auth
@@ -170,7 +170,7 @@ The SDK supports a variety of authentication methods. The most common authentica
 </Info>
 
 **Using environment variables**
-- `INFISICAL_GCP_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+- `KMS_GCP_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
 
 **Using the SDK directly**
 ```csharp
@@ -186,14 +186,14 @@ The SDK supports a variety of authentication methods. The most common authentica
   };
 
 
-  var infisicalClient = new InfisicalClient(settings);
+  var kmsClient = new KMSClient(settings);
 ```
 
 #### GCP IAM Auth
 
 **Using environment variables**
-- `INFISICAL_GCP_IAM_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
-- `INFISICAL_GCP_IAM_SERVICE_ACCOUNT_KEY_FILE_PATH` - The path to your GCP service account key file.
+- `KMS_GCP_IAM_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
+- `KMS_GCP_IAM_SERVICE_ACCOUNT_KEY_FILE_PATH` - The path to your GCP service account key file.
 
 **Using the SDK directly**
 ```csharp
@@ -210,7 +210,7 @@ The SDK supports a variety of authentication methods. The most common authentica
   };
 
 
-  var infisicalClient = new InfisicalClient(settings);
+  var kmsClient = new KMSClient(settings);
 ```
 
 #### AWS IAM Auth
@@ -220,7 +220,7 @@ The SDK supports a variety of authentication methods. The most common authentica
 </Info>
 
 **Using environment variables**
-- `INFISICAL_AWS_IAM_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+- `KMS_AWS_IAM_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
 
 **Using the SDK directly**
 ```csharp
@@ -236,7 +236,7 @@ The SDK supports a variety of authentication methods. The most common authentica
   };
 
 
-  var infisicalClient = new InfisicalClient(settings);
+  var kmsClient = new KMSClient(settings);
 ```
 
 
@@ -247,7 +247,7 @@ The SDK supports a variety of authentication methods. The most common authentica
 </Info>
 
 **Using environment variables**
-- `INFISICAL_AZURE_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+- `KMS_AZURE_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
 
 **Using the SDK directly**
 ```csharp
@@ -262,7 +262,7 @@ The SDK supports a variety of authentication methods. The most common authentica
     }
   };
 
-  var infisicalClient = new InfisicalClient(settings);
+  var kmsClient = new KMSClient(settings);
 ```
 
 #### Kubernetes Auth
@@ -272,8 +272,8 @@ The SDK supports a variety of authentication methods. The most common authentica
 </Info>
 
 **Using environment variables**
-- `INFISICAL_KUBERNETES_IDENTITY_ID` - Your Infisical Machine Identity ID.
-- `INFISICAL_KUBERNETES_SERVICE_ACCOUNT_TOKEN_PATH_ENV_NAME` - The environment variable name that contains the path to the service account token. This is optional and will default to `/var/run/secrets/kubernetes.io/serviceaccount/token`.
+- `KMS_KUBERNETES_IDENTITY_ID` - Your KMS Machine Identity ID.
+- `KMS_KUBERNETES_SERVICE_ACCOUNT_TOKEN_PATH_ENV_NAME` - The environment variable name that contains the path to the service account token. This is optional and will default to `/var/run/secrets/kubernetes.io/serviceaccount/token`.
 
 **Using the SDK directly**
 ```csharp
@@ -289,7 +289,7 @@ The SDK supports a variety of authentication methods. The most common authentica
     }
   };
 
-  var infisicalClient = new InfisicalClient(settings);
+  var kmsClient = new KMSClient(settings);
 ```
 
 
@@ -311,10 +311,10 @@ var options = new ListSecretsOptions
     AttachToProcessEnv = false,
 };
 
-var secrets = infisical.ListSecrets(options);
+var secrets = kms.ListSecrets(options);
 ```
 
-Retrieve all secrets within the Infisical project and environment that client is connected to
+Retrieve all secrets within the KMS project and environment that client is connected to
 
 #### Parameters
 
@@ -360,10 +360,10 @@ var options = new GetSecretOptions
         ProjectId = "659c781eb2d4fe3e307b77bd",
         Environment = "dev",
     };
-var secret = infisical.GetSecret(options);
+var secret = kms.GetSecret(options);
 ```
 
-Retrieve a secret from Infisical.
+Retrieve a secret from KMS.
 
 By default, `GetSecret()` fetches and returns a shared secret.
 
@@ -408,10 +408,10 @@ var options = new CreateSecretOptions {
     SecretComment = "This is a new secret",
 };
 
-var newSecret = infisical.CreateSecret(options);
+var newSecret = kms.CreateSecret(options);
 ```
 
-Create a new secret in Infisical.
+Create a new secret in KMS.
 
 #### Parameters
 
@@ -449,10 +449,10 @@ var options = new UpdateSecretOptions {
     SecretValue = "NEW VALUE"
 };
 
-var updatedSecret = infisical.UpdateSecret(options);
+var updatedSecret = kms.UpdateSecret(options);
 ```
 
-Update an existing secret in Infisical.
+Update an existing secret in KMS.
 
 #### Parameters
 
@@ -489,10 +489,10 @@ var options = new DeleteSecretOptions
     SecretName = "NEW_SECRET",
 };
 
-var deletedSecret = infisical.DeleteSecret(options);
+var deletedSecret = kms.DeleteSecret(options);
 ```
 
-Delete a secret in Infisical.
+Delete a secret in KMS.
 
 #### Parameters
 
@@ -523,7 +523,7 @@ Delete a secret in Infisical.
 Create a base64-encoded, 256-bit symmetric key to be used for encryption/decryption.
 
 ```cs
-var key = infisical.CreateSymmetricKey();
+var key = kms.CreateSymmetricKey();
 ```
 
 #### Returns (string)
@@ -533,11 +533,11 @@ var key = infisical.CreateSymmetricKey();
 ```cs
 var options = new EncryptSymmetricOptions
 {
-    Plaintext = "Infisical is awesome!",
+    Plaintext = "KMS is awesome!",
     Key = key,
 };
 
-var encryptedData = infisical.EncryptSymmetric(options);
+var encryptedData = kms.EncryptSymmetric(options);
 ```
 
 #### Parameters
@@ -568,7 +568,7 @@ var decryptOptions = new DecryptSymmetricOptions
     Tag = encryptedData.Tag,
 };
 
-var decryptedPlaintext = infisical.DecryptSymmetric(decryptOptions);
+var decryptedPlaintext = kms.DecryptSymmetric(decryptOptions);
 ```
 
 #### Parameters

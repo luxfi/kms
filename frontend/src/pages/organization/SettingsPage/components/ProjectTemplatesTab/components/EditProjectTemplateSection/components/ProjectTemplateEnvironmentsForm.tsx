@@ -25,7 +25,7 @@ import { slugSchema } from "@app/lib/schemas";
 
 type Props = {
   projectTemplate: TProjectTemplate;
-  isInfisicalTemplate: boolean;
+  isKMSTemplate: boolean;
 };
 
 const formSchema = z.object({
@@ -42,7 +42,7 @@ type TFormSchema = z.infer<typeof formSchema>;
 
 export const ProjectTemplateEnvironmentsForm = ({
   projectTemplate,
-  isInfisicalTemplate
+  isKMSTemplate
 }: Props) => {
   const {
     control,
@@ -103,13 +103,13 @@ export const ProjectTemplateEnvironmentsForm = ({
       <div className="mb-4 flex items-center justify-between border-b border-mineshaft-400 pb-4">
         <div>
           <h2 className="text-lg font-semibold">Project Environments</h2>
-          {!isInfisicalTemplate && (
+          {!isKMSTemplate && (
             <p className="text-sm text-mineshaft-400">
               Add, rename, remove and reorder environments for this project template
             </p>
           )}
         </div>
-        {!isInfisicalTemplate && (
+        {!isKMSTemplate && (
           <OrgPermissionCan
             I={OrgPermissionActions.Edit}
             a={OrgPermissionSubjects.ProjectTemplates}
@@ -138,14 +138,14 @@ export const ProjectTemplateEnvironmentsForm = ({
             <Tr>
               <Th>Friendly Name</Th>
               <Th>Slug</Th>
-              {!isInfisicalTemplate && (
+              {!isKMSTemplate && (
                 <Th>
                   <div className="flex w-full justify-end normal-case">
                     <OrgPermissionCan
                       I={OrgPermissionActions.Edit}
                       a={OrgPermissionSubjects.ProjectTemplates}
                       renderTooltip={isEnvironmentLimitExceeded ? true : undefined}
-                      allowedLabel={`Plan environment limit of ${subscription.environmentLimit} exceeded. Contact Infisical to increase limit.`}
+                      allowedLabel={`Plan environment limit of ${subscription.environmentLimit} exceeded. Contact KMS to increase limit.`}
                     >
                       {(isAllowed) => (
                         <Button
@@ -170,7 +170,7 @@ export const ProjectTemplateEnvironmentsForm = ({
             {environments.map(({ id, name, slug }, pos) => (
               <Tr key={id}>
                 <Td>
-                  {isInfisicalTemplate ? (
+                  {isKMSTemplate ? (
                     name
                   ) : (
                     <OrgPermissionCan
@@ -196,7 +196,7 @@ export const ProjectTemplateEnvironmentsForm = ({
                   )}
                 </Td>
                 <Td>
-                  {isInfisicalTemplate ? (
+                  {isKMSTemplate ? (
                     slug
                   ) : (
                     <OrgPermissionCan
@@ -221,7 +221,7 @@ export const ProjectTemplateEnvironmentsForm = ({
                     </OrgPermissionCan>
                   )}
                 </Td>
-                {!isInfisicalTemplate && (
+                {!isKMSTemplate && (
                   <Td className="flex items-center justify-end">
                     <OrgPermissionCan
                       I={OrgPermissionActions.Edit}

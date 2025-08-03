@@ -511,7 +511,7 @@ export const UserIdentitiesTable = () => {
         <UpgradePlanModal
           isOpen={popUp.upgradePlan.isOpen}
           onOpenChange={(isOpen) => handlePopUpToggle("upgradePlan", isOpen)}
-          text={`${popUp?.upgradePlan?.data?.message} is only available on Infisical's Pro plan and above.`}
+          text={`${popUp?.upgradePlan?.data?.message} is only available on KMS's Pro plan and above.`}
         />
         <DeleteActionModal
           isOpen={popUp.removeUsers.isOpen}

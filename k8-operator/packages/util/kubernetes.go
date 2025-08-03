@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Infisical/infisical/k8-operator/api/v1alpha1"
-	"github.com/Infisical/infisical/k8-operator/packages/model"
+	"github.com/luxfi/kms/k8-operator/api/v1alpha1"
+	"github.com/luxfi/kms/k8-operator/packages/model"
 	corev1 "k8s.io/api/core/v1"
 	k8Errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,8 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const INFISICAL_MACHINE_IDENTITY_CLIENT_ID = "clientId"
-const INFISICAL_MACHINE_IDENTITY_CLIENT_SECRET = "clientSecret"
+const KMS_MACHINE_IDENTITY_CLIENT_ID = "clientId"
+const KMS_MACHINE_IDENTITY_CLIENT_SECRET = "clientSecret"
 
 func GetKubeSecretByNamespacedName(ctx context.Context, reconcilerClient client.Client, namespacedName types.NamespacedName) (*corev1.Secret, error) {
 	kubeSecret := &corev1.Secret{}
@@ -38,13 +38,13 @@ func GetKubeConfigMapByNamespacedName(ctx context.Context, reconcilerClient clie
 	return kubeConfigMap, err
 }
 
-func GetInfisicalUniversalAuthFromKubeSecret(ctx context.Context, reconcilerClient client.Client, universalAuthRef v1alpha1.KubeSecretReference) (machineIdentityDetails model.MachineIdentityDetails, err error) {
+func GetKMSUniversalAuthFromKubeSecret(ctx context.Context, reconcilerClient client.Client, universalAuthRef v1alpha1.KubeSecretReference) (machineIdentityDetails model.MachineIdentityDetails, err error) {
 
 	universalAuthCredsFromKubeSecret, err := GetKubeSecretByNamespacedName(ctx, reconcilerClient, types.NamespacedName{
 		Namespace: universalAuthRef.SecretNamespace,
 		Name:      universalAuthRef.SecretName,
-		// Namespace: infisicalSecret.Spec.Authentication.UniversalAuth.CredentialsRef.SecretNamespace,
-		// Name:      infisicalSecret.Spec.Authentication.UniversalAuth.CredentialsRef.SecretName,
+		// Namespace: kmsSecret.Spec.Authentication.UniversalAuth.CredentialsRef.SecretNamespace,
+		// Name:      kmsSecret.Spec.Authentication.UniversalAuth.CredentialsRef.SecretName,
 	})
 
 	if k8Errors.IsNotFound(err) {
@@ -55,8 +55,8 @@ func GetInfisicalUniversalAuthFromKubeSecret(ctx context.Context, reconcilerClie
 		return model.MachineIdentityDetails{}, fmt.Errorf("something went wrong when fetching your machine identity credentials [err=%s]", err)
 	}
 
-	clientIdFromSecret := universalAuthCredsFromKubeSecret.Data[INFISICAL_MACHINE_IDENTITY_CLIENT_ID]
-	clientSecretFromSecret := universalAuthCredsFromKubeSecret.Data[INFISICAL_MACHINE_IDENTITY_CLIENT_SECRET]
+	clientIdFromSecret := universalAuthCredsFromKubeSecret.Data[KMS_MACHINE_IDENTITY_CLIENT_ID]
+	clientSecretFromSecret := universalAuthCredsFromKubeSecret.Data[KMS_MACHINE_IDENTITY_CLIENT_SECRET]
 
 	return model.MachineIdentityDetails{ClientId: string(clientIdFromSecret), ClientSecret: string(clientSecretFromSecret)}, nil
 

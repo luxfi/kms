@@ -1,33 +1,33 @@
 ---
-title: "Infisical Ruby SDK"
+title: "KMS Ruby SDK"
 sidebarTitle: "Ruby"
 icon: "/images/sdks/languages/ruby.svg"
 ---
 
 
 
-If you're working with Ruby, the official [Infisical Ruby SDK](https://github.com/infisical/sdk) package is the easiest way to fetch and work with secrets for your application.
+If you're working with Ruby, the official [KMS Ruby SDK](https://github.com/kms/sdk) package is the easiest way to fetch and work with secrets for your application.
 
-- [Ruby Package](https://rubygems.org/gems/infisical-sdk)
-- [Github Repository](https://github.com/infisical/sdk)
+- [Ruby Package](https://rubygems.org/gems/kms-sdk)
+- [Github Repository](https://github.com/kms/sdk)
 
 <Warning>
   **Deprecation Notice**
 
-  All versions prior to **2.3.9** should be considered deprecated and are no longer supported by Infisical. Please update to version **2.3.9** or newer. All changes are fully backwards compatible with older versions.
+  All versions prior to **2.3.9** should be considered deprecated and are no longer supported by KMS. Please update to version **2.3.9** or newer. All changes are fully backwards compatible with older versions.
 </Warning>
 
 ## Basic Usage
 
 ```ruby
-require 'infisical-sdk'
+require 'kms-sdk'
 
-# 1. Create the Infisical client
-infisical = InfisicalSDK::InfisicalClient.new('https://app.infisical.com')
+# 1. Create the KMS client
+kms = KMSSDK::KMSClient.new('https://kms.lux.network')
 
-infisical.auth.universal_auth(client_id: 'YOUR_CLIENT_ID', client_secret: 'YOUR_CLIENT_SECRET')
+kms.auth.universal_auth(client_id: 'YOUR_CLIENT_ID', client_secret: 'YOUR_CLIENT_SECRET')
 
-test_secret = infisical.secrets.get(
+test_secret = kms.secrets.get(
   secret_name: 'API_KEY',
   project_id: 'project-id',
   environment: 'dev'
@@ -35,7 +35,7 @@ test_secret = infisical.secrets.get(
 puts "Secret: #{single_test_secret}"
 ```
 
-This example demonstrates how to use the Infisical Ruby SDK in a simple Ruby application. The application retrieves a secret named `API_KEY` from the `dev` environment of the `YOUR_PROJECT_ID` project.
+This example demonstrates how to use the KMS Ruby SDK in a simple Ruby application. The application retrieves a secret named `API_KEY` from the `dev` environment of the `YOUR_PROJECT_ID` project.
 
 <Warning>
     We do not recommend hardcoding your [Machine Identity Tokens](/platform/identities/overview). Setting it as an environment variable would be best.
@@ -44,14 +44,14 @@ This example demonstrates how to use the Infisical Ruby SDK in a simple Ruby app
 # Installation
 
 ```console
-$ gem install infisical-sdk
+$ gem install kms-sdk
 ```
 # Configuration
 
 Import the SDK and create a client instance.
 
 ```ruby
-infisical = InfisicalSDK::InfisicalClient.new('https://app.infisical.com') # Optional parameter, default is https://api.infisical.com
+kms = KMSSDK::KMSClient.new('https://kms.lux.network') # Optional parameter, default is https://api.lux.network
 ```
 
 ### Client parameters
@@ -59,7 +59,7 @@ infisical = InfisicalSDK::InfisicalClient.new('https://app.infisical.com') # Opt
 <ParamField query="options" type="object">
     <Expandable title="properties">
         <ParamField query="Site URL" type="string" optional>
-            The URL of the Infisical API. Default is `https://api.infisical.com`.
+            The URL of the KMS API. Default is `https://api.lux.network`.
         </ParamField>
 
         <ParamField query="Cache TTL" type="string" required>
@@ -78,12 +78,12 @@ The SDK supports a variety of authentication methods. The most common authentica
 
 Call `auth.universal_auth()` with empty arguments to use the following environment variables:
 
-- `INFISICAL_UNIVERSAL_AUTH_CLIENT_ID` - Your machine identity client ID.
-- `INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET` - Your machine identity client secret.
+- `KMS_UNIVERSAL_AUTH_CLIENT_ID` - Your machine identity client ID.
+- `KMS_UNIVERSAL_AUTH_CLIENT_SECRET` - Your machine identity client secret.
 
 **Using the SDK directly**
 ```ruby
-infisical.auth.universal_auth(client_id: 'your-client-id', client_secret: 'your-client-secret')
+kms.auth.universal_auth(client_id: 'your-client-id', client_secret: 'your-client-secret')
 ```
 
 #### GCP ID Token Auth
@@ -96,11 +96,11 @@ infisical.auth.universal_auth(client_id: 'your-client-id', client_secret: 'your-
 
 Call `.auth.gcp_id_token_auth()` with empty arguments to use the following environment variables:
 
-- `INFISICAL_GCP_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+- `KMS_GCP_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
 
 **Using the SDK directly**
 ```ruby
-infisical.auth.gcp_id_token_auth(identity_id: 'MACHINE_IDENTITY_ID')
+kms.auth.gcp_id_token_auth(identity_id: 'MACHINE_IDENTITY_ID')
 ```
 
 #### GCP IAM Auth
@@ -109,12 +109,12 @@ infisical.auth.gcp_id_token_auth(identity_id: 'MACHINE_IDENTITY_ID')
 
 Call `.auth.gcp_iam_auth()` with empty arguments to use the following environment variables:
 
-- `INFISICAL_GCP_IAM_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
-- `INFISICAL_GCP_IAM_SERVICE_ACCOUNT_KEY_FILE_PATH` - The path to your GCP service account key file.
+- `KMS_GCP_IAM_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
+- `KMS_GCP_IAM_SERVICE_ACCOUNT_KEY_FILE_PATH` - The path to your GCP service account key file.
 
 **Using the SDK directly**
 ```ruby
-infisical.auth.gcp_iam_auth(identity_id: 'MACHINE_IDENTITY_ID', service_account_key_file_path: 'SERVICE_ACCOUNT_KEY_FILE_PATH')
+kms.auth.gcp_iam_auth(identity_id: 'MACHINE_IDENTITY_ID', service_account_key_file_path: 'SERVICE_ACCOUNT_KEY_FILE_PATH')
 ```
 
 #### AWS IAM Auth
@@ -127,11 +127,11 @@ infisical.auth.gcp_iam_auth(identity_id: 'MACHINE_IDENTITY_ID', service_account_
 
 Call `.auth.aws_iam_auth()` with empty arguments to use the following environment variables:
 
-- `INFISICAL_AWS_IAM_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+- `KMS_AWS_IAM_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
 
 **Using the SDK directly**
 ```ruby
-infisical.auth.aws_iam_auth(identity_id: 'MACHINE_IDENTITY_ID')
+kms.auth.aws_iam_auth(identity_id: 'MACHINE_IDENTITY_ID')
 ```
 
 
@@ -145,11 +145,11 @@ infisical.auth.aws_iam_auth(identity_id: 'MACHINE_IDENTITY_ID')
 
 Call `.auth.azure_auth()` with empty arguments to use the following environment variables:
 
-- `INFISICAL_AZURE_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+- `KMS_AZURE_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
 
 **Using the SDK directly**
 ```ruby
-infisical.auth.azure_auth(identity_id: 'MACHINE_IDENTITY_ID')
+kms.auth.azure_auth(identity_id: 'MACHINE_IDENTITY_ID')
 ```
 
 #### Kubernetes Auth
@@ -162,13 +162,13 @@ infisical.auth.azure_auth(identity_id: 'MACHINE_IDENTITY_ID')
 
 Call `.auth.kubernetes_auth()` with empty arguments to use the following environment variables:
 
-- `INFISICAL_KUBERNETES_IDENTITY_ID` - Your Infisical Machine Identity ID.
-- `INFISICAL_KUBERNETES_SERVICE_ACCOUNT_TOKEN_PATH_ENV_NAME` - The environment variable name that contains the path to the service account token. This is optional and will default to `/var/run/secrets/kubernetes.io/serviceaccount/token`.
+- `KMS_KUBERNETES_IDENTITY_ID` - Your KMS Machine Identity ID.
+- `KMS_KUBERNETES_SERVICE_ACCOUNT_TOKEN_PATH_ENV_NAME` - The environment variable name that contains the path to the service account token. This is optional and will default to `/var/run/secrets/kubernetes.io/serviceaccount/token`.
 
 **Using the SDK directly**
 ```ruby
 # Service account token path will default to /var/run/secrets/kubernetes.io/serviceaccount/token if empty value is passed
-infisical.auth.kubernetes_auth(identity_id: 'MACHINE_IDENTITY_ID', service_account_token_path: nil)
+kms.auth.kubernetes_auth(identity_id: 'MACHINE_IDENTITY_ID', service_account_token_path: nil)
 ```
 
 ## Working with Secrets
@@ -176,14 +176,14 @@ infisical.auth.kubernetes_auth(identity_id: 'MACHINE_IDENTITY_ID', service_accou
 ### client.secrets.list(options)
 
 ```ruby
-secrets = infisical.secrets.list(
+secrets = kms.secrets.list(
   project_id: 'PROJECT_ID',
   environment: 'dev',
   path: '/foo/bar',
 )
 ```
 
-Retrieve all secrets within the Infisical project and environment that client is connected to
+Retrieve all secrets within the KMS project and environment that client is connected to
 
 #### Parameters
 
@@ -223,14 +223,14 @@ Retrieve all secrets within the Infisical project and environment that client is
 ### client.secrets.get(options)
 
 ```ruby
-secret = infisical.secrets.get(
+secret = kms.secrets.get(
   secret_name: 'API_KEY',
   project_id: project_id,
   environment: env_slug
 )
 ```
 
-Retrieve a secret from Infisical.
+Retrieve a secret from KMS.
 
 By default, `Secrets().Retrieve()` fetches and returns a shared secret.
 
@@ -259,7 +259,7 @@ By default, `Secrets().Retrieve()` fetches and returns a shared secret.
 ### client.secrets.create(options)
 
 ```ruby
-new_secret = infisical.secrets.create(
+new_secret = kms.secrets.create(
   secret_name: 'NEW_SECRET',
   secret_value: 'SECRET_VALUE',
   project_id: 'PROJECT_ID',
@@ -267,7 +267,7 @@ new_secret = infisical.secrets.create(
 )
 ```
 
-Create a new secret in Infisical.
+Create a new secret in KMS.
 
 #### Parameters
 
@@ -300,7 +300,7 @@ Create a new secret in Infisical.
 ### client.secrets.update(options)
 
 ```ruby
-updated_secret = infisical.secrets.update(
+updated_secret = kms.secrets.update(
   secret_name: 'SECRET_KEY_TO_UPDATE',
   secret_value: 'NEW_SECRET_VALUE',
   project_id: 'PROJECT_ID',
@@ -308,7 +308,7 @@ updated_secret = infisical.secrets.update(
 )
 ```
 
-Update an existing secret in Infisical.
+Update an existing secret in KMS.
 
 #### Parameters
 
@@ -341,14 +341,14 @@ Update an existing secret in Infisical.
 ### client.secrets.delete(options)
 
 ```ruby
-deleted_secret = infisical.secrets.delete(
+deleted_secret = kms.secrets.delete(
   secret_name: 'SECRET_TO_DELETE',
   project_id: 'PROJECT_ID',
   environment: 'dev',
 )
 ```
 
-Delete a secret in Infisical.
+Delete a secret in KMS.
 
 #### Parameters
 
@@ -380,7 +380,7 @@ Delete a secret in Infisical.
 Create a base64-encoded, 256-bit symmetric key to be used for encryption/decryption.
 
 ```ruby
-key = infisical.cryptography.create_symmetric_key
+key = kms.cryptography.create_symmetric_key
 ```
 
 #### Returns (string)
@@ -388,7 +388,7 @@ key = infisical.cryptography.create_symmetric_key
 
 ### Encrypt symmetric
 ```ruby
-encrypted_data = infisical.cryptography.encrypt_symmetric(data: "Hello World!", key: key)
+encrypted_data = kms.cryptography.encrypt_symmetric(data: "Hello World!", key: key)
 ```
 
 #### Parameters
@@ -412,7 +412,7 @@ encrypted_data = infisical.cryptography.encrypt_symmetric(data: "Hello World!", 
 
 ### Decrypt symmetric
 ```ruby
-decrypted_data = infisical.cryptography.decrypt_symmetric(
+decrypted_data = kms.cryptography.decrypt_symmetric(
   ciphertext: encrypted_data['ciphertext'],
   iv: encrypted_data['iv'],
   tag: encrypted_data['tag'],

@@ -74,10 +74,10 @@ export const AuditLogsRetentionSection = () => {
     }
   };
 
-  // render only for dedicated/self-hosted instances of Infisical
+  // render only for dedicated/self-hosted instances of KMS
   if (
-    window.location.origin.includes("https://app.infisical.com") ||
-    window.location.origin.includes("https://gamma.infisical.com")
+    window.location.origin.includes("https://kms.lux.network") ||
+    window.location.origin.includes("https://gamma.lux.network")
   ) {
     return null;
   }

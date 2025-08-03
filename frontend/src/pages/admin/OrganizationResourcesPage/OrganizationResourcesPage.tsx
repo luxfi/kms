@@ -17,7 +17,7 @@ export const OrganizationResourcesPage = () => {
         <div className="mx-auto mb-6 w-full max-w-7xl">
           <PageHeader
             title="Organizations"
-            description="Manage all organizations within your Infisical instance."
+            description="Manage all organizations within your KMS instance."
           />
           <OrganizationsTable />
         </div>

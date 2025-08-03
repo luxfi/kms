@@ -163,7 +163,7 @@ export const SecretApprovalRequest = () => {
                 <div className="flex items-start gap-1">
                   <p className="text-xl font-semibold text-mineshaft-100">Change Requests</p>
                   <a
-                    href="https://infisical.com/docs/documentation/platform/pr-workflows"
+                    href="https://lux.network/docs/documentation/platform/pr-workflows"
                     target="_blank"
                     rel="noopener noreferrer"
                   >

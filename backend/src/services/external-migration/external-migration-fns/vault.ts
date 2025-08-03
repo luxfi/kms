@@ -5,7 +5,7 @@ import { BadRequestError } from "@app/lib/errors";
 import { logger } from "@app/lib/logger";
 import { blockLocalAndPrivateIpAddresses } from "@app/lib/validator";
 
-import { InfisicalImportData, VaultMappingType } from "../external-migration-types";
+import { KMSImportData, VaultMappingType } from "../external-migration-types";
 
 type VaultData = {
   namespace: string;
@@ -184,10 +184,10 @@ const vaultFactory = () => {
   };
 };
 
-export const transformToInfisicalFormatNamespaceToProjects = (
+export const transformToKMSFormatNamespaceToProjects = (
   vaultData: VaultData[],
   mappingType: VaultMappingType
-): InfisicalImportData => {
+): KMSImportData => {
   const projects: Array<{ name: string; id: string }> = [];
   const environments: Array<{ name: string; id: string; projectId: string; envParentId?: string }> = [];
   const folders: Array<{ id: string; name: string; environmentId: string; parentFolderId?: string }> = [];
@@ -326,7 +326,7 @@ export const importVaultDataFn = async ({
     namespace: vaultNamespace
   });
 
-  const infisicalData = transformToInfisicalFormatNamespaceToProjects(vaultData, mappingType);
+  const kmsData = transformToKMSFormatNamespaceToProjects(vaultData, mappingType);
 
-  return infisicalData;
+  return kmsData;
 };

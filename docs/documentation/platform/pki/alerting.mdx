@@ -1,11 +1,11 @@
 ---
 title: "Alerting"
-description: "Learn how to set up alerting for expiring certificates with Infisical"
+description: "Learn how to set up alerting for expiring certificates with KMS"
 ---
 
 ## Concept
 
-In order to ensure that your certificates are always up-to-date and not expired, you can set up alerting for expiring CA and leaf certificates in Infisical.
+In order to ensure that your certificates are always up-to-date and not expired, you can set up alerting for expiring CA and leaf certificates in KMS.
 
 ## Workflow
 
@@ -17,7 +17,7 @@ A typical alerting workflow for expiring certificates consists of the following 
 ## Guide to Creating an Alert
 
 <Tabs>
-  <Tab title="Infisical UI">
+  <Tab title="KMS UI">
     <Steps>
       <Step title="Creating a PKI/Certificate collection">
         To create a PKI/Certificate collection, head to your Project > Internal
@@ -67,7 +67,7 @@ A typical alerting workflow for expiring certificates consists of the following 
             ### Sample request
 
             ```bash Request
-            curl --location --request POST 'https://app.infisical.com/api/v1/pki/collections' \
+            curl --location --request POST 'https://kms.lux.network/api/v1/pki/collections' \
               --header 'Authorization: Bearer <access-token>' \
               --header 'Content-Type: application/json' \
               --data-raw '{
@@ -91,7 +91,7 @@ A typical alerting workflow for expiring certificates consists of the following 
             ### Sample request
 
             ```bash Request
-            curl --location --request POST 'https://app.infisical.com/api/v1/pki/collections/<collection-id>/items' \
+            curl --location --request POST 'https://kms.lux.network/api/v1/pki/collections/<collection-id>/items' \
               --header 'Authorization: Bearer <access-token>' \
               --header 'Content-Type: application/json' \
               --data-raw '{
@@ -117,7 +117,7 @@ A typical alerting workflow for expiring certificates consists of the following 
           ### Sample request
 
             ```bash Request
-            curl --location --request POST 'https://app.infisical.com/api/v1/pki/alerts' \
+            curl --location --request POST 'https://kms.lux.network/api/v1/pki/alerts' \
               --header 'Authorization: Bearer <access-token>' \
               --header 'Content-Type: application/json' \
               --data-raw '{

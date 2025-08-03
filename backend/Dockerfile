@@ -52,10 +52,10 @@ RUN npm ci --only-production && npm cache clean --force
 
 COPY --from=build /app .
 
-# Install Infisical CLI
+# Install KMS CLI
 RUN apt-get install -y curl bash && \
-    curl -1sLf 'https://artifacts-cli.infisical.com/setup.deb.sh' | bash && \
-    apt-get update && apt-get install -y infisical=0.41.89 git
+    curl -1sLf 'https://artifacts-cli.lux.network/setup.deb.sh' | bash && \
+    apt-get update && apt-get install -y kms=0.41.89 git
 
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s \
     CMD node healthcheck.js

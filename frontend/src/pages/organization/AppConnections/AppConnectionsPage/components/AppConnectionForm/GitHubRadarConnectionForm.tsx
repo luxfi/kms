@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { Button, FormControl, ModalClose, Select, SelectItem } from "@app/components/v2";
 import { APP_CONNECTION_MAP, getAppConnectionMethodDetails } from "@app/helpers/appConnections";
-import { isInfisicalCloud } from "@app/helpers/platform";
+import { isKMSCloud } from "@app/helpers/platform";
 import {
   GitHubRadarConnectionMethod,
   TGitHubRadarConnection,
@@ -106,8 +106,8 @@ export const GitHubRadarConnectionForm = ({ appConnection }: Props) => {
               errorText={
                 !isLoading && isMissingConfig
                   ? `Environment variables have not been configured. ${
-                      isInfisicalCloud()
-                        ? "Please contact Infisical."
+                      isKMSCloud()
+                        ? "Please contact KMS."
                         : `See Docs to configure GitHub Radar ${methodDetails.name} Connections.`
                     }`
                   : error?.message

@@ -26,7 +26,7 @@ export const SshHostGroupsSection = () => {
     if (!subscription?.sshHostGroups) {
       handlePopUpOpen("upgradePlan", {
         description:
-          "You can manage hosts more efficiently with SSH host groups if you upgrade your Infisical plan to an Enterprise license."
+          "You can manage hosts more efficiently with SSH host groups if you upgrade your KMS plan to an Enterprise license."
       });
     } else {
       handlePopUpOpen("sshHostGroup");
@@ -60,7 +60,7 @@ export const SshHostGroupsSection = () => {
           <a
             target="_blank"
             rel="noopener noreferrer"
-            href="https://infisical.com/docs/documentation/platform/ssh/host-groups"
+            href="https://lux.network/docs/documentation/platform/ssh/host-groups"
           >
             <span className="flex w-max cursor-pointer items-center rounded-md border border-mineshaft-500 bg-mineshaft-600 px-4 py-2 text-mineshaft-200 duration-200 hover:border-primary/40 hover:bg-primary/10 hover:text-white">
               Documentation{" "}

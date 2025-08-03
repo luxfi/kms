@@ -15,18 +15,18 @@ const bootstrapCb = async () => {
   const appCfg = getConfig();
   const serverCfg = await getServerCfg();
   if (!serverCfg.initialized) {
-    console.info(`Welcome to Infisical
+    console.info(`Welcome to KMS
 
-Create your Infisical administrator account at:
+Create your KMS administrator account at:
 http://localhost:${appCfg.PORT}/admin/signup
 `);
   } else {
     console.info(`Welcome back!
 
-To access Infisical Administrator Panel open
+To access KMS Administrator Panel open
 http://localhost:${appCfg.PORT}/admin
 
-To access Infisical server
+To access KMS server
 http://localhost:${appCfg.PORT}
 `);
   }

@@ -124,11 +124,11 @@ export const MicrosoftTeamsIntegrationForm = ({ id, onClose }: Props) => {
   return (
     <form onSubmit={handleSubmit(handleMicrosoftTeamsFormSubmit)} autoComplete="off">
       <div className="mb-4 text-xs text-mineshaft-200">
-        For seamless installations, ensure that the Infisical bot is already installed in your
+        For seamless installations, ensure that the KMS bot is already installed in your
         Microsoft Teams tenant. For more information, please refer to the{" "}
         <a
           className="text-primary-500"
-          href="https://infisical.com/docs/documentation/platform/workflow-integrations/microsoft-teams-integration"
+          href="https://lux.network/docs/documentation/platform/workflow-integrations/microsoft-teams-integration"
           target="_blank"
           rel="noopener noreferrer"
         >

@@ -60,7 +60,7 @@ export const CreateSecretRotationV2Modal = ({ onOpenChange, isOpen, ...props }: 
               Add Secret Rotation
               <a
                 target="_blank"
-                href="https://infisical.com/docs/documentation/platform/secret-rotation/overview"
+                href="https://lux.network/docs/documentation/platform/secret-rotation/overview"
                 className="mb-1 ml-1"
                 rel="noopener noreferrer"
               >

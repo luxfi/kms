@@ -101,8 +101,8 @@ export const SecretScanningDataSourceByIdPage = () => {
   return (
     <>
       <Helmet>
-        <title>Secret Scanning Data Source | Infisical</title>
-        <link rel="icon" href="/infisical.ico" />
+        <title>Secret Scanning Data Source | KMS</title>
+        <link rel="icon" href="/kms.ico" />
       </Helmet>
       <ProjectPermissionCan
         renderGuardBanner

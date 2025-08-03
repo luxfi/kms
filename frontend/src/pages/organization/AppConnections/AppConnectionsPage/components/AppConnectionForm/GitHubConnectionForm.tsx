@@ -26,7 +26,7 @@ import {
   OrgPermissionSubjects
 } from "@app/context/OrgPermissionContext/types";
 import { APP_CONNECTION_MAP, getAppConnectionMethodDetails } from "@app/helpers/appConnections";
-import { isInfisicalCloud } from "@app/helpers/platform";
+import { isKMSCloud } from "@app/helpers/platform";
 import { gatewaysQueryKeys } from "@app/hooks/api";
 import {
   GitHubConnectionMethod,
@@ -158,8 +158,8 @@ export const GitHubConnectionForm = ({ appConnection }: Props) => {
               errorText={
                 !isLoading && isMissingConfig
                   ? `Credentials have not been configured. ${
-                      isInfisicalCloud()
-                        ? "Please contact Infisical."
+                      isKMSCloud()
+                        ? "Please contact KMS."
                         : `See Docs to configure Github ${methodDetails.name} Connections.`
                     }`
                   : error?.message

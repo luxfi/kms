@@ -16,13 +16,13 @@ export const ErrorPage = ({ error }: ErrorComponentProps) => {
             className="inline cursor-pointer text-mineshaft-100 underline decoration-primary-500 underline-offset-4 opacity-80 duration-200 hover:opacity-100"
             target="_blank"
             rel="noopener noreferrer"
-            href="mailto:support@infisical.com"
+            href="mailto:support@lux.network"
           >
-            support@infisical.com
+            support@lux.network
           </a>
           , or{" "}
           <a
-            href="https://infisical.com/slack"
+            href="https://lux.network/slack"
             className="inline cursor-pointer text-mineshaft-100 underline decoration-primary-500 underline-offset-4 opacity-80 duration-200 hover:opacity-100"
             target="_blank"
             rel="noopener noreferrer"

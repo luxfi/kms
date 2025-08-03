@@ -1,9 +1,9 @@
 ---
 title: "Zabbix Connection"
-description: "Learn how to configure a Zabbix Connection for Infisical."
+description: "Learn how to configure a Zabbix Connection for KMS."
 ---
 
-Infisical supports the use of [API Tokens](https://www.zabbix.com/documentation/current/en/manual/web_interface/frontend_sections/users/api_tokens) to connect with Zabbix.
+KMS supports the use of [API Tokens](https://www.zabbix.com/documentation/current/en/manual/web_interface/frontend_sections/users/api_tokens) to connect with Zabbix.
 
 ## Create Zabbix API Token
 
@@ -25,13 +25,13 @@ Infisical supports the use of [API Tokens](https://www.zabbix.com/documentation/
     </Step>
 </Steps>
 
-## Create Zabbix Connection in Infisical
+## Create Zabbix Connection in KMS
 
 <Tabs>
-    <Tab title="Infisical UI">
+    <Tab title="KMS UI">
         <Steps>
             <Step title="Navigate to App Connections">
-                In your Infisical dashboard, go to **Organization Settings** and select the [**App Connections**](https://app.infisical.com/organization/app-connections) tab.
+                In your KMS dashboard, go to **Organization Settings** and select the [**App Connections**](https://kms.lux.network/organization/app-connections) tab.
 
                 ![App Connections Tab](/images/app-connections/general/add-connection.png)
             </Step>
@@ -50,7 +50,7 @@ Infisical supports the use of [API Tokens](https://www.zabbix.com/documentation/
                 ![Zabbix Connection Modal](/images/app-connections/zabbix/zabbix-app-connection-form.png)
             </Step>
             <Step title="Connection Created">
-                After clicking Create, your **Zabbix Connection** is established and ready to use with your Infisical projects.
+                After clicking Create, your **Zabbix Connection** is established and ready to use with your KMS projects.
 
                 ![Zabbix Connection Created](/images/app-connections/zabbix/zabbix-app-connection-generated.png)
             </Step>
@@ -63,7 +63,7 @@ Infisical supports the use of [API Tokens](https://www.zabbix.com/documentation/
 
         ```bash Request
         curl    --request POST \
-                --url https://app.infisical.com/api/v1/app-connections/zabbix \
+                --url https://kms.lux.network/api/v1/app-connections/zabbix \
                 --header 'Content-Type: application/json' \
                 --data '{
                     "name": "my-zabbix-connection",

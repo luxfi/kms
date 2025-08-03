@@ -44,7 +44,7 @@ import {
   TextArea,
   Tooltip
 } from "@app/components/v2";
-import { InfisicalSecretInput } from "@app/components/v2/InfisicalSecretInput";
+import { KMSSecretInput } from "@app/components/v2/KMSSecretInput";
 import {
   ProjectPermissionActions,
   ProjectPermissionSub,
@@ -322,7 +322,7 @@ export const SecretDetailSidebar = ({
         onOpenChange={(isUpgradeModalOpen) =>
           handlePopUpToggle("secretAccessUpgradePlan", isUpgradeModalOpen)
         }
-        text="Secret access analysis is only available on Infisical's Pro plan and above."
+        text="Secret access analysis is only available on KMS's Pro plan and above."
       />
       <Drawer
         onOpenChange={(state) => {
@@ -381,7 +381,7 @@ export const SecretDetailSidebar = ({
                               label="Value"
                             >
                               <div className="flex items-center gap-2">
-                                <InfisicalSecretInput
+                                <KMSSecretInput
                                   isReadOnly={isReadOnly || !isAllowed || secret?.isRotatedSecret}
                                   environment={environment}
                                   secretPath={secretPath}
@@ -506,7 +506,7 @@ export const SecretDetailSidebar = ({
                     control={control}
                     render={({ field }) => (
                       <FormControl label="Override Value" className="px-4">
-                        <InfisicalSecretInput
+                        <KMSSecretInput
                           isReadOnly={isReadOnly}
                           environment={environment}
                           secretPath={secretPath}

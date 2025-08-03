@@ -36,7 +36,7 @@ import {
 } from "@app/components/v2";
 import { envConfig } from "@app/config/env";
 import { useOrganization, useSubscription, useUser } from "@app/context";
-import { isInfisicalCloud } from "@app/helpers/platform";
+import { isKMSCloud } from "@app/helpers/platform";
 import { useToggle } from "@app/hooks";
 import { useGetOrganizations, useLogoutUser, workspaceKeys } from "@app/hooks/api";
 import { authKeys, selectOrganization } from "@app/hooks/api/auth/queries";
@@ -55,9 +55,9 @@ const getPlan = (subscription: SubscriptionPlan) => {
 };
 
 const getFormattedSupportEmailLink = (variables: { org_id: string; domain: string }) => {
-  const email = "support@infisical.com";
+  const email = "support@lux.network";
 
-  const body = `Hello Infisical Support Team,
+  const body = `Hello KMS Support Team,
 
 Issue Details:
 [What you did]
@@ -76,21 +76,21 @@ Thank you,
   return `mailto:${email}?body=${encodeURIComponent(body)}`;
 };
 
-export const INFISICAL_SUPPORT_OPTIONS = [
+export const KMS_SUPPORT_OPTIONS = [
   [
     <FontAwesomeIcon key={1} className="pr-4 text-sm" icon={faSlack} />,
     "Support Forum",
-    () => "https://infisical.com/slack"
+    () => "https://lux.network/slack"
   ],
   [
     <FontAwesomeIcon key={2} className="pr-4 text-sm" icon={faBook} />,
     "Read Docs",
-    () => "https://infisical.com/docs/documentation/getting-started/introduction"
+    () => "https://lux.network/docs/documentation/getting-started/introduction"
   ],
   [
     <FontAwesomeIcon key={3} className="pr-4 text-sm" icon={faGithub} />,
     "GitHub Issues",
-    () => "https://github.com/Infisical/infisical/issues"
+    () => "https://github.com/luxfi/kms/issues"
   ],
   [
     <FontAwesomeIcon key={4} className="pr-4 text-sm" icon={faEnvelope} />,
@@ -183,7 +183,7 @@ export const Navbar = () => {
     <div className="z-10 flex min-h-12 items-center border-b border-mineshaft-600 bg-mineshaft-800 px-4">
       <div>
         <Link to="/organization/projects">
-          <img alt="infisical logo" src="/images/logotransparent.png" className="h-4" />
+          <img alt="kms logo" src="/images/logotransparent.png" className="h-4" />
         </Link>
       </div>
       <p className="pl-1 pr-3 text-lg text-mineshaft-400/70">/</p>
@@ -278,7 +278,7 @@ export const Navbar = () => {
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" side="bottom" className="mt-3 p-1">
-          {INFISICAL_SUPPORT_OPTIONS.map(([icon, text, getUrl]) => {
+          {KMS_SUPPORT_OPTIONS.map(([icon, text, getUrl]) => {
             const url =
               text === "Email Support"
                 ? getUrl({
@@ -287,7 +287,7 @@ export const Navbar = () => {
                   })
                 : getUrl();
 
-            if (url === "server-admins" && isInfisicalCloud()) {
+            if (url === "server-admins" && isKMSCloud()) {
               return null;
             }
             return (
@@ -351,7 +351,7 @@ export const Navbar = () => {
             <DropdownMenuItem>Personal Settings</DropdownMenuItem>
           </Link>
           <a
-            href="https://infisical.com/docs/documentation/getting-started/introduction"
+            href="https://lux.network/docs/documentation/getting-started/introduction"
             target="_blank"
             rel="noopener noreferrer"
             className="mt-3 w-full text-sm font-normal leading-[1.2rem] text-mineshaft-300 hover:text-mineshaft-100"
@@ -365,7 +365,7 @@ export const Navbar = () => {
             </DropdownMenuItem>
           </a>
           <a
-            href="https://infisical.com/slack"
+            href="https://lux.network/slack"
             target="_blank"
             rel="noopener noreferrer"
             className="mt-3 w-full text-sm font-normal leading-[1.2rem] text-mineshaft-300 hover:text-mineshaft-100"

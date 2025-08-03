@@ -91,7 +91,7 @@ export const HasuraCloudConfigurePage = () => {
       <Card className="max-w-lg rounded-md border border-mineshaft-600">
         <CardTitle
           className="px-6 text-left text-xl"
-          subTitle={`Choose which environment or folder in Infisical you want to sync to ${APP_NAME} environment variables.`}
+          subTitle={`Choose which environment or folder in KMS you want to sync to ${APP_NAME} environment variables.`}
         >
           <div className="flex flex-row items-center">
             <div className="flex items-center pb-0.5">
@@ -106,7 +106,7 @@ export const HasuraCloudConfigurePage = () => {
             <a
               target="_blank"
               rel="noopener noreferrer"
-              href="https://infisical.com/docs/integrations/cloud/hasura-cloud"
+              href="https://lux.network/docs/integrations/cloud/hasura-cloud"
             >
               <div className="mb-1 ml-2 inline-block cursor-default rounded-md bg-yellow/20 px-1.5 pb-[0.03rem] pt-[0.04rem] text-sm text-yellow opacity-80 hover:opacity-100">
                 <FontAwesomeIcon icon={faBookOpen} className="mr-1.5" />
@@ -209,7 +209,7 @@ export const HasuraCloudConfigurePage = () => {
           src="/images/loading/loading.gif"
           height={70}
           width={120}
-          alt="infisical loading indicator"
+          alt="kms loading indicator"
         />
       ) : (
         <div className="flex h-max max-w-md flex-col rounded-md border border-mineshaft-600 bg-mineshaft-800 p-6 text-center text-mineshaft-200">
@@ -220,9 +220,9 @@ export const HasuraCloudConfigurePage = () => {
               className="inline cursor-pointer text-mineshaft-100 underline decoration-primary-500 underline-offset-4 opacity-80 duration-200 hover:opacity-100"
               target="_blank"
               rel="noopener noreferrer"
-              href="mailto:support@infisical.com"
+              href="mailto:support@lux.network"
             >
-              support@infisical.com
+              support@lux.network
             </a>{" "}
             if the issue persists.
           </p>

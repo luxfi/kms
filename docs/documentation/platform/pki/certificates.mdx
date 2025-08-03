@@ -1,7 +1,7 @@
 ---
 title: "Certificates"
 sidebarTitle: "Certificates"
-description: "Learn how to issue X.509 certificates with Infisical."
+description: "Learn how to issue X.509 certificates with KMS."
 ---
 
 ## Concept
@@ -31,7 +31,7 @@ The typical workflow for managing certificates consists of the following steps:
    data structure issued by a CA containing a list of revoked certificates to check if a certificate has been revoked.
 
 <Note>
-  Note that this workflow can be executed via the Infisical UI or manually such
+  Note that this workflow can be executed via the KMS UI or manually such
   as via API.
 </Note>
 
@@ -40,7 +40,7 @@ The typical workflow for managing certificates consists of the following steps:
 In the following steps, we explore how to issue a X.509 certificate under a CA.
 
 <Tabs>
-  <Tab title="Infisical UI">
+  <Tab title="KMS UI">
 
 <Steps>
   <Step title="Creating a certificate template">
@@ -82,7 +82,7 @@ In the following steps, we explore how to issue a X.509 certificate under a CA.
     - Extended Key Usage: The extended key usage extension of the certificate.
 
     <Note>
-      Note that Infisical PKI supports issuing certificates without certificate templates as well. If this is desired, then you can set the **Certificate Template** field to **None**
+      Note that KMS PKI supports issuing certificates without certificate templates as well. If this is desired, then you can set the **Certificate Template** field to **None**
       and specify the **Issuing CA** and optional **Certificate Collection** fields; the rest of the fields for the issued certificate remain the same.
 
       That said, we recommend using certificate templates to enforce policies and attach expiration monitoring on issued certificates.
@@ -114,7 +114,7 @@ In the following steps, we explore how to issue a X.509 certificate under a CA.
     ### Sample request
 
     ```bash Request
-    curl --location --request POST 'https://app.infisical.com/api/v1/pki/certificate-templates' \
+    curl --location --request POST 'https://kms.lux.network/api/v1/pki/certificate-templates' \
       --header 'Content-Type: application/json' \
       --data-raw '{
           "caId": "<ca-id>",
@@ -146,7 +146,7 @@ In the following steps, we explore how to issue a X.509 certificate under a CA.
     ### Sample request
 
     ```bash Request
-    curl --location --request POST 'https://app.infisical.com/api/v1/pki/certificates/issue-certificate' \
+    curl --location --request POST 'https://kms.lux.network/api/v1/pki/certificates/issue-certificate' \
       --header 'Content-Type: application/json' \
       --data-raw '{
           "certificateTemplateId": "<certificate-template-id>",
@@ -168,7 +168,7 @@ In the following steps, we explore how to issue a X.509 certificate under a CA.
     ```
 
     <Note>
-      Note that Infisical PKI supports issuing certificates without certificate templates as well. If this is desired, then you can set the **Certificate Template** field to **None**
+      Note that KMS PKI supports issuing certificates without certificate templates as well. If this is desired, then you can set the **Certificate Template** field to **None**
       and specify the **Issuing CA** and optional **Certificate Collection** fields; the rest of the fields for the issued certificate remain the same.
 
       That said, we recommend using certificate templates to enforce policies and attach expiration monitoring on issued certificates.
@@ -183,7 +183,7 @@ In the following steps, we explore how to issue a X.509 certificate under a CA.
      ### Sample request
 
     ```bash Request
-    curl --location --request POST 'https://app.infisical.com/api/v1/pki/certificates/sign-certificate' \
+    curl --location --request POST 'https://kms.lux.network/api/v1/pki/certificates/sign-certificate' \
       --header 'Content-Type: application/json' \
       --data-raw '{
           "certificateTemplateId": "<certificate-template-id>",
@@ -214,7 +214,7 @@ In the following steps, we explore how to issue a X.509 certificate under a CA.
 In the following steps, we explore how to revoke a X.509 certificate under a CA and obtain a Certificate Revocation List (CRL) for a CA.
 
 <Tabs>
-  <Tab title="Infisical UI">
+  <Tab title="KMS UI">
 <Steps>
   <Step title="Revoking a Certificate">
     Assuming that you've issued a certificate under a CA, you can revoke it by
@@ -260,7 +260,7 @@ openssl verify -verbose -crl_check -crl_download -CAfile chain.pem cert.pem
         ### Sample request
 
         ```bash Request
-        curl --location --request POST 'https://app.infisical.com/api/v1/pki/certificates/<cert-serial-number>/revoke' \
+        curl --location --request POST 'https://kms.lux.network/api/v1/pki/certificates/<cert-serial-number>/revoke' \
           --header 'Authorization: Bearer <access-token>' \
           --header 'Content-Type: application/json' \
           --data-raw '{
@@ -285,7 +285,7 @@ openssl verify -verbose -crl_check -crl_download -CAfile chain.pem cert.pem
         ### Sample request
 
         ```bash Request
-        curl --location --request GET 'https://app.infisical.com/api/v1/pki/ca/<ca-id>/crls' \
+        curl --location --request GET 'https://kms.lux.network/api/v1/pki/ca/<ca-id>/crls' \
           --header 'Authorization: Bearer <access-token>'
         ```
 

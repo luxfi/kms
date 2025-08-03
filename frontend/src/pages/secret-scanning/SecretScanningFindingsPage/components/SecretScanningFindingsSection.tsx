@@ -26,7 +26,7 @@ export const SecretScanningFindingsSection = () => {
           <div className="flex items-center gap-1">
             <p className="text-xl font-semibold text-mineshaft-100">Findings</p>
             <a
-              href="https://infisical.com/docs/documentation/platform/secret-scanning/overview"
+              href="https://lux.network/docs/documentation/platform/secret-scanning/overview"
               target="_blank"
               rel="noopener noreferrer"
             >

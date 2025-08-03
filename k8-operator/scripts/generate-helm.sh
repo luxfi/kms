@@ -241,8 +241,8 @@ if [ -f "${HELM_DIR}/values.yaml" ]; then
   # Process the file line by line
   while IFS= read -r line; do
 
-    # Check if previous line includes infisical/kubernetes-operator and this line includes tag:
-    if [[ "$previous_line" =~ infisical/kubernetes-operator ]] && [[ "$line" =~ ^[[:space:]]*tag: ]]; then
+    # Check if previous line includes kms/kubernetes-operator and this line includes tag:
+    if [[ "$previous_line" =~ kms/kubernetes-operator ]] && [[ "$line" =~ ^[[:space:]]*tag: ]]; then
       # Get the indentation
       indent=$(echo "$line" | sed 's/\(^[[:space:]]*\).*/\1/')
       # Replace with our custom tag

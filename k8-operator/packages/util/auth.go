@@ -10,9 +10,9 @@ import (
 
 	authenticationv1 "k8s.io/api/authentication/v1"
 
-	"github.com/Infisical/infisical/k8-operator/api/v1alpha1"
+	"github.com/luxfi/kms/k8-operator/api/v1alpha1"
 	"github.com/aws/smithy-go/ptr"
-	infisicalSdk "github.com/infisical/go-sdk"
+	kmsSdk "github.com/kms/go-sdk"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -102,13 +102,13 @@ var AuthStrategy = struct {
 type SecretCrdType string
 
 var SecretCrd = struct {
-	INFISICAL_SECRET         SecretCrdType
-	INFISICAL_PUSH_SECRET    SecretCrdType
-	INFISICAL_DYNAMIC_SECRET SecretCrdType
+	KMS_SECRET         SecretCrdType
+	KMS_PUSH_SECRET    SecretCrdType
+	KMS_DYNAMIC_SECRET SecretCrdType
 }{
-	INFISICAL_SECRET:         "INFISICAL_SECRET",
-	INFISICAL_PUSH_SECRET:    "INFISICAL_PUSH_SECRET",
-	INFISICAL_DYNAMIC_SECRET: "INFISICAL_DYNAMIC_SECRET",
+	KMS_SECRET:         "KMS_SECRET",
+	KMS_PUSH_SECRET:    "KMS_PUSH_SECRET",
+	KMS_DYNAMIC_SECRET: "KMS_DYNAMIC_SECRET",
 }
 
 type SecretAuthInput struct {
@@ -125,57 +125,57 @@ type AuthenticationDetails struct {
 
 var ErrAuthNotApplicable = errors.New("authentication not applicable")
 
-func HandleUniversalAuth(ctx context.Context, reconcilerClient client.Client, secretCrd SecretAuthInput, infisicalClient infisicalSdk.InfisicalClientInterface) (AuthenticationDetails, error) {
+func HandleUniversalAuth(ctx context.Context, reconcilerClient client.Client, secretCrd SecretAuthInput, kmsClient kmsSdk.KMSClientInterface) (AuthenticationDetails, error) {
 
 	var universalAuthSpec v1alpha1.UniversalAuthDetails
 
 	switch secretCrd.Type {
-	case SecretCrd.INFISICAL_SECRET:
-		infisicalSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalSecret)
+	case SecretCrd.KMS_SECRET:
+		kmsSecret, ok := secretCrd.Secret.(v1alpha1.KMSSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSSecret")
 		}
-		universalAuthSpec = infisicalSecret.Spec.Authentication.UniversalAuth
-	case SecretCrd.INFISICAL_PUSH_SECRET:
-		infisicalPushSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalPushSecret)
+		universalAuthSpec = kmsSecret.Spec.Authentication.UniversalAuth
+	case SecretCrd.KMS_PUSH_SECRET:
+		kmsPushSecret, ok := secretCrd.Secret.(v1alpha1.KMSPushSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalPushSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSPushSecret")
 		}
 
 		universalAuthSpec = v1alpha1.UniversalAuthDetails{
-			CredentialsRef: infisicalPushSecret.Spec.Authentication.UniversalAuth.CredentialsRef,
+			CredentialsRef: kmsPushSecret.Spec.Authentication.UniversalAuth.CredentialsRef,
 			SecretsScope:   v1alpha1.MachineIdentityScopeInWorkspace{},
 		}
 
-	case SecretCrd.INFISICAL_DYNAMIC_SECRET:
-		infisicalDynamicSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalDynamicSecret)
+	case SecretCrd.KMS_DYNAMIC_SECRET:
+		kmsDynamicSecret, ok := secretCrd.Secret.(v1alpha1.KMSDynamicSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalDynamicSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSDynamicSecret")
 		}
 
 		universalAuthSpec = v1alpha1.UniversalAuthDetails{
-			CredentialsRef: infisicalDynamicSecret.Spec.Authentication.UniversalAuth.CredentialsRef,
+			CredentialsRef: kmsDynamicSecret.Spec.Authentication.UniversalAuth.CredentialsRef,
 			SecretsScope:   v1alpha1.MachineIdentityScopeInWorkspace{},
 		}
 	}
 
-	universalAuthKubeSecret, err := GetInfisicalUniversalAuthFromKubeSecret(ctx, reconcilerClient, v1alpha1.KubeSecretReference{
+	universalAuthKubeSecret, err := GetKMSUniversalAuthFromKubeSecret(ctx, reconcilerClient, v1alpha1.KubeSecretReference{
 		SecretNamespace: universalAuthSpec.CredentialsRef.SecretNamespace,
 		SecretName:      universalAuthSpec.CredentialsRef.SecretName,
 	})
 
 	if err != nil {
-		return AuthenticationDetails{}, fmt.Errorf("ReconcileInfisicalSecret: unable to get machine identity creds from kube secret [err=%s]", err)
+		return AuthenticationDetails{}, fmt.Errorf("ReconcileKMSSecret: unable to get machine identity creds from kube secret [err=%s]", err)
 	}
 
 	if universalAuthKubeSecret.ClientId == "" && universalAuthKubeSecret.ClientSecret == "" {
 		return AuthenticationDetails{}, ErrAuthNotApplicable
 	}
 
-	_, err = infisicalClient.Auth().UniversalAuthLogin(universalAuthKubeSecret.ClientId, universalAuthKubeSecret.ClientSecret)
+	_, err = kmsClient.Auth().UniversalAuthLogin(universalAuthKubeSecret.ClientId, universalAuthKubeSecret.ClientSecret)
 	if err != nil {
 		return AuthenticationDetails{}, fmt.Errorf("unable to login with machine identity credentials [err=%s]", err)
 	}
@@ -188,50 +188,50 @@ func HandleUniversalAuth(ctx context.Context, reconcilerClient client.Client, se
 	}, nil
 }
 
-func HandleKubernetesAuth(ctx context.Context, reconcilerClient client.Client, secretCrd SecretAuthInput, infisicalClient infisicalSdk.InfisicalClientInterface) (AuthenticationDetails, error) {
+func HandleKubernetesAuth(ctx context.Context, reconcilerClient client.Client, secretCrd SecretAuthInput, kmsClient kmsSdk.KMSClientInterface) (AuthenticationDetails, error) {
 	var kubernetesAuthSpec v1alpha1.KubernetesAuthDetails
 
 	switch secretCrd.Type {
-	case SecretCrd.INFISICAL_SECRET:
-		infisicalSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalSecret)
+	case SecretCrd.KMS_SECRET:
+		kmsSecret, ok := secretCrd.Secret.(v1alpha1.KMSSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSSecret")
 		}
-		kubernetesAuthSpec = infisicalSecret.Spec.Authentication.KubernetesAuth
-	case SecretCrd.INFISICAL_PUSH_SECRET:
-		infisicalPushSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalPushSecret)
+		kubernetesAuthSpec = kmsSecret.Spec.Authentication.KubernetesAuth
+	case SecretCrd.KMS_PUSH_SECRET:
+		kmsPushSecret, ok := secretCrd.Secret.(v1alpha1.KMSPushSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalPushSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSPushSecret")
 		}
 		kubernetesAuthSpec = v1alpha1.KubernetesAuthDetails{
-			IdentityID: infisicalPushSecret.Spec.Authentication.KubernetesAuth.IdentityID,
+			IdentityID: kmsPushSecret.Spec.Authentication.KubernetesAuth.IdentityID,
 			ServiceAccountRef: v1alpha1.KubernetesServiceAccountRef{
-				Namespace: infisicalPushSecret.Spec.Authentication.KubernetesAuth.ServiceAccountRef.Namespace,
-				Name:      infisicalPushSecret.Spec.Authentication.KubernetesAuth.ServiceAccountRef.Name,
+				Namespace: kmsPushSecret.Spec.Authentication.KubernetesAuth.ServiceAccountRef.Namespace,
+				Name:      kmsPushSecret.Spec.Authentication.KubernetesAuth.ServiceAccountRef.Name,
 			},
 			SecretsScope:                  v1alpha1.MachineIdentityScopeInWorkspace{},
-			AutoCreateServiceAccountToken: infisicalPushSecret.Spec.Authentication.KubernetesAuth.AutoCreateServiceAccountToken,
-			ServiceAccountTokenAudiences:  infisicalPushSecret.Spec.Authentication.KubernetesAuth.ServiceAccountTokenAudiences,
+			AutoCreateServiceAccountToken: kmsPushSecret.Spec.Authentication.KubernetesAuth.AutoCreateServiceAccountToken,
+			ServiceAccountTokenAudiences:  kmsPushSecret.Spec.Authentication.KubernetesAuth.ServiceAccountTokenAudiences,
 		}
 
-	case SecretCrd.INFISICAL_DYNAMIC_SECRET:
-		infisicalDynamicSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalDynamicSecret)
+	case SecretCrd.KMS_DYNAMIC_SECRET:
+		kmsDynamicSecret, ok := secretCrd.Secret.(v1alpha1.KMSDynamicSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalDynamicSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSDynamicSecret")
 		}
 
 		kubernetesAuthSpec = v1alpha1.KubernetesAuthDetails{
-			IdentityID: infisicalDynamicSecret.Spec.Authentication.KubernetesAuth.IdentityID,
+			IdentityID: kmsDynamicSecret.Spec.Authentication.KubernetesAuth.IdentityID,
 			ServiceAccountRef: v1alpha1.KubernetesServiceAccountRef{
-				Namespace: infisicalDynamicSecret.Spec.Authentication.KubernetesAuth.ServiceAccountRef.Namespace,
-				Name:      infisicalDynamicSecret.Spec.Authentication.KubernetesAuth.ServiceAccountRef.Name,
+				Namespace: kmsDynamicSecret.Spec.Authentication.KubernetesAuth.ServiceAccountRef.Namespace,
+				Name:      kmsDynamicSecret.Spec.Authentication.KubernetesAuth.ServiceAccountRef.Name,
 			},
 			SecretsScope:                  v1alpha1.MachineIdentityScopeInWorkspace{},
-			AutoCreateServiceAccountToken: infisicalDynamicSecret.Spec.Authentication.KubernetesAuth.AutoCreateServiceAccountToken,
-			ServiceAccountTokenAudiences:  infisicalDynamicSecret.Spec.Authentication.KubernetesAuth.ServiceAccountTokenAudiences,
+			AutoCreateServiceAccountToken: kmsDynamicSecret.Spec.Authentication.KubernetesAuth.AutoCreateServiceAccountToken,
+			ServiceAccountTokenAudiences:  kmsDynamicSecret.Spec.Authentication.KubernetesAuth.ServiceAccountTokenAudiences,
 		}
 	}
 
@@ -251,7 +251,7 @@ func HandleKubernetesAuth(ctx context.Context, reconcilerClient client.Client, s
 		return AuthenticationDetails{}, fmt.Errorf("unable to get service account token [err=%s]", err)
 	}
 
-	_, err = infisicalClient.Auth().KubernetesRawServiceAccountTokenLogin(kubernetesAuthSpec.IdentityID, serviceAccountToken)
+	_, err = kmsClient.Auth().KubernetesRawServiceAccountTokenLogin(kubernetesAuthSpec.IdentityID, serviceAccountToken)
 	if err != nil {
 		return AuthenticationDetails{}, fmt.Errorf("unable to login with Kubernetes native auth [err=%s]", err)
 	}
@@ -265,39 +265,39 @@ func HandleKubernetesAuth(ctx context.Context, reconcilerClient client.Client, s
 
 }
 
-func HandleAwsIamAuth(ctx context.Context, reconcilerClient client.Client, secretCrd SecretAuthInput, infisicalClient infisicalSdk.InfisicalClientInterface) (AuthenticationDetails, error) {
+func HandleAwsIamAuth(ctx context.Context, reconcilerClient client.Client, secretCrd SecretAuthInput, kmsClient kmsSdk.KMSClientInterface) (AuthenticationDetails, error) {
 	awsIamAuthSpec := v1alpha1.AWSIamAuthDetails{}
 
 	switch secretCrd.Type {
-	case SecretCrd.INFISICAL_SECRET:
-		infisicalSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalSecret)
+	case SecretCrd.KMS_SECRET:
+		kmsSecret, ok := secretCrd.Secret.(v1alpha1.KMSSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSSecret")
 		}
 
-		awsIamAuthSpec = infisicalSecret.Spec.Authentication.AwsIamAuth
-	case SecretCrd.INFISICAL_PUSH_SECRET:
-		infisicalPushSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalPushSecret)
+		awsIamAuthSpec = kmsSecret.Spec.Authentication.AwsIamAuth
+	case SecretCrd.KMS_PUSH_SECRET:
+		kmsPushSecret, ok := secretCrd.Secret.(v1alpha1.KMSPushSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalPushSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSPushSecret")
 		}
 
 		awsIamAuthSpec = v1alpha1.AWSIamAuthDetails{
-			IdentityID:   infisicalPushSecret.Spec.Authentication.AwsIamAuth.IdentityID,
+			IdentityID:   kmsPushSecret.Spec.Authentication.AwsIamAuth.IdentityID,
 			SecretsScope: v1alpha1.MachineIdentityScopeInWorkspace{},
 		}
 
-	case SecretCrd.INFISICAL_DYNAMIC_SECRET:
-		infisicalDynamicSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalDynamicSecret)
+	case SecretCrd.KMS_DYNAMIC_SECRET:
+		kmsDynamicSecret, ok := secretCrd.Secret.(v1alpha1.KMSDynamicSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalDynamicSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSDynamicSecret")
 		}
 
 		awsIamAuthSpec = v1alpha1.AWSIamAuthDetails{
-			IdentityID:   infisicalDynamicSecret.Spec.Authentication.AwsIamAuth.IdentityID,
+			IdentityID:   kmsDynamicSecret.Spec.Authentication.AwsIamAuth.IdentityID,
 			SecretsScope: v1alpha1.MachineIdentityScopeInWorkspace{},
 		}
 	}
@@ -306,7 +306,7 @@ func HandleAwsIamAuth(ctx context.Context, reconcilerClient client.Client, secre
 		return AuthenticationDetails{}, ErrAuthNotApplicable
 	}
 
-	_, err := infisicalClient.Auth().AwsIamAuthLogin(awsIamAuthSpec.IdentityID)
+	_, err := kmsClient.Auth().AwsIamAuthLogin(awsIamAuthSpec.IdentityID)
 	if err != nil {
 		return AuthenticationDetails{}, fmt.Errorf("unable to login with AWS IAM auth [err=%s]", err)
 	}
@@ -320,42 +320,42 @@ func HandleAwsIamAuth(ctx context.Context, reconcilerClient client.Client, secre
 
 }
 
-func HandleAzureAuth(ctx context.Context, reconcilerClient client.Client, secretCrd SecretAuthInput, infisicalClient infisicalSdk.InfisicalClientInterface) (AuthenticationDetails, error) {
+func HandleAzureAuth(ctx context.Context, reconcilerClient client.Client, secretCrd SecretAuthInput, kmsClient kmsSdk.KMSClientInterface) (AuthenticationDetails, error) {
 	azureAuthSpec := v1alpha1.AzureAuthDetails{}
 
 	switch secretCrd.Type {
-	case SecretCrd.INFISICAL_SECRET:
-		infisicalSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalSecret)
+	case SecretCrd.KMS_SECRET:
+		kmsSecret, ok := secretCrd.Secret.(v1alpha1.KMSSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSSecret")
 		}
 
-		azureAuthSpec = infisicalSecret.Spec.Authentication.AzureAuth
+		azureAuthSpec = kmsSecret.Spec.Authentication.AzureAuth
 
-	case SecretCrd.INFISICAL_PUSH_SECRET:
-		infisicalPushSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalPushSecret)
+	case SecretCrd.KMS_PUSH_SECRET:
+		kmsPushSecret, ok := secretCrd.Secret.(v1alpha1.KMSPushSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalPushSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSPushSecret")
 		}
 
 		azureAuthSpec = v1alpha1.AzureAuthDetails{
-			IdentityID:   infisicalPushSecret.Spec.Authentication.AzureAuth.IdentityID,
-			Resource:     infisicalPushSecret.Spec.Authentication.AzureAuth.Resource,
+			IdentityID:   kmsPushSecret.Spec.Authentication.AzureAuth.IdentityID,
+			Resource:     kmsPushSecret.Spec.Authentication.AzureAuth.Resource,
 			SecretsScope: v1alpha1.MachineIdentityScopeInWorkspace{},
 		}
 
-	case SecretCrd.INFISICAL_DYNAMIC_SECRET:
-		infisicalDynamicSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalDynamicSecret)
+	case SecretCrd.KMS_DYNAMIC_SECRET:
+		kmsDynamicSecret, ok := secretCrd.Secret.(v1alpha1.KMSDynamicSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalDynamicSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSDynamicSecret")
 		}
 
 		azureAuthSpec = v1alpha1.AzureAuthDetails{
-			IdentityID:   infisicalDynamicSecret.Spec.Authentication.AzureAuth.IdentityID,
-			Resource:     infisicalDynamicSecret.Spec.Authentication.AzureAuth.Resource,
+			IdentityID:   kmsDynamicSecret.Spec.Authentication.AzureAuth.IdentityID,
+			Resource:     kmsDynamicSecret.Spec.Authentication.AzureAuth.Resource,
 			SecretsScope: v1alpha1.MachineIdentityScopeInWorkspace{},
 		}
 	}
@@ -364,7 +364,7 @@ func HandleAzureAuth(ctx context.Context, reconcilerClient client.Client, secret
 		return AuthenticationDetails{}, ErrAuthNotApplicable
 	}
 
-	_, err := infisicalClient.Auth().AzureAuthLogin(azureAuthSpec.IdentityID, azureAuthSpec.Resource) // If resource is empty(""), it will default to "https://management.azure.com/" in the SDK.
+	_, err := kmsClient.Auth().AzureAuthLogin(azureAuthSpec.IdentityID, azureAuthSpec.Resource) // If resource is empty(""), it will default to "https://management.azure.com/" in the SDK.
 	if err != nil {
 		return AuthenticationDetails{}, fmt.Errorf("unable to login with Azure auth [err=%s]", err)
 	}
@@ -378,39 +378,39 @@ func HandleAzureAuth(ctx context.Context, reconcilerClient client.Client, secret
 
 }
 
-func HandleGcpIdTokenAuth(ctx context.Context, reconcilerClient client.Client, secretCrd SecretAuthInput, infisicalClient infisicalSdk.InfisicalClientInterface) (AuthenticationDetails, error) {
+func HandleGcpIdTokenAuth(ctx context.Context, reconcilerClient client.Client, secretCrd SecretAuthInput, kmsClient kmsSdk.KMSClientInterface) (AuthenticationDetails, error) {
 	gcpIdTokenSpec := v1alpha1.GCPIdTokenAuthDetails{}
 
 	switch secretCrd.Type {
-	case SecretCrd.INFISICAL_SECRET:
-		infisicalSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalSecret)
+	case SecretCrd.KMS_SECRET:
+		kmsSecret, ok := secretCrd.Secret.(v1alpha1.KMSSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSSecret")
 		}
 
-		gcpIdTokenSpec = infisicalSecret.Spec.Authentication.GcpIdTokenAuth
-	case SecretCrd.INFISICAL_PUSH_SECRET:
-		infisicalPushSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalPushSecret)
+		gcpIdTokenSpec = kmsSecret.Spec.Authentication.GcpIdTokenAuth
+	case SecretCrd.KMS_PUSH_SECRET:
+		kmsPushSecret, ok := secretCrd.Secret.(v1alpha1.KMSPushSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalPushSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSPushSecret")
 		}
 
 		gcpIdTokenSpec = v1alpha1.GCPIdTokenAuthDetails{
-			IdentityID:   infisicalPushSecret.Spec.Authentication.GcpIdTokenAuth.IdentityID,
+			IdentityID:   kmsPushSecret.Spec.Authentication.GcpIdTokenAuth.IdentityID,
 			SecretsScope: v1alpha1.MachineIdentityScopeInWorkspace{},
 		}
 
-	case SecretCrd.INFISICAL_DYNAMIC_SECRET:
-		infisicalDynamicSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalDynamicSecret)
+	case SecretCrd.KMS_DYNAMIC_SECRET:
+		kmsDynamicSecret, ok := secretCrd.Secret.(v1alpha1.KMSDynamicSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalDynamicSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSDynamicSecret")
 		}
 
 		gcpIdTokenSpec = v1alpha1.GCPIdTokenAuthDetails{
-			IdentityID:   infisicalDynamicSecret.Spec.Authentication.GcpIdTokenAuth.IdentityID,
+			IdentityID:   kmsDynamicSecret.Spec.Authentication.GcpIdTokenAuth.IdentityID,
 			SecretsScope: v1alpha1.MachineIdentityScopeInWorkspace{},
 		}
 	}
@@ -419,7 +419,7 @@ func HandleGcpIdTokenAuth(ctx context.Context, reconcilerClient client.Client, s
 		return AuthenticationDetails{}, ErrAuthNotApplicable
 	}
 
-	_, err := infisicalClient.Auth().GcpIdTokenAuthLogin(gcpIdTokenSpec.IdentityID)
+	_, err := kmsClient.Auth().GcpIdTokenAuthLogin(gcpIdTokenSpec.IdentityID)
 	if err != nil {
 		return AuthenticationDetails{}, fmt.Errorf("unable to login with GCP Id Token auth [err=%s]", err)
 	}
@@ -433,41 +433,41 @@ func HandleGcpIdTokenAuth(ctx context.Context, reconcilerClient client.Client, s
 
 }
 
-func HandleGcpIamAuth(ctx context.Context, reconcilerClient client.Client, secretCrd SecretAuthInput, infisicalClient infisicalSdk.InfisicalClientInterface) (AuthenticationDetails, error) {
+func HandleGcpIamAuth(ctx context.Context, reconcilerClient client.Client, secretCrd SecretAuthInput, kmsClient kmsSdk.KMSClientInterface) (AuthenticationDetails, error) {
 	gcpIamSpec := v1alpha1.GcpIamAuthDetails{}
 
 	switch secretCrd.Type {
-	case SecretCrd.INFISICAL_SECRET:
-		infisicalSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalSecret)
+	case SecretCrd.KMS_SECRET:
+		kmsSecret, ok := secretCrd.Secret.(v1alpha1.KMSSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSSecret")
 		}
 
-		gcpIamSpec = infisicalSecret.Spec.Authentication.GcpIamAuth
-	case SecretCrd.INFISICAL_PUSH_SECRET:
-		infisicalPushSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalPushSecret)
+		gcpIamSpec = kmsSecret.Spec.Authentication.GcpIamAuth
+	case SecretCrd.KMS_PUSH_SECRET:
+		kmsPushSecret, ok := secretCrd.Secret.(v1alpha1.KMSPushSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalPushSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSPushSecret")
 		}
 
 		gcpIamSpec = v1alpha1.GcpIamAuthDetails{
-			IdentityID:                infisicalPushSecret.Spec.Authentication.GcpIamAuth.IdentityID,
-			ServiceAccountKeyFilePath: infisicalPushSecret.Spec.Authentication.GcpIamAuth.ServiceAccountKeyFilePath,
+			IdentityID:                kmsPushSecret.Spec.Authentication.GcpIamAuth.IdentityID,
+			ServiceAccountKeyFilePath: kmsPushSecret.Spec.Authentication.GcpIamAuth.ServiceAccountKeyFilePath,
 			SecretsScope:              v1alpha1.MachineIdentityScopeInWorkspace{},
 		}
 
-	case SecretCrd.INFISICAL_DYNAMIC_SECRET:
-		infisicalDynamicSecret, ok := secretCrd.Secret.(v1alpha1.InfisicalDynamicSecret)
+	case SecretCrd.KMS_DYNAMIC_SECRET:
+		kmsDynamicSecret, ok := secretCrd.Secret.(v1alpha1.KMSDynamicSecret)
 
 		if !ok {
-			return AuthenticationDetails{}, errors.New("unable to cast secret to InfisicalDynamicSecret")
+			return AuthenticationDetails{}, errors.New("unable to cast secret to KMSDynamicSecret")
 		}
 
 		gcpIamSpec = v1alpha1.GcpIamAuthDetails{
-			IdentityID:                infisicalDynamicSecret.Spec.Authentication.GcpIamAuth.IdentityID,
-			ServiceAccountKeyFilePath: infisicalDynamicSecret.Spec.Authentication.GcpIamAuth.ServiceAccountKeyFilePath,
+			IdentityID:                kmsDynamicSecret.Spec.Authentication.GcpIamAuth.IdentityID,
+			ServiceAccountKeyFilePath: kmsDynamicSecret.Spec.Authentication.GcpIamAuth.ServiceAccountKeyFilePath,
 			SecretsScope:              v1alpha1.MachineIdentityScopeInWorkspace{},
 		}
 	}
@@ -476,7 +476,7 @@ func HandleGcpIamAuth(ctx context.Context, reconcilerClient client.Client, secre
 		return AuthenticationDetails{}, ErrAuthNotApplicable
 	}
 
-	_, err := infisicalClient.Auth().GcpIamAuthLogin(gcpIamSpec.IdentityID, gcpIamSpec.ServiceAccountKeyFilePath)
+	_, err := kmsClient.Auth().GcpIamAuthLogin(gcpIamSpec.IdentityID, gcpIamSpec.ServiceAccountKeyFilePath)
 	if err != nil {
 		return AuthenticationDetails{}, fmt.Errorf("unable to login with GCP IAM auth [err=%s]", err)
 	}

@@ -1,0 +1,44 @@
+{{- $kmsValues := .Values.kms }}
+{{- if $kmsValues.autoDatabaseSchemaMigration }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Release.Name }}-schema-migration-{{ .Release.Revision }}"
+  labels:
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+spec:
+  backoffLimit: 10
+  template:
+    metadata:
+      name: "{{ .Release.Name }}-create-tables"
+      labels:
+        app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+        app.kubernetes.io/instance: {{ .Release.Name | quote }}
+        helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    spec:
+      serviceAccountName: {{ include "kms.serviceAccountName" . }}
+    {{- if $kmsValues.image.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml $kmsValues.image.imagePullSecrets | nindent 6 }}
+    {{- end }}
+      restartPolicy: OnFailure
+      containers:
+        - name: kms-schema-migration
+          image: "{{ $kmsValues.image.repository }}:{{ $kmsValues.image.tag }}"
+          command: ["npm", "run", "migration:latest"]
+          env:
+          {{- if .Values.postgresql.useExistingPostgresSecret.enabled }}
+          - name: DB_CONNECTION_URI
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.postgresql.useExistingPostgresSecret.existingConnectionStringSecret.name }}
+                key: {{ .Values.postgresql.useExistingPostgresSecret.existingConnectionStringSecret.key }}
+          {{- end }}
+          {{- if .Values.postgresql.enabled }}
+          - name: DB_CONNECTION_URI
+            value: {{ include "kms.postgresDBConnectionString" . }}
+          {{- end }}
+          envFrom:
+          - secretRef:
+              name: {{ $kmsValues.kubeSecretRef }}
+{{- end }}

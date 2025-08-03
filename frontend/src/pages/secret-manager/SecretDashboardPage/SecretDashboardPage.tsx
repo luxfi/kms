@@ -721,34 +721,34 @@ const Page = () => {
             Inject your secrets using
             <a
               className="ml-1 text-mineshaft-300 underline decoration-primary-800 underline-offset-4 duration-200 hover:text-mineshaft-100 hover:decoration-primary-600"
-              href="https://infisical.com/docs/cli/overview"
+              href="https://lux.network/docs/cli/overview"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Infisical CLI
+              KMS CLI
             </a>
             ,
             <a
               className="ml-1 text-mineshaft-300 underline decoration-primary-800 underline-offset-4 duration-200 hover:text-mineshaft-100 hover:decoration-primary-600"
-              href="https://infisical.com/docs/documentation/getting-started/api"
+              href="https://lux.network/docs/documentation/getting-started/api"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Infisical API
+              KMS API
             </a>
             ,
             <a
               className="ml-1 text-mineshaft-300 underline decoration-primary-800 underline-offset-4 duration-200 hover:text-mineshaft-100 hover:decoration-primary-600"
-              href="https://infisical.com/docs/sdks/overview"
+              href="https://lux.network/docs/sdks/overview"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Infisical SDKs
+              KMS SDKs
             </a>
             , and
             <a
               className="ml-1 text-mineshaft-300 underline decoration-primary-800 underline-offset-4 duration-200 hover:text-mineshaft-100 hover:decoration-primary-600"
-              href="https://infisical.com/docs/documentation/getting-started/introduction"
+              href="https://lux.network/docs/documentation/getting-started/introduction"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -1082,7 +1082,7 @@ export const SecretDashboardPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("dashboard.title") })}</title>
-        <link rel="icon" href="/infisical.ico" />
+        <link rel="icon" href="/kms.ico" />
         <meta property="og:image" content="/images/message.png" />
         <meta property="og:title" content={String(t("dashboard.og-title"))} />
         <meta name="og:description" content={String(t("dashboard.og-description"))} />

@@ -17,7 +17,7 @@ export const UserIdentitiesResourcesPage = () => {
         <div className="mx-auto mb-6 w-full max-w-7xl">
           <PageHeader
             title="User Identities"
-            description="Manage all user identities within your Infisical instance."
+            description="Manage all user identities within your KMS instance."
           />
           <UserIdentitiesTable />
         </div>

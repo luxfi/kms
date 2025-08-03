@@ -43,7 +43,7 @@ export default SecretRequestCompletedTemplate;
 
 SecretRequestCompletedTemplate.PreviewProps = {
   respondentUsername: "Gracie",
-  siteUrl: "https://infisical.com",
-  secretRequestUrl: "https://infisical.com",
+  siteUrl: "https://lux.network",
+  secretRequestUrl: "https://lux.network",
   name: "API_TOKEN"
 } as SecretRequestCompletedTemplateProps;

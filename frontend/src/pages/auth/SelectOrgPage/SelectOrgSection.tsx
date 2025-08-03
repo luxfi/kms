@@ -230,7 +230,7 @@ export const SelectOrganizationSection = () => {
     <div className="flex max-h-screen min-h-screen flex-col justify-center overflow-y-auto bg-gradient-to-tr from-mineshaft-600 via-mineshaft-800 to-bunker-700">
       <Helmet>
         <title>{t("common.head-title", { title: t("login.title") })}</title>
-        <link rel="icon" href="/infisical.ico" />
+        <link rel="icon" href="/kms.ico" />
         <meta property="og:image" content="/images/message.png" />
         <meta property="og:title" content={t("login.og-title") ?? ""} />
         <meta name="og:description" content={t("login.og-description") ?? ""} />
@@ -251,7 +251,7 @@ export const SelectOrganizationSection = () => {
                   height: "90px",
                   width: "120px"
                 }}
-                alt="Infisical logo"
+                alt="KMS logo"
               />
             </div>
           </Link>

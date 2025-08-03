@@ -192,7 +192,7 @@ export const CreateDynamicSecretForm = ({
           <div className="flex items-center">
             <span>{modalTitle ? `${modalTitle} Dynamic Secret` : "Dynamic Secrets"} </span>
             <a
-              href={`https://infisical.com/docs/documentation/platform/dynamic-secrets/${selectedProvider ? (UniqueLinks[selectedProvider] ?? selectedProvider) : "overview"}`}
+              href={`https://lux.network/docs/documentation/platform/dynamic-secrets/${selectedProvider ? (UniqueLinks[selectedProvider] ?? selectedProvider) : "overview"}`}
               target="_blank"
               className="mb-0.5 ml-1.5"
               rel="noopener noreferrer"

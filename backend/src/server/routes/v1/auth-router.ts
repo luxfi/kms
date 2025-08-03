@@ -34,7 +34,7 @@ export const registerAuthRoutes = async (server: FastifyZodProvider) => {
         secure: appCfg.HTTPS_ENABLED
       });
 
-      void res.cookie("infisical-project-assume-privileges", "", {
+      void res.cookie("kms-project-assume-privileges", "", {
         httpOnly: true,
         path: "/",
         sameSite: "strict",

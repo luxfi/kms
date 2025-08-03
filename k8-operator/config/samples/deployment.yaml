@@ -5,7 +5,7 @@ metadata:
   labels:
     app: nginx
   annotations: 
-    secrets.infisical.com/auto-reload: "true"
+    secrets.lux.network/auto-reload: "true"
 spec:
   replicas: 3
   selector:

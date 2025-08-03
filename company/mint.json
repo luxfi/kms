@@ -1,9 +1,9 @@
 {
-  "name": "Infisical",
+  "name": "KMS",
   "logo": {
     "dark": "/logo/dark.svg",
     "light": "/logo/light.svg",
-    "href": "https://infisical.com"
+    "href": "https://lux.network"
   },
   "favicon": "/favicon.ico",
   "colors": {
@@ -31,17 +31,17 @@
     "thumbsRating": true
   },
   "api": {
-    "baseUrl": ["https://app.infisical.com", "http://localhost:8080"]
+    "baseUrl": ["https://kms.lux.network", "http://localhost:8080"]
   },
   "topbarLinks": [
     {
       "name": "Log In",
-      "url": "https://app.infisical.com/login"
+      "url": "https://kms.lux.network/login"
     }
   ],
   "topbarCtaButton": {
     "name": "Start for Free",
-    "url": "https://app.infisical.com/signup"
+    "url": "https://kms.lux.network/signup"
   },
   "primaryTab": {
     "name": "About"

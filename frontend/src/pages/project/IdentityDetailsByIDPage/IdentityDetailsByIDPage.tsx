@@ -215,7 +215,7 @@ export const IdentityDetailsByIDPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.members.title") })}</title>
-        <link rel="icon" href="/infisical.ico" />
+        <link rel="icon" href="/kms.ico" />
       </Helmet>
       <ProjectPermissionCan
         I={ProjectPermissionActions.Read}

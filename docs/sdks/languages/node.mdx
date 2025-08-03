@@ -1,29 +1,29 @@
 ---
-title: "Infisical Node.js SDK"
+title: "KMS Node.js SDK"
 sidebarTitle: "Node.js"
-url: "https://github.com/Infisical/node-sdk-v2?tab=readme-ov-file#infisical-nodejs-sdk"
+url: "https://github.com/KMS/node-sdk-v2?tab=readme-ov-file#kms-nodejs-sdk"
 icon: "/images/sdks/languages/node.svg"
 ---
 
 {/*
-If you're working with Node.js, the official [Infisical Node SDK](https://github.com/Infisical/sdk/tree/main/languages/node) package is the easiest way to fetch and work with secrets for your application.
+If you're working with Node.js, the official [KMS Node SDK](https://github.com/KMS/sdk/tree/main/languages/node) package is the easiest way to fetch and work with secrets for your application.
 
-- [NPM Package](https://www.npmjs.com/package/@infisical/sdk)
-- [Github Repository](https://github.com/Infisical/sdk/tree/main/languages/node)
+- [NPM Package](https://www.npmjs.com/package/@kms/sdk)
+- [Github Repository](https://github.com/KMS/sdk/tree/main/languages/node)
 
 ## Basic Usage
 
 ```js
 import express from "express";
 
-import { InfisicalClient } from "@infisical/sdk";
+import { KMSClient } from "@kms/sdk";
 
 const app = express();
 
 const PORT = 3000;
 
-const client = new InfisicalClient({
-    siteUrl: "https://app.infisical.com", // Optional, defaults to https://app.infisical.com
+const client = new KMSClient({
+    siteUrl: "https://kms.lux.network", // Optional, defaults to https://kms.lux.network
     auth: {
       universalAuth: {
         clientId: "YOUR_CLIENT_ID",
@@ -53,7 +53,7 @@ app.listen(PORT, async () => {
 });
 ```
 
-This example demonstrates how to use the Infisical Node SDK with an Express application. The application retrieves a secret named "NAME" and responds to requests with a greeting that includes the secret value.
+This example demonstrates how to use the KMS Node SDK with an Express application. The application retrieves a secret named "NAME" and responds to requests with a greeting that includes the secret value.
 
 <Warning>
     We do not recommend hardcoding your [Machine Identity Tokens](/documentation/platform/identities/overview). Setting it as an environment variable
@@ -62,10 +62,10 @@ This example demonstrates how to use the Infisical Node SDK with an Express appl
 
 ## Installation
 
-Run `npm` to add `@infisical/sdk` to your project.
+Run `npm` to add `@kms/sdk` to your project.
 
 ```console
-$ npm install @infisical/sdk
+$ npm install @kms/sdk
 ```
 
 ## Configuration
@@ -75,9 +75,9 @@ Import the SDK and create a client instance with your [Machine Identity](/docume
 <Tabs>
   <Tab title="ES6">
     ```js
-    import { InfisicalClient, LogLevel } from "@infisical/sdk";
+    import { KMSClient, LogLevel } from "@kms/sdk";
 
-    const client = new InfisicalClient({
+    const client = new KMSClient({
         auth: {
           universalAuth: {
             clientId: "YOUR_CLIENT_ID",
@@ -91,9 +91,9 @@ Import the SDK and create a client instance with your [Machine Identity](/docume
   </Tab>
   <Tab title="ES5">
     ```js
-    const { InfisicalClient } = require("@infisical/sdk");
+    const { KMSClient } = require("@kms/sdk");
 
-    const client = new InfisicalClient({
+    const client = new KMSClient({
         auth: {
           universalAuth: {
             clientId: "YOUR_CLIENT_ID",
@@ -132,15 +132,15 @@ Import the SDK and create a client instance with your [Machine Identity](/docume
             If manually set to 0, caching will be disabled, this is not recommended.
         </ParamField>
 
-        <ParamField query="siteUrl" type="string" default="https://app.infisical.com" optional>
-            Your self-hosted absolute site URL including the protocol (e.g. `https://app.infisical.com`)
+        <ParamField query="siteUrl" type="string" default="https://kms.lux.network" optional>
+            Your self-hosted absolute site URL including the protocol (e.g. `https://kms.lux.network`)
         </ParamField>
         <ParamField query="logLevel" type="enum" default="Error" optional>
             The level of logs you wish to log The logs are derived from Rust, as we have written our base SDK in Rust.
         </ParamField>
 
         <ParamField query="sslCertificatePath" optional>
-            Optionally provide a path to a custom SSL certificate file. This can be substituted by setting the `INFISICAL_SSL_CERTIFICATE` environment variable to the contents of the certificate.
+            Optionally provide a path to a custom SSL certificate file. This can be substituted by setting the `KMS_SSL_CERTIFICATE` environment variable to the contents of the certificate.
         </ParamField>
 
         <ParamField query="auth" type="AuthenticationOptions">
@@ -158,12 +158,12 @@ The SDK supports a variety of authentication methods. The most common authentica
 #### Universal Auth
 
 **Using environment variables**
-- `INFISICAL_UNIVERSAL_AUTH_CLIENT_ID` - Your machine identity client ID.
-- `INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET` - Your machine identity client secret.
+- `KMS_UNIVERSAL_AUTH_CLIENT_ID` - Your machine identity client ID.
+- `KMS_UNIVERSAL_AUTH_CLIENT_SECRET` - Your machine identity client secret.
 
 **Using the SDK directly**
 ```js
-const client = new InfisicalClient({
+const client = new KMSClient({
     auth: {
       universalAuth: {
         clientId: "YOUR_CLIENT_ID",
@@ -180,11 +180,11 @@ const client = new InfisicalClient({
 </Info>
 
 **Using environment variables**
-- `INFISICAL_GCP_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+- `KMS_GCP_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
 
 **Using the SDK directly**
 ```js
-const client = new InfisicalClient({
+const client = new KMSClient({
     auth: {
       gcpIdToken: {
         identityId: "YOUR_IDENTITY_ID"
@@ -196,12 +196,12 @@ const client = new InfisicalClient({
 #### GCP IAM Auth
 
 **Using environment variables**
-- `INFISICAL_GCP_IAM_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
-- `INFISICAL_GCP_IAM_SERVICE_ACCOUNT_KEY_FILE_PATH` - The path to your GCP service account key file.
+- `KMS_GCP_IAM_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
+- `KMS_GCP_IAM_SERVICE_ACCOUNT_KEY_FILE_PATH` - The path to your GCP service account key file.
 
 **Using the SDK directly**
 ```js
-const client = new InfisicalClient({
+const client = new KMSClient({
     auth: {
       gcpIam: {
         identityId: "YOUR_IDENTITY_ID",
@@ -218,11 +218,11 @@ const client = new InfisicalClient({
 </Info>
 
 **Using environment variables**
-- `INFISICAL_AWS_IAM_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+- `KMS_AWS_IAM_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
 
 **Using the SDK directly**
 ```js
-const client = new InfisicalClient({
+const client = new KMSClient({
     auth: {
       awsIam: {
         identityId: "YOUR_IDENTITY_ID"
@@ -238,11 +238,11 @@ const client = new InfisicalClient({
 </Info>
 
 **Using environment variables**
-- `INFISICAL_AZURE_AUTH_IDENTITY_ID` - Your Infisical Machine Identity ID.
+- `KMS_AZURE_AUTH_IDENTITY_ID` - Your KMS Machine Identity ID.
 
 **Using the SDK directly**
 ```js
-const client = new InfisicalClient({
+const client = new KMSClient({
   auth: {
     azure: {
       identityId: "YOUR_IDENTITY_ID"
@@ -259,12 +259,12 @@ const client = new InfisicalClient({
 </Info>
 
 **Using environment variables**
-- `INFISICAL_KUBERNETES_IDENTITY_ID` - Your Infisical Machine Identity ID.
-- `INFISICAL_KUBERNETES_SERVICE_ACCOUNT_TOKEN_PATH_ENV_NAME` - The environment variable name that contains the path to the service account token. This is optional and will default to `/var/run/secrets/kubernetes.io/serviceaccount/token`.
+- `KMS_KUBERNETES_IDENTITY_ID` - Your KMS Machine Identity ID.
+- `KMS_KUBERNETES_SERVICE_ACCOUNT_TOKEN_PATH_ENV_NAME` - The environment variable name that contains the path to the service account token. This is optional and will default to `/var/run/secrets/kubernetes.io/serviceaccount/token`.
 
 **Using the SDK directly**
 ```js
-const client = new InfisicalClient({
+const client = new KMSClient({
   auth: {
     kubernetes: {
       identityId: "YOUR_IDENTITY_ID",
@@ -291,7 +291,7 @@ const secrets = await client.listSecrets({
 });
 ```
 
-Retrieve all secrets within the Infisical project and environment that client is connected to
+Retrieve all secrets within the KMS project and environment that client is connected to
 
 #### Parameters
 
@@ -339,7 +339,7 @@ const secret = await client.getSecret({
 });
 ```
 
-Retrieve a secret from Infisical.
+Retrieve a secret from KMS.
 
 By default, `getSecret()` fetches and returns a shared secret.
 
@@ -384,7 +384,7 @@ const newApiKey = await client.createSecret({
 });
 ```
 
-Create a new secret in Infisical.
+Create a new secret in KMS.
 
 <ParamField query="Parameters" type="object" optional>
     <Expandable title="properties">
@@ -422,7 +422,7 @@ const updatedApiKey = await client.updateSecret({
 });
 ```
 
-Update an existing secret in Infisical.
+Update an existing secret in KMS.
 
 #### Parameters
 
@@ -463,7 +463,7 @@ const deletedSecret = await client.deleteSecret({
 });
 ```
 
-Delete a secret in Infisical.
+Delete a secret in KMS.
 
 <ParamField query="Parameters" type="object" optional>
     <Expandable title="properties">
@@ -502,7 +502,7 @@ const key = client.createSymmetricKey();
 ```js
 const { iv, tag, ciphertext } = await client.encryptSymmetric({
     key: key,
-    plaintext: "Infisical is awesome!",
+    plaintext: "KMS is awesome!",
 })
 ```
 

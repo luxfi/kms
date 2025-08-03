@@ -131,7 +131,7 @@ export const OrgMembersTable = ({
 
       if (isCustomRole && subscription && !subscription?.rbac) {
         handlePopUpOpen("upgradePlan", {
-          description: "You can assign custom roles to members if you upgrade your Infisical plan."
+          description: "You can assign custom roles to members if you upgrade your KMS plan."
         });
         return;
       }
@@ -627,7 +627,7 @@ export const OrgMembersTable = ({
 
                                       if (currentOrg?.scimEnabled) {
                                         createNotification({
-                                          text: "You cannot manage users from Infisical when org-level auth is enforced for your organization",
+                                          text: "You cannot manage users from KMS when org-level auth is enforced for your organization",
                                           type: "error"
                                         });
                                         return;
@@ -667,7 +667,7 @@ export const OrgMembersTable = ({
 
                                       if (currentOrg?.scimEnabled && isActive) {
                                         createNotification({
-                                          text: "You cannot manage users from Infisical when org-level auth is enforced for your organization",
+                                          text: "You cannot manage users from KMS when org-level auth is enforced for your organization",
                                           type: "error"
                                         });
                                         return;

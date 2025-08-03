@@ -891,7 +891,7 @@ export const OverviewPage = () => {
   if (isProjectV3 && visibleEnvs.length > 0 && isOverviewLoading) {
     return (
       <div className="container mx-auto flex h-screen w-full items-center justify-center px-8 text-mineshaft-50 dark:[color-scheme:dark]">
-        <Lottie isAutoPlay icon="infisical_loading" className="h-32 w-32" />
+        <Lottie isAutoPlay icon="kms_loading" className="h-32 w-32" />
       </div>
     );
   }
@@ -926,34 +926,34 @@ export const OverviewPage = () => {
                 Inject your secrets using
                 <a
                   className="ml-1 text-mineshaft-300 underline decoration-primary-800 underline-offset-4 duration-200 hover:text-mineshaft-100 hover:decoration-primary-600"
-                  href="https://infisical.com/docs/cli/overview"
+                  href="https://lux.network/docs/cli/overview"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Infisical CLI
+                  KMS CLI
                 </a>
                 ,
                 <a
                   className="ml-1 text-mineshaft-300 underline decoration-primary-800 underline-offset-4 duration-200 hover:text-mineshaft-100 hover:decoration-primary-600"
-                  href="https://infisical.com/docs/documentation/getting-started/api"
+                  href="https://lux.network/docs/documentation/getting-started/api"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Infisical API
+                  KMS API
                 </a>
                 ,
                 <a
                   className="ml-1 text-mineshaft-300 underline decoration-primary-800 underline-offset-4 duration-200 hover:text-mineshaft-100 hover:decoration-primary-600"
-                  href="https://infisical.com/docs/sdks/overview"
+                  href="https://lux.network/docs/sdks/overview"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Infisical SDKs
+                  KMS SDKs
                 </a>
                 , and
                 <a
                   className="ml-1 text-mineshaft-300 underline decoration-primary-800 underline-offset-4 duration-200 hover:text-mineshaft-100 hover:decoration-primary-600"
-                  href="https://infisical.com/docs/documentation/getting-started/introduction"
+                  href="https://lux.network/docs/documentation/getting-started/introduction"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -1666,7 +1666,7 @@ export const OverviewPage = () => {
           text={
             subscription.slug === null
               ? "You can perform this action under an Enterprise license"
-              : "You can perform this action if you switch to Infisical's Team plan"
+              : "You can perform this action if you switch to KMS's Team plan"
           }
         />
       )}

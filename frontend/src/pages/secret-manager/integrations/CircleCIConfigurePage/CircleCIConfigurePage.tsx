@@ -135,7 +135,7 @@ export const CircleCIConfigurePage = () => {
       <Card className="max-w-lg rounded-md p-8 pt-4">
         <CardTitle
           className="w-full px-0 text-left text-xl"
-          subTitle="Choose which environment or folder in Infisical you want to sync to CircleCI."
+          subTitle="Choose which environment or folder in KMS you want to sync to CircleCI."
         >
           <div className="flex w-full flex-row items-center justify-between">
             <div className="flex flex-row items-center gap-1.5">
@@ -150,7 +150,7 @@ export const CircleCIConfigurePage = () => {
             </div>
 
             <a
-              href="https://infisical.com/docs/integrations/cicd/circleci"
+              href="https://lux.network/docs/integrations/cicd/circleci"
               target="_blank"
               rel="noopener noreferrer"
             >

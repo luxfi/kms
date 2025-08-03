@@ -70,7 +70,7 @@ export const userServiceFactory = ({
 
     await smtpService.sendMail({
       template: SmtpTemplates.EmailVerification,
-      subjectLine: "Infisical confirmation code",
+      subjectLine: "KMS confirmation code",
       recipients: [user.email],
       substitutions: {
         code: token

@@ -18,8 +18,8 @@ import { TSecretV2BridgeServiceFactory } from "../secret-v2-bridge/secret-v2-bri
 import { TSecretVersionV2DALFactory } from "../secret-v2-bridge/secret-version-dal";
 import { TSecretVersionV2TagDALFactory } from "../secret-v2-bridge/secret-version-tag-dal";
 import { SmtpTemplates, TSmtpService } from "../smtp/smtp-service";
-import { importDataIntoInfisicalFn } from "./external-migration-fns";
-import { ExternalPlatforms, TImportInfisicalDataCreate } from "./external-migration-types";
+import { importDataIntoKMSFn } from "./external-migration-fns";
+import { ExternalPlatforms, TImportKMSDataCreate } from "./external-migration-types";
 
 export type TExternalMigrationQueueFactoryDep = {
   smtpService: TSmtpService;
@@ -92,7 +92,7 @@ export const externalMigrationQueueFactory = ({
     try {
       await smtpService.sendMail({
         recipients: [actorEmail],
-        subjectLine: "Infisical import started",
+        subjectLine: "KMS import started",
         substitutions: {
           provider: importType
         },
@@ -106,9 +106,9 @@ export const externalMigrationQueueFactory = ({
         tag: data.tag
       });
 
-      const decryptedJson = JSON.parse(decrypted) as TImportInfisicalDataCreate;
+      const decryptedJson = JSON.parse(decrypted) as TImportKMSDataCreate;
 
-      const { projectsNotImported } = await importDataIntoInfisicalFn({
+      const { projectsNotImported } = await importDataIntoKMSFn({
         input: decryptedJson,
         projectDAL,
         projectEnvDAL,
@@ -139,7 +139,7 @@ export const externalMigrationQueueFactory = ({
 
       await smtpService.sendMail({
         recipients: [actorEmail],
-        subjectLine: "Infisical import successful",
+        subjectLine: "KMS import successful",
         substitutions: {
           provider: importType
         },
@@ -148,7 +148,7 @@ export const externalMigrationQueueFactory = ({
     } catch (err) {
       await smtpService.sendMail({
         recipients: [job.data.actorEmail],
-        subjectLine: "Infisical import failed",
+        subjectLine: "KMS import failed",
         substitutions: {
           provider: importType,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment

@@ -26,8 +26,8 @@ import type {
 
 export const SecretServiceCacheKeys = {
   get productKey() {
-    const { INFISICAL_PLATFORM_VERSION } = getConfig();
-    return `${ProjectType.SecretManager}:${INFISICAL_PLATFORM_VERSION || 0}`;
+    const { KMS_PLATFORM_VERSION } = getConfig();
+    return `${ProjectType.SecretManager}:${KMS_PLATFORM_VERSION || 0}`;
   },
   getSecretDalVersion: (projectId: string) => {
     return `${SecretServiceCacheKeys.productKey}:${projectId}:${TableName.SecretV2}-dal-version`;

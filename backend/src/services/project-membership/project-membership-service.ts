@@ -240,7 +240,7 @@ export const projectMembershipServiceFactory = ({
       const appCfg = getConfig();
       await smtpService.sendMail({
         template: SmtpTemplates.WorkspaceInvite,
-        subjectLine: "Infisical project invitation",
+        subjectLine: "KMS project invitation",
         recipients: orgMembers.filter((i) => i.email).map((i) => i.email as string),
         substitutions: {
           workspaceName: project.name,

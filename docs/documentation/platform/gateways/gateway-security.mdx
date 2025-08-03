@@ -1,18 +1,18 @@
 ---
 title: "Gateway Security Architecture"
 sidebarTitle: "Architecture"
-description: "Understand the security model and tenant isolation of Infisical's Gateway"
+description: "Understand the security model and tenant isolation of KMS's Gateway"
 ---
 
 # Gateway Security Architecture
 
-The Infisical Gateway enables Infisical Cloud to securely interact with private resources using mutual TLS authentication and private PKI (Public Key Infrastructure) system to ensure secure, isolated communication between multiple tenants. 
+The KMS Gateway enables KMS Cloud to securely interact with private resources using mutual TLS authentication and private PKI (Public Key Infrastructure) system to ensure secure, isolated communication between multiple tenants. 
 This document explains the internal security architecture and how tenant isolation is maintained.
 
 ## Security Model Overview
 
 ### Private PKI System
-Each organization (tenant) in Infisical has its own private PKI system consisting of:
+Each organization (tenant) in KMS has its own private PKI system consisting of:
 
 1. **Root CA**: The ultimate trust anchor for the organization
 2. **Intermediate CAs**:

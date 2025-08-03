@@ -60,7 +60,7 @@ export const LogsSection = withPermission(
               <div className="flex items-center gap-1 whitespace-nowrap">
                 <p className="text-xl font-semibold text-mineshaft-100">Audit History</p>
                 <a
-                  href="https://infisical.com/docs/documentation/platform/audit-logs"
+                  href="https://lux.network/docs/documentation/platform/audit-logs"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -118,7 +118,7 @@ export const LogsSection = withPermission(
               onOpenChange={(isOpen) => {
                 handlePopUpToggle("upgradePlan", isOpen);
               }}
-              text="You can use audit logs if you switch to a paid Infisical plan."
+              text="You can use audit logs if you switch to a paid KMS plan."
             />
           </div>
         </div>
@@ -162,7 +162,7 @@ export const LogsSection = withPermission(
           onOpenChange={(isOpen) => {
             handlePopUpToggle("upgradePlan", isOpen);
           }}
-          text="You can use audit logs if you switch to a paid Infisical plan."
+          text="You can use audit logs if you switch to a paid KMS plan."
         />
       </div>
     );

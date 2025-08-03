@@ -1,6 +1,6 @@
 ---
 title: "HSM Integration"
-description: "Learn more about integrating an HSM with Infisical KMS."
+description: "Learn more about integrating an HSM with KMS KMS."
 ---
 
 <Note>
@@ -8,13 +8,13 @@ description: "Learn more about integrating an HSM with Infisical KMS."
   This section is intended for users who have obtained an Enterprise license and are on-premise.
 
 
-  Please reach out to sales@infisical.com if you have any questions.
+  Please reach out to sales@lux.network if you have any questions.
 </Note>
 
 ## Overview
 
-Infisical KMS currently supports two encryption strategies:
-1. **Standard Encryption**: This is the default encryption strategy used by Infisical KMS. It uses a software-protected encryption key to encrypt KMS keys within your Infisical instance. The root encryption key is defined by setting the `ENCRYPTION_KEY` environment variable.
+KMS KMS currently supports two encryption strategies:
+1. **Standard Encryption**: This is the default encryption strategy used by KMS KMS. It uses a software-protected encryption key to encrypt KMS keys within your KMS instance. The root encryption key is defined by setting the `ENCRYPTION_KEY` environment variable.
 2. **Hardware Security Module (HSM)**: This encryption strategy uses a Hardware Security Module (HSM) to create a root encryption key that is stored on a physical device to encrypt the KMS keys within your instance.
 
 ## Hardware Security Module (HSM)
@@ -24,19 +24,19 @@ Infisical KMS currently supports two encryption strategies:
 Using a hardware security module comes with the added benefit of having a secure and tamper-proof device to store your encryption keys. This ensures that your data is protected from unauthorized access.
 
 <Warning>
-  All encryption keys used for cryptographic operations are stored within the HSM. This means that if the HSM is lost or destroyed, you will no longer be able to decrypt your data stored within Infisical. Most providers offer recovery options for HSM devices, which you should consider when setting up an HSM device.
+  All encryption keys used for cryptographic operations are stored within the HSM. This means that if the HSM is lost or destroyed, you will no longer be able to decrypt your data stored within KMS. Most providers offer recovery options for HSM devices, which you should consider when setting up an HSM device.
 </Warning>
 
 Enabling HSM encryption has a set of key benefits:
-1. **Root Key Wrapping**: The root KMS encryption key that is used to secure your Infisical instance will be encrypted using the HSM device rather than the standard software-protected key.
+1. **Root Key Wrapping**: The root KMS encryption key that is used to secure your KMS instance will be encrypted using the HSM device rather than the standard software-protected key.
 
 #### Caveats
-- **Performance**: Using an HSM device can have a performance impact on your Infisical instance. This is due to the additional latency introduced by the HSM device. This is however only noticeable when your instance(s) start up or when the encryption strategy is changed.
-- **Key Recovery**: If the HSM device is lost or destroyed, you will no longer be able to decrypt your data stored within Infisical. Most HSM providers offer recovery options, which you should consider when setting up an HSM device.
+- **Performance**: Using an HSM device can have a performance impact on your KMS instance. This is due to the additional latency introduced by the HSM device. This is however only noticeable when your instance(s) start up or when the encryption strategy is changed.
+- **Key Recovery**: If the HSM device is lost or destroyed, you will no longer be able to decrypt your data stored within KMS. Most HSM providers offer recovery options, which you should consider when setting up an HSM device.
 
 ### Requirements
-- An Infisical instance with a version number that is equal to or greater than `v0.91.0`.
-- If you are using Docker, your instance must be using the `infisical/infisical-fips` image.
+- An KMS instance with a version number that is equal to or greater than `v0.91.0`.
+- If you are using Docker, your instance must be using the `kms/kms-fips` image.
 - An HSM device from a provider such as [Thales Luna HSM](https://cpl.thalesgroup.com/encryption/data-protection-on-demand/services/luna-cloud-hsm), [AWS CloudHSM](https://aws.amazon.com/cloudhsm/), [Fortanix HSM](https://www.fortanix.com/platform/data-security-manager), or others.
 
 
@@ -45,23 +45,23 @@ Enabling HSM encryption has a set of key benefits:
 
 <Steps>
     <Step title="Setting up an HSM Device">
-        To set up HSM encryption, you need to configure an HSM provider and HSM key. The HSM provider is used to connect to the HSM device, and the HSM key is used to encrypt Infisical's KMS keys. We recommend using a Cloud HSM provider such as [Thales Luna HSM](https://cpl.thalesgroup.com/encryption/data-protection-on-demand/services/luna-cloud-hsm), [AWS CloudHSM](https://aws.amazon.com/cloudhsm/), or [Fortanix HSM](https://www.fortanix.com/platform/data-security-manager).
+        To set up HSM encryption, you need to configure an HSM provider and HSM key. The HSM provider is used to connect to the HSM device, and the HSM key is used to encrypt KMS's KMS keys. We recommend using a Cloud HSM provider such as [Thales Luna HSM](https://cpl.thalesgroup.com/encryption/data-protection-on-demand/services/luna-cloud-hsm), [AWS CloudHSM](https://aws.amazon.com/cloudhsm/), or [Fortanix HSM](https://www.fortanix.com/platform/data-security-manager).
 
-        You need to follow the instructions provided by the HSM provider to set up the HSM device. Once the HSM device is set up, the HSM device can be used within Infisical.
+        You need to follow the instructions provided by the HSM provider to set up the HSM device. Once the HSM device is set up, the HSM device can be used within KMS.
 
-        After setting up the HSM from your provider, you will have a set of files that you can use to access the HSM. These files need to be present on the machine where Infisical is running.
+        After setting up the HSM from your provider, you will have a set of files that you can use to access the HSM. These files need to be present on the machine where KMS is running.
         If you are using containers, you will need to mount the folder where these files are stored as a volume in the container.
 
         The setup process for an HSM device varies depending on the provider. We have created guides for Thales Luna Cloud HSM and Fortanix HSM, which you can find below.
         
     </Step>
-    <Step title="Configure HSM on Infisical">
+    <Step title="Configure HSM on KMS">
 
     <Warning>
       Are you using Docker or Kubernetes for your deployment? If you are using Docker or Kubernetes, please follow the instructions in the [Using HSM's in your Deployment](#using-hsms-in-your-deployment) section.
     </Warning>
 
-        Configuring the HSM on Infisical requires setting a set of environment variables:
+        Configuring the HSM on KMS requires setting a set of environment variables:
         - `HSM_LIB_PATH`: The path to the PKCS#11 library provided by the HSM provider. This usually comes in the form of a `.so` for Linux and MacOS, or a `.dll` file for Windows. For Docker, you need to mount the library path as a volume. Further instructions can be found below. If you are using Docker, make sure to set the HSM_LIB_PATH environment variable to the path where the library is mounted in the container.
         - `HSM_PIN`: The PKCS#11 PIN to use for authentication with the HSM device.
         - `HSM_SLOT`: The slot number to use for the HSM device. This is typically between `0` and `5` for most HSM devices.
@@ -70,7 +70,7 @@ Enabling HSM encryption has a set of key benefits:
         You can read more about the [default instance configurations](/self-hosting/configuration/envars) here.
     </Step>
     <Step title="Restart Instance">
-        After setting up the HSM, you need to restart the Infisical instance for the changes to take effect.
+        After setting up the HSM, you need to restart the KMS instance for the changes to take effect.
     </Step>
     <Step title="Navigate to the Server Admin Console">
         ![Server Admin Console](/images/platform/kms/hsm/server-admin-console.png)
@@ -78,7 +78,7 @@ Enabling HSM encryption has a set of key benefits:
     <Step title="Update the KMS Encryption Strategy to HSM">
         ![Set Encryption Strategy](/images/platform/kms/hsm/encryption-strategy.png)
 
-        Once you press the 'Save' button, your Infisical instance will immediately switch to the HSM encryption strategy. This will re-encrypt your KMS key with keys from the HSM device.
+        Once you press the 'Save' button, your KMS instance will immediately switch to the HSM encryption strategy. This will re-encrypt your KMS key with keys from the HSM device.
     </Step>
     <Step title="Verify Encryption Strategy">
         To verify that the HSM was correctly configured, you can try creating a new secret in one of your projects. If the secret is created successfully, the HSM is now being used for encryption.
@@ -90,7 +90,7 @@ Enabling HSM encryption has a set of key benefits:
 
 <Tabs>
   <Tab title="Docker">
-    When using Docker, you need to mount the path containing the HSM client files. This section covers how to configure your Infisical instance to use an HSM with Docker.
+    When using Docker, you need to mount the path containing the HSM client files. This section covers how to configure your KMS instance to use an HSM with Docker.
 
     <Tabs>
       <Tab title="Thales Luna Cloud HSM">
@@ -221,7 +221,7 @@ Enabling HSM encryption has a set of key benefits:
 
             <Warning>
               If no key is found with the provided key label, the HSM will create a new key with the provided label.
-              Infisical depends on an AES and HMAC key to be present in the HSM. If these keys are not present, Infisical will create them. The AES key label will be the value of the `HSM_KEY_LABEL` environment variable, and the HMAC key label will be the value of the `HSM_KEY_LABEL` environment variable with the suffix `_HMAC`.
+              KMS depends on an AES and HMAC key to be present in the HSM. If these keys are not present, KMS will create them. The AES key label will be the value of the `HSM_KEY_LABEL` environment variable, and the HMAC key label will be the value of the `HSM_KEY_LABEL` environment variable with the suffix `_HMAC`.
             </Warning>
 
             ```bash
@@ -238,10 +238,10 @@ Enabling HSM encryption has a set of key benefits:
               -e DB_CONNECTION_URI="<>" \
               -e REDIS_URL="<>" \
               -e SITE_URL="<>" \
-              infisical/infisical-fips:<version> # Replace <version> with the version you want to use
+              kms/kms-fips:<version> # Replace <version> with the version you want to use
             ```
 
-            We recommend reading further about [using Infisical with Docker](/self-hosting/deployment-options/standalone-infisical).
+            We recommend reading further about [using KMS with Docker](/self-hosting/deployment-options/standalone-kms).
 
           </Step>
         </Steps>
@@ -250,7 +250,7 @@ Enabling HSM encryption has a set of key benefits:
       <Tab title="Fortanix HSM">
         <Steps>
           <Step title="Set up Fortanix HSM">
-            To use Fortanix HSM with Infisical, you need to:
+            To use Fortanix HSM with KMS, you need to:
             
             1. Create an App in Fortanix:
                - Set Interface value to be PKCS#11
@@ -309,7 +309,7 @@ Enabling HSM encryption has a set of key benefits:
               -e DB_CONNECTION_URI="<>" \
               -e REDIS_URL="<>" \
               -e SITE_URL="<>" \
-              infisical/infisical-fips:<version> # Replace <version> with the version you want to use
+              kms/kms-fips:<version> # Replace <version> with the version you want to use
             ```
             
             <Warning>
@@ -322,17 +322,17 @@ Enabling HSM encryption has a set of key benefits:
     </Tabs>
   </Tab>
   <Tab title="Kubernetes">
-    When you are deploying Infisical with the [Kubernetes self-hosting option](/self-hosting/deployment-options/kubernetes-helm), you can still use HSM encryption, but you need to ensure that the HSM client files are present in the container.
+    When you are deploying KMS with the [Kubernetes self-hosting option](/self-hosting/deployment-options/kubernetes-helm), you can still use HSM encryption, but you need to ensure that the HSM client files are present in the container.
 
     <Tabs>
       <Tab title="Thales Luna Cloud HSM">
         <Note>
-          This is only supported on helm chart version `1.4.1` and above. Please see the [Helm Chart Changelog](https://github.com/Infisical/infisical/blob/main/helm-charts/infisical-standalone-postgres/CHANGELOG.md#141-march-19-2025) for more information.
+          This is only supported on helm chart version `1.4.1` and above. Please see the [Helm Chart Changelog](https://github.com/luxfi/kms/blob/main/helm-charts/kms-standalone-postgres/CHANGELOG.md#141-march-19-2025) for more information.
         </Note>
 
         <Steps>
           <Step title="Create HSM client folder">
-            When using Kubernetes, you need to mount the path containing the HSM client files. This section covers how to configure your Infisical instance to use an HSM with Kubernetes. In this example, we are going to be using `/etc/luna-docker`.
+            When using Kubernetes, you need to mount the path containing the HSM client files. This section covers how to configure your KMS instance to use an HSM with Kubernetes. In this example, we are going to be using `/etc/luna-docker`.
 
 
             ```bash
@@ -490,7 +490,7 @@ Enabling HSM encryption has a set of key benefits:
           </Step>
 
           <Step title="Creating Persistent Volume Claim (PVC)">
-            You need to create a Persistent Volume Claim (PVC) to mount the HSM client files to the Infisical deployment.
+            You need to create a Persistent Volume Claim (PVC) to mount the HSM client files to the KMS deployment.
 
 
             ```bash
@@ -498,7 +498,7 @@ Enabling HSM encryption has a set of key benefits:
             apiVersion: v1
             kind: PersistentVolumeClaim
             metadata:
-              name: infisical-data-pvc
+              name: kms-data-pvc
             spec:
               accessModes:
                 - ReadWriteOnce
@@ -507,7 +507,7 @@ Enabling HSM encryption has a set of key benefits:
                   storage: 500Mi
             EOF
             ```
-            The above command will create a PVC named `infisical-data-pvc` with a storage size of `500Mi`. You can change the storage size if needed.
+            The above command will create a PVC named `kms-data-pvc` with a storage size of `500Mi`. You can change the storage size if needed.
 
 
             Next we need to create a temporary pod with the PVC mounted as a volume, allowing us to copy the HSM client files into this mounted storage.
@@ -529,7 +529,7 @@ Enabling HSM encryption has a set of key benefits:
               volumes:
               - name: hsm-data
                 persistentVolumeClaim:
-                  claimName: infisical-data-pvc
+                  claimName: kms-data-pvc
             EOF
             ```
 
@@ -557,7 +557,7 @@ Enabling HSM encryption has a set of key benefits:
           </Step>
 
           <Step title="Updating your environment variables">
-            Next we need to update the environment variables used for the deployment. If you followed the [setup instructions for Kubernetes deployments](/self-hosting/deployment-options/kubernetes-helm), you should have a Kubernetes secret called `infisical-secrets`.
+            Next we need to update the environment variables used for the deployment. If you followed the [setup instructions for Kubernetes deployments](/self-hosting/deployment-options/kubernetes-helm), you should have a Kubernetes secret called `kms-secrets`.
             We need to update the secret with the following environment variables:
 
             - `HSM_LIB_PATH` - The path to the HSM client library _(mapped to `/usr/safenet/lunaclient/libs/64/libCryptoki2.so`)_
@@ -571,7 +571,7 @@ Enabling HSM encryption has a set of key benefits:
             apiVersion: v1
             kind: Secret
             metadata:
-              name: infisical-secrets
+              name: kms-secrets
             type: Opaque
             stringData:
               # ... Other environment variables ...
@@ -591,13 +591,13 @@ Enabling HSM encryption has a set of key benefits:
           <Step title="Updating the Deployment">
             After we've successfully configured the PVC and updated our environment variables, we are ready to update the deployment configuration so that the pods it creates can access the HSM client files.
 
-            We need to update the Docker image of the deployment to use `infisical/infisical-fips`. The `infisical/infisical-fips` image is a functionally identical image to the `infisical/infisical` image, but it is built with HSM support.
+            We need to update the Docker image of the deployment to use `kms/kms-fips`. The `kms/kms-fips` image is a functionally identical image to the `kms/kms` image, but it is built with HSM support.
 
             ```yaml
               # ... The rest of the values.yaml file ...
               
               image:
-                repository: infisical/infisical-fips # Very important: Must use "infisical/infisical-fips"
+                repository: kms/kms-fips # Very important: Must use "kms/kms-fips"
                 tag: "v0.117.1-postgres"
                 pullPolicy: IfNotPresent
 
@@ -608,7 +608,7 @@ Enabling HSM encryption has a set of key benefits:
               extraVolumes:
                 - name: hsm-data 
                   persistentVolumeClaim:
-                    claimName: infisical-data-pvc # The PVC we created in the previous step
+                    claimName: kms-data-pvc # The PVC we created in the previous step
 
               # ... The rest of the values.yaml file ...
             ```
@@ -620,14 +620,14 @@ Enabling HSM encryption has a set of key benefits:
             After updating the values.yaml file, you need to upgrade the Helm chart in order for the changes to take effect.
 
             ```bash
-            helm upgrade --install infisical infisical-helm-charts/infisical-standalone --values /path/to/values.yaml
+            helm upgrade --install kms kms-helm-charts/kms-standalone --values /path/to/values.yaml
             ```
           </Step>
           <Step title="Restarting the Deployment">
             After upgrading the Helm chart, you need to restart the deployment in order for the changes to take effect.
 
             ```bash
-            kubectl rollout restart deployment/infisical-infisical
+            kubectl rollout restart deployment/kms-kms
             ```
           </Step>
         </Steps>
@@ -738,7 +738,7 @@ Enabling HSM encryption has a set of key benefits:
             apiVersion: v1
             kind: Secret
             metadata:
-              name: infisical-secrets
+              name: kms-secrets
             type: Opaque
             stringData:
               # ... Other environment variables ...
@@ -763,7 +763,7 @@ Enabling HSM encryption has a set of key benefits:
             # ... The rest of the values.yaml file ...
             
             image:
-              repository: infisical/infisical-fips  # Must use "infisical/infisical-fips"
+              repository: kms/kms-fips  # Must use "kms/kms-fips"
               tag: "v0.117.1-postgres"
               pullPolicy: IfNotPresent
             
@@ -788,13 +788,13 @@ Enabling HSM encryption has a set of key benefits:
             Upgrade the Helm chart with the new values:
             
             ```bash
-            helm upgrade --install infisical infisical-helm-charts/infisical-standalone --values /path/to/values.yaml
+            helm upgrade --install kms kms-helm-charts/kms-standalone --values /path/to/values.yaml
             ```
             
             Restart the deployment:
             
             ```bash
-            kubectl rollout restart deployment/infisical-infisical
+            kubectl rollout restart deployment/kms-kms
             ```
           </Step>
         </Steps>
@@ -807,8 +807,8 @@ Enabling HSM encryption has a set of key benefits:
 
 ## Disabling HSM Encryption
 
-To disable HSM encryption, navigate to Infisical's Server Admin Console and set the KMS encryption strategy to `Software-based Encryption`. This will revert the encryption strategy back to the default software-based encryption.
+To disable HSM encryption, navigate to KMS's Server Admin Console and set the KMS encryption strategy to `Software-based Encryption`. This will revert the encryption strategy back to the default software-based encryption.
 
 <Note>
-  In order to disable HSM encryption, the Infisical instance must be able to access the HSM device. If the HSM device is no longer accessible, you will not be able to disable HSM encryption.
+  In order to disable HSM encryption, the KMS instance must be able to access the HSM device. If the HSM device is no longer accessible, you will not be able to disable HSM encryption.
 </Note>

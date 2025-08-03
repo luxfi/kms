@@ -339,7 +339,7 @@ export const PasswordStep = ({
     <form onSubmit={handleLogin} className="mx-auto h-full w-full max-w-md px-6 pt-8">
       <div className="mb-8">
         <p className="mx-auto mb-4 flex w-max justify-center bg-gradient-to-b from-white to-bunker-200 bg-clip-text text-center text-xl font-medium text-transparent">
-          What&apos;s your Infisical password?
+          What&apos;s your KMS password?
         </p>
       </div>
       <div className="relative mx-auto flex max-h-24 w-full min-w-[22rem] items-center justify-center rounded-lg md:max-h-28 lg:w-1/6">
@@ -381,7 +381,7 @@ export const PasswordStep = ({
       </div>
       <div className="mx-auto mt-4 flex w-max flex-col items-center text-xs text-bunker-400">
         <span className="max-w-sm px-4 text-center duration-200">
-          Infisical Master Password serves as a decryption mechanism so that even Google is not able
+          KMS Master Password serves as a decryption mechanism so that even Google is not able
           to access your secrets.
         </span>
         <Link to="/verify-email">

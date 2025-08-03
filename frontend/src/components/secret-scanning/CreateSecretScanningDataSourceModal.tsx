@@ -59,7 +59,7 @@ export const CreateSecretScanningDataSourceModal = ({ onOpenChange, isOpen, ...p
               Add Data Source
               <a
                 target="_blank"
-                href="https://infisical.com/docs/documentation/platform/secret-scanning/overview"
+                href="https://lux.network/docs/documentation/platform/secret-scanning/overview"
                 className="mb-1 ml-1"
                 rel="noopener noreferrer"
               >

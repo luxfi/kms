@@ -70,7 +70,7 @@ export const SignupSsoPage = () => {
     <div className="flex min-h-screen flex-col justify-center bg-gradient-to-tr from-mineshaft-600 via-mineshaft-800 to-bunker-700 px-6 pb-28">
       <Helmet>
         <title>{t("common.head-title", { title: t("signup.title") })}</title>
-        <link rel="icon" href="/infisical.ico" />
+        <link rel="icon" href="/kms.ico" />
         <meta property="og:image" content="/images/message.png" />
         <meta property="og:title" content={t("signup.og-title") as string} />
         <meta name="og:description" content={t("signup.og-description") as string} />
@@ -82,7 +82,7 @@ export const SignupSsoPage = () => {
             height: "90px",
             width: "120px"
           }}
-          alt="Infisical Logo"
+          alt="KMS Logo"
         />
       </div>
       <div>{renderView()}</div>

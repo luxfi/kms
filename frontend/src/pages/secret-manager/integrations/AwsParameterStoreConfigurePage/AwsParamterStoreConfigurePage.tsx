@@ -177,7 +177,7 @@ export const AWSParameterStoreConfigurePage = () => {
       <Card className="max-w-lg rounded-md border border-mineshaft-600">
         <CardTitle
           className="px-6 text-left text-xl"
-          subTitle="Choose which environment in Infisical you want to sync to secerts in AWS Parameter Store."
+          subTitle="Choose which environment in KMS you want to sync to secerts in AWS Parameter Store."
         >
           <div className="flex flex-row items-center">
             <div className="flex items-center">
@@ -190,7 +190,7 @@ export const AWSParameterStoreConfigurePage = () => {
             </div>
             <span className="ml-1.5">AWS Parameter Store Integration </span>
             <a
-              href="https://infisical.com/docs/integrations/cloud/aws-parameter-store"
+              href="https://lux.network/docs/integrations/cloud/aws-parameter-store"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -303,7 +303,7 @@ export const AWSParameterStoreConfigurePage = () => {
                   </FormControl>
                   <FormControl label="Tag Value">
                     <Input
-                      placeholder="infisical"
+                      placeholder="kms"
                       value={tagValue}
                       onChange={(e) => setTagValue(e.target.value)}
                     />
@@ -357,7 +357,7 @@ export const AWSParameterStoreConfigurePage = () => {
         <span className="mt-4 text-sm text-mineshaft-300">
           After creating an integration, your secrets will start syncing immediately. This might
           cause an unexpected override of current secrets in AWS Parameter Store with secrets from
-          Infisical.
+          KMS.
         </span>
       </div>
     </div>
@@ -371,7 +371,7 @@ export const AWSParameterStoreConfigurePage = () => {
           src="/images/loading/loading.gif"
           height={70}
           width={120}
-          alt="infisical loading indicator"
+          alt="kms loading indicator"
         />
       ) : (
         <div className="flex h-max max-w-md flex-col rounded-md border border-mineshaft-600 bg-mineshaft-800 p-6 text-center text-mineshaft-200">
@@ -382,9 +382,9 @@ export const AWSParameterStoreConfigurePage = () => {
               className="inline cursor-pointer text-mineshaft-100 underline decoration-primary-500 underline-offset-4 opacity-80 duration-200 hover:opacity-100"
               target="_blank"
               rel="noopener noreferrer"
-              href="mailto:support@infisical.com"
+              href="mailto:support@lux.network"
             >
-              support@infisical.com
+              support@lux.network
             </a>{" "}
             if the issue persists.
           </p>

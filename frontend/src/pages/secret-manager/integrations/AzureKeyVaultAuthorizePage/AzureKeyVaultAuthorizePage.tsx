@@ -38,7 +38,7 @@ export function AzureKeyVaultAuthorizePage() {
     <div className="flex h-full w-full items-center justify-center">
       <Helmet>
         <title>Authorize Azure Key Vault Integration</title>
-        <link rel="icon" href="/infisical.ico" />
+        <link rel="icon" href="/kms.ico" />
       </Helmet>
       <Card className="mb-12 max-w-lg rounded-md border border-mineshaft-600">
         <CardTitle
@@ -56,7 +56,7 @@ export function AzureKeyVaultAuthorizePage() {
             </div>
             <span className="ml-2.5">Azure Key Vault Integration </span>
             <a
-              href="https://infisical.com/docs/integrations/cloud/azure-key-vault"
+              href="https://lux.network/docs/integrations/cloud/azure-key-vault"
               target="_blank"
               rel="noopener noreferrer"
             >

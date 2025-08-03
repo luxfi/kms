@@ -188,7 +188,7 @@ export const OrgSsoTab = withPermission(
           onOpenChange={(isOpen) => handlePopUpToggle("upgradePlan", isOpen)}
           text={`You can use ${
             (popUp.upgradePlan.data as { feature: string })?.feature
-          } if you switch to Infisical's ${
+          } if you switch to KMS's ${
             (popUp.upgradePlan.data as { plan: string })?.plan
           } plan.`}
         />

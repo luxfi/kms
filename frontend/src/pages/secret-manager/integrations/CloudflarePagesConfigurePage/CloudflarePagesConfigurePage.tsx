@@ -129,11 +129,11 @@ export const CloudflarePagesConfigurePage = () => {
       <Card className="max-w-lg rounded-md border border-mineshaft-600 p-0">
         <CardTitle
           className="px-6 text-left"
-          subTitle="Choose which environment in Infisical you want to sync with your Cloudflare Pages project."
+          subTitle="Choose which environment in KMS you want to sync with your Cloudflare Pages project."
         >
           Cloudflare Pages Integration
         </CardTitle>
-        <FormControl label="Infisical Project Environment" className="mt-2 px-6">
+        <FormControl label="KMS Project Environment" className="mt-2 px-6">
           <Select
             value={selectedSourceEnvironment}
             onValueChange={(val) => setSelectedSourceEnvironment(val)}
@@ -149,7 +149,7 @@ export const CloudflarePagesConfigurePage = () => {
             ))}
           </Select>
         </FormControl>
-        <FormControl label="Infisical Secret Path" className="mt-2 px-6">
+        <FormControl label="KMS Secret Path" className="mt-2 px-6">
           <SecretPathInput
             value={secretPath}
             onChange={(value) => setSecretPath(value)}

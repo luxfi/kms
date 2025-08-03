@@ -17,7 +17,7 @@ export const EncryptionPage = () => {
         <div className="mx-auto mb-6 w-full max-w-7xl">
           <PageHeader
             title="Encryption"
-            description="Manage encryption settings for your Infisical instance."
+            description="Manage encryption settings for your KMS instance."
           />
           <EncryptionPageForm />
         </div>

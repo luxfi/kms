@@ -1,6 +1,6 @@
 import { Tab, TabList, TabPanel, Tabs } from "@app/components/v2";
 import { OrgPermissionBillingActions, OrgPermissionSubjects } from "@app/context";
-import { isInfisicalCloud } from "@app/helpers/platform";
+import { isKMSCloud } from "@app/helpers/platform";
 import { withPermission } from "@app/hoc";
 
 import { BillingCloudTab } from "../BillingCloudTab";
@@ -9,17 +9,17 @@ import { BillingReceiptsTab } from "../BillingReceiptsTab";
 import { BillingSelfHostedTab } from "../BillingSelfHostedTab";
 
 const tabs = [
-  { name: "Infisical Cloud", key: "tab-infisical-cloud" },
-  { name: "Infisical Self-Hosted", key: "tab-infisical-self-hosted" },
+  { name: "KMS Cloud", key: "tab-kms-cloud" },
+  { name: "KMS Self-Hosted", key: "tab-kms-self-hosted" },
   { name: "Receipts", key: "tab-receipts" },
   { name: "Billing details", key: "tab-billing-details" }
 ];
 
 export const BillingTabGroup = withPermission(
   () => {
-    const tabsFiltered = isInfisicalCloud()
+    const tabsFiltered = isKMSCloud()
       ? tabs
-      : [{ name: "Infisical Self-Hosted", key: "tab-infisical-cloud" }];
+      : [{ name: "KMS Self-Hosted", key: "tab-kms-cloud" }];
 
     return (
       <Tabs defaultValue={tabs[0].key}>
@@ -31,7 +31,7 @@ export const BillingTabGroup = withPermission(
         <TabPanel value={tabs[0].key}>
           <BillingCloudTab />
         </TabPanel>
-        {isInfisicalCloud() && (
+        {isKMSCloud() && (
           <>
             <TabPanel value={tabs[1].key}>
               <BillingSelfHostedTab />

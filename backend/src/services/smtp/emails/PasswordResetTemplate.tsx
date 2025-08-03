@@ -16,19 +16,19 @@ export const PasswordResetTemplate = ({ email, isCloud, siteUrl, callback_url, t
   return (
     <BaseEmailWrapper
       title="Account Recovery"
-      preview="A password reset was requested for your Infisical account."
+      preview="A password reset was requested for your KMS account."
       siteUrl={siteUrl}
     >
       <Heading className="text-black text-[18px] leading-[28px] text-center font-normal p-0 mx-0">
         <strong>Account Recovery</strong>
       </Heading>
       <Section className="px-[24px] mb-[28px] mt-[36px] pt-[12px] pb-[8px] border border-solid border-gray-200 rounded-md bg-gray-50">
-        <Text className="text-[14px]">A password reset was requested for your Infisical account.</Text>
+        <Text className="text-[14px]">A password reset was requested for your KMS account.</Text>
         <Text className="text-[14px]">
           If you did not initiate this request, please contact{" "}
           {isCloud ? (
             <>
-              us immediately at <BaseLink href="mailto:support@infisical.com">support@infisical.com</BaseLink>
+              us immediately at <BaseLink href="mailto:support@lux.network">support@lux.network</BaseLink>
             </>
           ) : (
             "your administrator immediately"
@@ -46,9 +46,9 @@ export const PasswordResetTemplate = ({ email, isCloud, siteUrl, callback_url, t
 export default PasswordResetTemplate;
 
 PasswordResetTemplate.PreviewProps = {
-  email: "kevin@infisical.com",
-  callback_url: "https://app.infisical.com",
+  email: "kevin@lux.network",
+  callback_url: "https://kms.lux.network",
   isCloud: true,
   token: "preview-token",
-  siteUrl: "https://infisical.com"
+  siteUrl: "https://lux.network"
 } as PasswordResetTemplateProps;

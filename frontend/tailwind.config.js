@@ -20,17 +20,17 @@ module.exports = {
       colors: {
         // You can generate your own colors with this tool: https://javisperez.github.io/tailwindcolorshades/
         primary: {
-          50: "#fffff5",
-          100: "#fcfce8",
-          200: "#f8faca",
-          300: "#f4f7ab",
-          400: "#ecf26d",
-          500: "#e0ed34",
-          600: "#c2d62b",
-          700: "#97b31d",
-          800: "#708f13",
-          900: "#4d6b0b",
-          DEFAULT: "#e0ed34"
+          50: "#ffffff",
+          100: "#f5f5f5",
+          200: "#e5e5e5",
+          300: "#d4d4d4",
+          400: "#a3a3a3",
+          500: "#737373",
+          600: "#525252",
+          700: "#404040",
+          800: "#262626",
+          900: "#171717",
+          DEFAULT: "#ffffff"
         },
         grey: "#0d1117",
         mineshaft: {

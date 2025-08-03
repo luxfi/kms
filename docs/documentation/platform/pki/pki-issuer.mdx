@@ -1,42 +1,42 @@
 ---
 title: "Cert Manager Issuer"
-description: "Learn how to automatically provision and manage TLS certificates in Kubernetes using Infisical PKI"
+description: "Learn how to automatically provision and manage TLS certificates in Kubernetes using KMS PKI"
 ---
 
 ## Concept
 
-The Infisical PKI Issuer is an installable Kubernetes [cert-manager](https://cert-manager.io/) controller that uses Infisical PKI to sign certificate requests. The issuer is perfect for getting X.509 certificates for ingresses and other Kubernetes resources and capable of automatically renewing certificates as needed.
+The KMS PKI Issuer is an installable Kubernetes [cert-manager](https://cert-manager.io/) controller that uses KMS PKI to sign certificate requests. The issuer is perfect for getting X.509 certificates for ingresses and other Kubernetes resources and capable of automatically renewing certificates as needed.
 
-As part of the workflow, you install `cert-manager`, the Infisical PKI Issuer, and configure resources to represent the connection details to your Infisical PKI and the certificates you wish to issue. Each issued certificate and corresponding private key is made available in a Kubernetes secret.
+As part of the workflow, you install `cert-manager`, the KMS PKI Issuer, and configure resources to represent the connection details to your KMS PKI and the certificates you wish to issue. Each issued certificate and corresponding private key is made available in a Kubernetes secret.
 
 We recommend reading the [cert-manager documentation](https://cert-manager.io/docs/) for a fuller understanding of all the moving parts.
 
 ## Workflow
 
-A typical workflow for using the Infisical PKI Issuer to issue certificates for your Kubernetes resources consists of the following steps:
+A typical workflow for using the KMS PKI Issuer to issue certificates for your Kubernetes resources consists of the following steps:
 
-1. Creating a machine identity in Infisical.
+1. Creating a machine identity in KMS.
 2. Creating a Kubernetes secret to store the credentials of the machine identity.
 3. Installing `cert-manager` into your Kubernetes cluster.
-4. Installing the Infisical PKI Issuer controller into your Kubernetes cluster.
-5. Creating an `Issuer` or `ClusterIssuer` resource in your Kubernetes cluster to represent the Infisical PKI issuer you wish to use.
+4. Installing the KMS PKI Issuer controller into your Kubernetes cluster.
+5. Creating an `Issuer` or `ClusterIssuer` resource in your Kubernetes cluster to represent the KMS PKI issuer you wish to use.
 6. Create the approver policy to accept certificate request.
 7. Creating a `Certificate` resource in your Kubernetes cluster to represent a certificate you wish to issue. As part of this step, you specify the Kubernetes `Secret` to create and store the issued certificate and private key.
 8. Consuming the issued certificate across your Kubernetes resources from the specified Kubernetes `Secret`.
 
 ## Guide
 
-In the following steps, we explore how to install the Infisical PKI Issuer using [kubectl](https://github.com/kubernetes/kubectl) and use it to obtain certificates for your Kubernetes resources.
+In the following steps, we explore how to install the KMS PKI Issuer using [kubectl](https://github.com/kubernetes/kubectl) and use it to obtain certificates for your Kubernetes resources.
 
 <Steps>
-    <Step title="Create an identity in Infisical">
+    <Step title="Create an identity in KMS">
 
-        Follow the instructions [here](/documentation/platform/identities/universal-auth) to configure a [machine identity](/documentation/platform/identities/machine-identities) in Infisical with Universal Auth.
+        Follow the instructions [here](/documentation/platform/identities/universal-auth) to configure a [machine identity](/documentation/platform/identities/machine-identities) in KMS with Universal Auth.
 
-        By the end of this step, you should have a **Client ID** and **Client Secret** on hand as part of the Universal Auth configuration for the Infisical PKI Issuer to authenticate with Infisical; this will be useful in steps 4 and 5.
+        By the end of this step, you should have a **Client ID** and **Client Secret** on hand as part of the Universal Auth configuration for the KMS PKI Issuer to authenticate with KMS; this will be useful in steps 4 and 5.
 
         <Note>
-            Currently, the Infisical PKI Issuer only supports authenticating with Infisical via the [Universal Auth](/documentation/platform/identities/universal-auth) authentication method.
+            Currently, the KMS PKI Issuer only supports authenticating with KMS via the [Universal Auth](/documentation/platform/identities/universal-auth) authentication method.
 
             We're planning to add support for [Kubernetes Auth](/documentation/platform/identities/kubernetes-auth) in the near future.
         </Note>
@@ -49,29 +49,29 @@ In the following steps, we explore how to install the Infisical PKI Issuer using
         ```
     </Step>
     <Step title="Install the Issuer Controller">
-        Install the Infisical PKI Issuer controller into your Kubernetes cluster using one of the following methods:
+        Install the KMS PKI Issuer controller into your Kubernetes cluster using one of the following methods:
 
         <Tabs>
             <Tab title="Helm">
                 ```bash
-                helm repo add infisical-helm-charts 'https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/'
-                helm install infisical-pki-issuer infisical-helm-charts/infisical-pki-issuer
+                helm repo add kms-helm-charts 'https://dl.cloudsmith.io/public/kms/helm-charts/helm/charts/'
+                helm install kms-pki-issuer kms-helm-charts/kms-pki-issuer
                 ```
             </Tab>
             <Tab title="kubectl">
                 ```bash
-                kubectl apply -f https://raw.githubusercontent.com/Infisical/infisical-issuer/main/build/install.yaml
+                kubectl apply -f https://raw.githubusercontent.com/KMS/kms-issuer/main/build/install.yaml
                 ```
             </Tab>
         </Tabs>
     </Step>
-    <Step title="Create Kubernetes Secret for Infisical PKI Issuer">
-        Start by creating a Kubernetes `Secret` containing the **Client Secret** from step 1. As mentioned previously, this will be used by the Infisical PKI issuer to authenticate with Infisical.
+    <Step title="Create Kubernetes Secret for KMS PKI Issuer">
+        Start by creating a Kubernetes `Secret` containing the **Client Secret** from step 1. As mentioned previously, this will be used by the KMS PKI issuer to authenticate with KMS.
 
         <Tabs>
             <Tab title="kubectl command">
                 ```bash
-                kubectl create secret generic issuer-infisical-client-secret \
+                kubectl create secret generic issuer-kms-client-secret \
                     --namespace <namespace_you_want_to_issue_certificates_in> \
                     --from-literal=clientSecret=<client_secret>
                 ```
@@ -81,7 +81,7 @@ In the following steps, we explore how to install the Infisical PKI Issuer using
                 apiVersion: v1
                 kind: Secret
                 metadata:
-                    name: issuer-infisical-client-secret
+                    name: issuer-kms-client-secret
                     namespace: <namespace_you_want_to_issue_certificates_in>
                 data:
                     clientSecret: <client_secret>
@@ -93,41 +93,41 @@ In the following steps, we explore how to install the Infisical PKI Issuer using
             </Tab>
         </Tabs>
     </Step>
-    <Step title="Create Infisical PKI Issuer">
-        Next, create the Infisical PKI Issuer by filling out `url`, `clientId`, `projectId` or `certificateTemplateName`, and applying the following configuration file for the `Issuer` resource.
-        This configuration file specifies the connection details to your Infisical PKI CA to be used for issuing certificates.
+    <Step title="Create KMS PKI Issuer">
+        Next, create the KMS PKI Issuer by filling out `url`, `clientId`, `projectId` or `certificateTemplateName`, and applying the following configuration file for the `Issuer` resource.
+        This configuration file specifies the connection details to your KMS PKI CA to be used for issuing certificates.
 
-        ```yaml infisical-issuer.yaml
-        apiVersion: infisical-issuer.infisical.com/v1alpha1
+        ```yaml kms-issuer.yaml
+        apiVersion: kms-issuer.lux.network/v1alpha1
         kind: Issuer
         metadata:
-            name: issuer-infisical
+            name: issuer-kms
             namespace: <namespace_you_want_to_issue_certificates_in>
         spec:
-            url: "https://app.infisical.com" # the URL of your Infisical instance
+            url: "https://kms.lux.network" # the URL of your KMS instance
             projectId: <project_id> # the ID of the project you want to use to issue certificates
             certificateTemplateName: <certificate_template_name> # the name of the certificate template you want to use to issue certificates against
             authentication:
                 universalAuth:
                     clientId: <client_id> # the Client ID from step 1
                     secretRef: # reference to the Secret created in step 4
-                        name: "issuer-infisical-client-secret"
+                        name: "issuer-kms-client-secret"
                         key: "clientSecret"
         ```
 
         ```
-        kubectl apply -f infisical-issuer.yaml
+        kubectl apply -f kms-issuer.yaml
         ```
 
         You can check that the issuer was created successfully by running the following command:
 
         ```bash
-        kubectl get issuers.infisical-issuer.infisical.com -n <namespace_of_issuer> -o wide
+        kubectl get issuers.kms-issuer.lux.network -n <namespace_of_issuer> -o wide
         ```
 
         ```bash
         NAME               AGE
-        issuer-infisical   21h
+        issuer-kms   21h
         ```
 
         <Note>
@@ -144,11 +144,11 @@ In the following steps, we explore how to install the Infisical PKI Issuer using
 
       To enable approval, create the following YAML file and apply it:
 
-       ```yaml infisical-approver-policy.yaml
+       ```yaml kms-approver-policy.yaml
       apiVersion: rbac.authorization.k8s.io/v1
       kind: ClusterRole
       metadata:
-        name: infisical-issuer-approver
+        name: kms-issuer-approver
       rules:
         # Permission to approve or deny CertificateRequests for signers in cert-manager.io API group
         - apiGroups: ['cert-manager.io']
@@ -156,15 +156,15 @@ In the following steps, we explore how to install the Infisical PKI Issuer using
           verbs: ['approve']
           resourceNames:
             # Grant approval permissions for namespaced issuers
-            - "issuers.infisical-issuer.infisical.com/default.issuer-infisical"
+            - "issuers.kms-issuer.lux.network/default.issuer-kms"
             # Grant approval permissions for cluster-scoped issuers
-            - "clusterissuers.infisical-issuer.infisical.com/clusterissuer-infisical"
+            - "clusterissuers.kms-issuer.lux.network/clusterissuer-kms"
       ---
       # Bind the cert-manager service account to the new role
       apiVersion: rbac.authorization.k8s.io/v1
       kind: ClusterRoleBinding
       metadata:
-        name: infisical-issuer-approver-binding
+        name: kms-issuer-approver-binding
       subjects:
         - kind: ServiceAccount
           name: cert-manager
@@ -172,14 +172,14 @@ In the following steps, we explore how to install the Infisical PKI Issuer using
       roleRef:
         apiGroup: rbac.authorization.k8s.io
         kind: ClusterRole
-        name: infisical-issuer-approver
+        name: kms-issuer-approver
         ```
 
         ```
-        kubectl apply -f infisical-approver-policy.yaml
+        kubectl apply -f kms-approver-policy.yaml
         ```
 
-        This configuration creates a `ClusterRole` named `infisical-issuer-approver` that grants approval permissions for specific Infisical issuer types. It then binds this role to the cert-manager service account, allowing it to approve certificate requests from your Infisical issuers.
+        This configuration creates a `ClusterRole` named `kms-issuer-approver` that grants approval permissions for specific KMS issuer types. It then binds this role to the cert-manager service account, allowing it to approve certificate requests from your KMS issuers.
 
         For information, check out [cert manager approval policy doc](https://cert-manager.io/docs/policy/approval/approver-policy/).
     </Step>
@@ -198,8 +198,8 @@ In the following steps, we explore how to install the Infisical PKI Issuer using
             commonName: certificate-by-issuer.example.com # the common name for the certificate
             secretName: certificate-by-issuer # the name of the Kubernetes Secret to create and store the certificate and private key in
             issuerRef:
-                name: issuer-infisical
-                group: infisical-issuer.infisical.com
+                name: issuer-kms
+                group: kms-issuer.lux.network
                 kind: Issuer
             privateKey: # the algorithm and key size to use
                 algorithm: ECDSA
@@ -209,7 +209,7 @@ In the following steps, we explore how to install the Infisical PKI Issuer using
         ```
 
         The above sample configuration file specifies a certificate to be issued with the common name `certificate-by-issuer.example.com` and ECDSA private key using the P-256 curve, valid for 48 hours; the certificate will be automatically renewed by `cert-manager` 12 hours before expiry.
-        The certificate is issued by the issuer `issuer-infisical` created in the previous step and the resulting certificate and private key will be stored in a secret named `certificate-by-issuer`.
+        The certificate is issued by the issuer `issuer-kms` created in the previous step and the resulting certificate and private key will be stored in a secret named `certificate-by-issuer`.
 
         Note that the full list of the fields supported on the `Certificate` resource can be found in the API reference documentation [here](https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1.CertificateSpec).
 
@@ -221,7 +221,7 @@ In the following steps, we explore how to install the Infisical PKI Issuer using
 
         ```bash
         NAME                    READY   SECRET                  ISSUER             STATUS                                          AGE
-        certificate-by-issuer   True    certificate-by-issuer   issuer-infisical   Certificate is up to date and has not expired   20h
+        certificate-by-issuer   True    certificate-by-issuer   issuer-kms   Certificate is up to date and has not expired   20h
         ```
     </Step>
     <Step title="Use Certificate in Kubernetes Secret">
@@ -250,9 +250,9 @@ In the following steps, we explore how to install the Infisical PKI Issuer using
                     cert-manager.io/certificate-name: certificate-by-issuer
                     cert-manager.io/common-name: certificate-by-issuer.example.com
                     cert-manager.io/ip-sans:
-                    cert-manager.io/issuer-group: infisical-issuer.infisical.com
+                    cert-manager.io/issuer-group: kms-issuer.lux.network
                     cert-manager.io/issuer-kind: Issuer
-                    cert-manager.io/issuer-name: issuer-infisical
+                    cert-manager.io/issuer-name: issuer-kms
                     cert-manager.io/uri-sans:
 
         Type:  kubernetes.io/tls
@@ -284,7 +284,7 @@ In the following steps, we explore how to install the Infisical PKI Issuer using
     The full list of the fields supported on the `Certificate` resource can be found in the API reference documentation [here](https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1.CertificateSpec).
 
     <Note>
-        Currently, not all fields are supported by the Infisical PKI Issuer.
+        Currently, not all fields are supported by the KMS PKI Issuer.
     </Note>
 
 </Accordion>
@@ -298,7 +298,7 @@ In the following steps, we explore how to install the Infisical PKI Issuer using
 <Accordion title="Why is my CertificateRequest not being approved, showing 'CertificateRequest has not been approved yet. Ignoring.'?">
     If you see log messages similar to:
     ```
-    "CertificateRequest has not been approved yet. Ignoring.","controller":"certificaterequest","controllerGroup":"cert-manager.io","controllerKind":"CertificateRequest","CertificateRequest":{"name":"skynet-infisical-rta-rsa2048-1","namespace":"infisical-system"},"namespace":"infisical-system","name":"skynet-infisical-rta-rsa2048-1","reconcileID":"bfb7cad9-d867-45b5-b3a3-0139e731b7a6"}
+    "CertificateRequest has not been approved yet. Ignoring.","controller":"certificaterequest","controllerGroup":"cert-manager.io","controllerKind":"CertificateRequest","CertificateRequest":{"name":"skynet-kms-rta-rsa2048-1","namespace":"kms-system"},"namespace":"kms-system","name":"skynet-kms-rta-rsa2048-1","reconcileID":"bfb7cad9-d867-45b5-b3a3-0139e731b7a6"}
     ```
     This indicates that the `CertificateRequest` has been created, but `cert-manager` has not yet approved it. This typically occurs because a necessary approver policy is missing. Refer to the documentation above to create an approver policy.
 </Accordion>

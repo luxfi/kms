@@ -18,11 +18,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	secretsv1alpha1 "github.com/Infisical/infisical/k8-operator/api/v1alpha1"
-	infisicalDynamicSecretController "github.com/Infisical/infisical/k8-operator/controllers/infisicaldynamicsecret"
-	infisicalPushSecretController "github.com/Infisical/infisical/k8-operator/controllers/infisicalpushsecret"
-	infisicalSecretController "github.com/Infisical/infisical/k8-operator/controllers/infisicalsecret"
-	"github.com/Infisical/infisical/k8-operator/packages/template"
+	secretsv1alpha1 "github.com/luxfi/kms/k8-operator/api/v1alpha1"
+	kmsDynamicSecretController "github.com/luxfi/kms/k8-operator/controllers/kmsdynamicsecret"
+	kmsPushSecretController "github.com/luxfi/kms/k8-operator/controllers/kmspushsecret"
+	kmsSecretController "github.com/luxfi/kms/k8-operator/controllers/kmssecret"
+	"github.com/luxfi/kms/k8-operator/packages/template"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -45,7 +45,7 @@ func main() {
 	var namespace string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.StringVar(&namespace, "namespace", "", "Watch InfisicalSecrets scoped in the provided namespace only")
+	flag.StringVar(&namespace, "namespace", "", "Watch KMSSecrets scoped in the provided namespace only")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -63,7 +63,7 @@ func main() {
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "cf2b8c44.infisical.com",
+		LeaderElectionID:       "cf2b8c44.lux.network",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -89,32 +89,32 @@ func main() {
 
 	template.InitializeTemplateFunctions()
 
-	if err = (&infisicalSecretController.InfisicalSecretReconciler{
+	if err = (&kmsSecretController.KMSSecretReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		BaseLogger: ctrl.Log,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "InfisicalSecret")
+		setupLog.Error(err, "unable to create controller", "controller", "KMSSecret")
 		os.Exit(1)
 	}
 
-	if err = (&infisicalPushSecretController.InfisicalPushSecretReconciler{
+	if err = (&kmsPushSecretController.KMSPushSecretReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		BaseLogger:        ctrl.Log,
 		IsNamespaceScoped: namespace != "",
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "InfisicalPushSecret")
+		setupLog.Error(err, "unable to create controller", "controller", "KMSPushSecret")
 		os.Exit(1)
 	}
 
-	if err = (&infisicalDynamicSecretController.InfisicalDynamicSecretReconciler{
+	if err = (&kmsDynamicSecretController.KMSDynamicSecretReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		BaseLogger: ctrl.Log,
 		Random:     rand.New(rand.NewSource(time.Now().UnixNano())),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "InfisicalDynamicSecret")
+		setupLog.Error(err, "unable to create controller", "controller", "KMSDynamicSecret")
 		os.Exit(1)
 	}
 

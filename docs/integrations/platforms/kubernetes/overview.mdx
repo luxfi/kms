@@ -1,23 +1,23 @@
 ---
 title: "Kubernetes Operator"
 sidebarTitle: "Overview"
-description: "How to use Infisical to inject, push, and manage secrets within Kubernetes clusters"
+description: "How to use KMS to inject, push, and manage secrets within Kubernetes clusters"
 ---
 
-The Infisical Operator is a collection of Kubernetes controllers that streamline how secrets are managed between Infisical and your Kubernetes cluster. 
+The KMS Operator is a collection of Kubernetes controllers that streamline how secrets are managed between KMS and your Kubernetes cluster. 
 It provides multiple Custom Resource Definitions (CRDs) which enable you to:
 
-- **Sync** secrets from Infisical into Kubernetes (`InfisicalSecret`).
-- **Push** new secrets from Kubernetes to Infisical (`InfisicalPushSecret`).
-- **Manage** dynamic secrets and automatically create time-bound leases (`InfisicalDynamicSecret`).
+- **Sync** secrets from KMS into Kubernetes (`KMSSecret`).
+- **Push** new secrets from Kubernetes to KMS (`KMSPushSecret`).
+- **Manage** dynamic secrets and automatically create time-bound leases (`KMSDynamicSecret`).
 
-When these CRDs are configured, the Infisical Operator will continuously monitors for changes and performs necessary updates to keep your Kubernetes secrets up to date. 
+When these CRDs are configured, the KMS Operator will continuously monitors for changes and performs necessary updates to keep your Kubernetes secrets up to date. 
 It can also automatically reload dependent Deployments resources whenever relevant secrets are updated.
 
 <Note>
   If you are already using the External Secrets operator, you can view the
   integration documentation for it
-  [here](https://external-secrets.io/latest/provider/infisical/).
+  [here](https://external-secrets.io/latest/provider/kms/).
 </Note>
 
 ## Install 
@@ -26,7 +26,7 @@ The operator can be install via [Helm](https://helm.sh). Helm is a package manag
 
 **Install the latest Helm repository**
 ```bash
-helm repo add infisical-helm-charts 'https://dl.cloudsmith.io/public/infisical/helm-charts/helm/charts/' 
+helm repo add kms-helm-charts 'https://dl.cloudsmith.io/public/kms/helm-charts/helm/charts/' 
 ```
 
 ```bash  
@@ -39,7 +39,7 @@ If you require stronger isolation and stricter access controls, a namespace-scop
 <Tabs>
   <Tab title="Cluster Wide Installation">
     ```bash
-    helm install --generate-name infisical-helm-charts/secrets-operator
+    helm install --generate-name kms-helm-charts/secrets-operator
     ```
   </Tab>
   <Tab title="Namespace Scoped Installation">
@@ -54,13 +54,13 @@ If you require stronger isolation and stricter access controls, a namespace-scop
 
     ```bash
     # First namespace installation (with CRDs)
-    helm install operator-namespace1 infisical-helm-charts/secrets-operator \
+    helm install operator-namespace1 kms-helm-charts/secrets-operator \
       --namespace first-namespace \
       --set scopedNamespace=first-namespace \
       --set scopedRBAC=true
 
     # Subsequent namespace installations
-    helm install operator-namespace2 infisical-helm-charts/secrets-operator \
+    helm install operator-namespace2 kms-helm-charts/secrets-operator \
       --namespace another-namespace \
       --set scopedNamespace=another-namespace \
       --set scopedRBAC=true \
@@ -69,7 +69,7 @@ If you require stronger isolation and stricter access controls, a namespace-scop
 
     When scoped to a namespace, the operator will:
 
-    - Only watch InfisicalSecrets in the specified namespace
+    - Only watch KMSSecrets in the specified namespace
     - Only create/update Kubernetes secrets in that namespace
     - Only access deployments in that namespace
 
@@ -92,19 +92,19 @@ If you require stronger isolation and stricter access controls, a namespace-scop
 
 Currently the operator supports the following CRD's. We are constantly expanding the functionality of the operator, and this list will be updated as new CRD's are added.
 
-1. [InfisicalSecret](/integrations/platforms/kubernetes/infisical-secret-crd): Sync secrets from Infisical to a Kubernetes secret.
-2. [InfisicalPushSecret](/integrations/platforms/kubernetes/infisical-push-secret-crd): Push secrets from a Kubernetes secret to Infisical.
-3. [InfisicalDynamicSecret](/integrations/platforms/kubernetes/infisical-dynamic-secret-crd): Sync dynamic secrets and create leases automatically in Kubernetes.
+1. [KMSSecret](/integrations/platforms/kubernetes/kms-secret-crd): Sync secrets from KMS to a Kubernetes secret.
+2. [KMSPushSecret](/integrations/platforms/kubernetes/kms-push-secret-crd): Push secrets from a Kubernetes secret to KMS.
+3. [KMSDynamicSecret](/integrations/platforms/kubernetes/kms-dynamic-secret-crd): Sync dynamic secrets and create leases automatically in Kubernetes.
 
 ## General Configuration
 ### Private/self-signed certificate
-To connect to Infisical instances behind a private/self-signed certificate, you can configure the TLS settings in the CRD
+To connect to KMS instances behind a private/self-signed certificate, you can configure the TLS settings in the CRD
 to point to a CA certificate stored in a Kubernetes secret resource.
 
 ```yaml
 ---
 spec:
-  hostAPI: https://app.infisical.com/api
+  hostAPI: https://kms.lux.network/api
   tls:
     caRef:
       secretName: custom-ca-certificate
@@ -116,17 +116,17 @@ spec:
 
 ## Advanced Templating
 
-With the Infisical Secrets Operator, you can use templating to dynamically generate secrets in Kubernetes. The templating is built on top of [Go templates](https://pkg.go.dev/text/template), which is a powerful and flexible template engine built into Go.
+With the KMS Secrets Operator, you can use templating to dynamically generate secrets in Kubernetes. The templating is built on top of [Go templates](https://pkg.go.dev/text/template), which is a powerful and flexible template engine built into Go.
 
 Please be aware that trying to reference non-existing keys will result in an error. Additionally, each template field is processed individually, which means one template field cannot reference another template field.
 
 <Note>
-  Please note that templating is currently only supported for the `InfisicalPushSecret` and `InfisicalSecret` CRDs.
+  Please note that templating is currently only supported for the `KMSPushSecret` and `KMSSecret` CRDs.
 </Note>
 
 ### Available helper functions
 
-The Infisical Secrets Operator exposes a wide range of helper functions to make it easier to work with secrets in Kubernetes.
+The KMS Secrets Operator exposes a wide range of helper functions to make it easier to work with secrets in Kubernetes.
 
 | Function | Description | Signature |
 | -------- | ----------- | --------- |
@@ -149,7 +149,7 @@ The Infisical Secrets Operator exposes a wide range of helper functions to make 
 
 ### Sprig functions
 
-The Infisical Secrets Operator integrates with the [Sprig library](https://github.com/Masterminds/sprig) to provide additional helper functions.
+The KMS Secrets Operator integrates with the [Sprig library](https://github.com/Masterminds/sprig) to provide additional helper functions.
 
 <Note>
   We've removed `expandEnv` and `env` from the supported functions for security reasons.
@@ -158,31 +158,31 @@ The Infisical Secrets Operator integrates with the [Sprig library](https://githu
 
 ## Global configuration
 
-To configure global settings that will apply to all instances of `InfisicalSecret`, you can define these configurations in a Kubernetes ConfigMap.
-For example, you can configure all `InfisicalSecret` instances to fetch secrets from a single backend API without specifying the `hostAPI` parameter for each instance.
+To configure global settings that will apply to all instances of `KMSSecret`, you can define these configurations in a Kubernetes ConfigMap.
+For example, you can configure all `KMSSecret` instances to fetch secrets from a single backend API without specifying the `hostAPI` parameter for each instance.
 
 ### Available global properties
 
 | Property | Description                                                                       | Default value                 |
 | -------- | --------------------------------------------------------------------------------- | ----------------------------- |
-| hostAPI  | If `hostAPI` in `InfisicalSecret` instance is left empty, this value will be used | https://app.infisical.com/api |
+| hostAPI  | If `hostAPI` in `KMSSecret` instance is left empty, this value will be used | https://kms.lux.network/api |
 
 ### Applying global configurations
 
-All global configurations must reside in a Kubernetes ConfigMap named `infisical-config` in the namespace `infisical-operator-system`.
-To apply global configuration to the operator, copy the following yaml into `infisical-config.yaml` file.
+All global configurations must reside in a Kubernetes ConfigMap named `kms-config` in the namespace `kms-operator-system`.
+To apply global configuration to the operator, copy the following yaml into `kms-config.yaml` file.
 
-```yaml infisical-config.yaml
+```yaml kms-config.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: infisical-operator-system
+  name: kms-operator-system
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: infisical-config
-  namespace: infisical-operator-system
+  name: kms-config
+  namespace: kms-operator-system
 data:
   hostAPI: https://example.com/api # <-- global hostAPI
 ```
@@ -190,36 +190,36 @@ data:
 Then apply this change via kubectl by running the following
 
 ```bash
-kubectl apply -f infisical-config.yaml
+kubectl apply -f kms-config.yaml
 ```
 
 ## Troubleshoot operator
 
 If the operator is unable to fetch secrets from the API, it will not affect the managed Kubernetes secret.
 It will continue attempting to reconnect to the API indefinitely.
-The InfisicalSecret resource uses the `status.conditions` field to report its current state and any errors encountered.
+The KMSSecret resource uses the `status.conditions` field to report its current state and any errors encountered.
 
 ```yaml
-$ kubectl get infisicalSecrets
+$ kubectl get kmsSecrets
 NAME                     AGE
-infisicalsecret-sample   12s
+kmssecret-sample   12s
 
-$ kubectl describe infisicalSecret infisicalsecret-sample
+$ kubectl describe kmsSecret kmssecret-sample
 ...
 Spec:
 ...
 Status:
   Conditions:
     Last Transition Time:  2022-12-18T04:29:09Z
-    Message:               Infisical controller has located the Infisical token in provided Kubernetes secret
+    Message:               KMS controller has located the KMS token in provided Kubernetes secret
     Reason:                OK
     Status:                True
-    Type:                  secrets.infisical.com/LoadedInfisicalToken
+    Type:                  secrets.lux.network/LoadedKMSToken
     Last Transition Time:  2022-12-18T04:29:10Z
     Message:               Failed to update secret because: 400 Bad Request
     Reason:                Error
     Status:                False
-    Type:                  secrets.infisical.com/ReadyToSyncSecrets
+    Type:                  secrets.lux.network/ReadyToSyncSecrets
 Events:                    <none>
 ```
 
@@ -229,7 +229,7 @@ The managed secret created by the operator will not be deleted when the operator
 
 <Tabs>
 	 <Tab title="Helm">
-		Install Infisical Helm repository 
+		Install KMS Helm repository 
     ```bash
     helm uninstall <release name>
     ```

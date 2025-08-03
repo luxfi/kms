@@ -1,9 +1,9 @@
 ---
 title: "Windmill Connection"
-description: "Learn how to configure a Windmill Connection for Infisical."
+description: "Learn how to configure a Windmill Connection for KMS."
 ---
 
-Infisical supports connecting to Windmill using Access Tokens.
+KMS supports connecting to Windmill using Access Tokens.
 
 ## Get a Windmill Access Token
 
@@ -40,14 +40,14 @@ Ensure the user generating the access token has the required role and permission
 </Steps>
 
 
-## Setup Windmill Connection in Infisical
+## Setup Windmill Connection in KMS
 
 
 <Tabs>
-    <Tab title="Infisical UI">
+    <Tab title="KMS UI">
         <Steps>
             <Step title="Navigate to App Connections">
-                In your Infisical dashboard, go to **Organization Settings** and select the **App Connections** tab.
+                In your KMS dashboard, go to **Organization Settings** and select the **App Connections** tab.
                 ![App Connections Tab](/images/app-connections/general/add-connection.png)
             </Step>
             <Step title="Add Connection">
@@ -77,7 +77,7 @@ Ensure the user generating the access token has the required role and permission
 
         ```bash Request
         curl    --request POST \
-                --url https://app.infisical.com/api/v1/app-connections/windmill \
+                --url https://kms.lux.network/api/v1/app-connections/windmill \
                 --header 'Content-Type: application/json' \
                 --data '{
                     "name": "my-windmill-connection",

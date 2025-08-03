@@ -63,7 +63,7 @@ export const OrgMembersSection = () => {
   const handleAddMemberModal = () => {
     if (currentOrg?.authEnforced) {
       createNotification({
-        text: "You cannot manage users from Infisical when org-level auth is enforced for your organization",
+        text: "You cannot manage users from KMS when org-level auth is enforced for your organization",
         type: "error"
       });
       return;
@@ -71,7 +71,7 @@ export const OrgMembersSection = () => {
 
     if (!isMoreIdentitiesAllowed && !isEnterprise) {
       handlePopUpOpen("upgradePlan", {
-        description: "You can add more members if you upgrade your Infisical plan."
+        description: "You can add more members if you upgrade your KMS plan."
       });
       return;
     }
@@ -173,7 +173,7 @@ export const OrgMembersSection = () => {
             renderTooltip
             allowedLabel={
               currentOrg?.scimEnabled
-                ? "You cannot manage users from Infisical when org-level auth is enforced for your organization"
+                ? "You cannot manage users from KMS when org-level auth is enforced for your organization"
                 : undefined
             }
           >

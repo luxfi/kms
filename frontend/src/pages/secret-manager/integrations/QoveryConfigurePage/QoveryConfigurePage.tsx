@@ -37,7 +37,7 @@ const qoveryScopes = [
 ];
 
 enum TabSections {
-  InfisicalSettings = "infisicalSettings",
+  KMSSettings = "kmsSettings",
   QoverySettings = "qoverySettings"
 }
 
@@ -197,7 +197,7 @@ export const QoveryConfigurePage = () => {
       <Card className="max-w-lg rounded-md border border-mineshaft-600 p-0">
         <CardTitle
           className="px-6 text-left text-xl"
-          subTitle="Choose which environment in Infisical you want to sync to Checkly environment variables."
+          subTitle="Choose which environment in KMS you want to sync to Checkly environment variables."
         >
           <div className="flex flex-row items-center">
             <div className="flex items-center pb-0.5">
@@ -205,7 +205,7 @@ export const QoveryConfigurePage = () => {
             </div>
             <span className="ml-2.5">Qovery Integration </span>
             <a
-              href="https://infisical.com/docs/integrations/cloud/qovery"
+              href="https://lux.network/docs/integrations/cloud/qovery"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -220,14 +220,14 @@ export const QoveryConfigurePage = () => {
             </a>
           </div>
         </CardTitle>
-        <Tabs defaultValue={TabSections.InfisicalSettings} className="px-6">
+        <Tabs defaultValue={TabSections.KMSSettings} className="px-6">
           <TabList>
             <div className="flex w-full flex-row border-b border-mineshaft-600">
-              <Tab value={TabSections.InfisicalSettings}>Infisical Settings</Tab>
+              <Tab value={TabSections.KMSSettings}>KMS Settings</Tab>
               <Tab value={TabSections.QoverySettings}>Qovery Settings</Tab>
             </div>
           </TabList>
-          <TabPanel value={TabSections.InfisicalSettings}>
+          <TabPanel value={TabSections.KMSSettings}>
             <motion.div
               key="panel-1"
               transition={{ duration: 0.15 }}
@@ -235,7 +235,7 @@ export const QoveryConfigurePage = () => {
               animate={{ opacity: 1, translateX: 0 }}
               exit={{ opacity: 0, translateX: 30 }}
             >
-              <FormControl label="Infisical Project Environment">
+              <FormControl label="KMS Project Environment">
                 <Select
                   value={selectedSourceEnvironment}
                   onValueChange={(val) => setSelectedSourceEnvironment(val)}
@@ -398,7 +398,7 @@ export const QoveryConfigurePage = () => {
       {/* <div className="border-t border-mineshaft-800 w-full max-w-md mt-6"/>
       <div className="flex flex-col bg-mineshaft-800 border border-mineshaft-600 w-full p-4 max-w-lg mt-6 rounded-md">
         <div className="flex flex-row items-center"><FontAwesomeIcon icon={faCircleInfo} className="text-mineshaft-200 text-xl"/> <span className="ml-3 text-md text-mineshaft-100">Pro Tip</span></div>
-        <span className="text-mineshaft-300 text-sm mt-4">After creating an integration, your secrets will start syncing immediately. This might cause an unexpected override of current secrets in Qovery with secrets from Infisical.</span>
+        <span className="text-mineshaft-300 text-sm mt-4">After creating an integration, your secrets will start syncing immediately. This might cause an unexpected override of current secrets in Qovery with secrets from KMS.</span>
       </div> */}
     </div>
   ) : (
@@ -411,7 +411,7 @@ export const QoveryConfigurePage = () => {
           src="/images/loading/loading.gif"
           height={70}
           width={120}
-          alt="infisical loading indicator"
+          alt="kms loading indicator"
         />
       ) : (
         <div className="flex h-max max-w-md flex-col rounded-md border border-mineshaft-600 bg-mineshaft-800 p-6 text-center text-mineshaft-200">
@@ -422,9 +422,9 @@ export const QoveryConfigurePage = () => {
               className="inline cursor-pointer text-mineshaft-100 underline decoration-primary-500 underline-offset-4 opacity-80 duration-200 hover:opacity-100"
               target="_blank"
               rel="noopener noreferrer"
-              href="mailto:support@infisical.com"
+              href="mailto:support@lux.network"
             >
-              support@infisical.com
+              support@lux.network
             </a>{" "}
             if the issue persists.
           </p>

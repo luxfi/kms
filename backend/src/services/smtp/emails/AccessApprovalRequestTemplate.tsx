@@ -77,11 +77,11 @@ export default AccessApprovalRequestTemplate;
 
 AccessApprovalRequestTemplate.PreviewProps = {
   requesterFullName: "Abigail Williams",
-  requesterEmail: "abigail@infisical.com",
+  requesterEmail: "abigail@lux.network",
   isTemporary: true,
   secretPath: "/api/secrets",
   environment: "Production",
-  siteUrl: "https://infisical.com",
+  siteUrl: "https://lux.network",
   projectName: "Example Project",
   expiresIn: "1 day",
   permissions: ["Read Secret", "Delete Project", "Create Dynamic Secret"],

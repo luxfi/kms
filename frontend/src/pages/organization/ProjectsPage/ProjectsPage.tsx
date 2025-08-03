@@ -22,7 +22,7 @@ import { ProjectListToggle, ProjectListView } from "./components/ProjectListTogg
 //     return "Centralize the management of keys for cryptographic operations, such as encryption and decryption.";
 //   if (type === ProjectType.SecretScanning)
 //     return "Connect and monitor data sources to prevent secret leaks.";
-//   return "Infisical SSH lets you issue SSH credentials to users for short-lived, secure SSH access to infrastructure.";
+//   return "KMS SSH lets you issue SSH credentials to users for short-lived, secure SSH access to infrastructure.";
 // };
 
 export const ProjectsPage = () => {
@@ -45,7 +45,7 @@ export const ProjectsPage = () => {
     <div className="mx-auto flex max-w-7xl flex-col justify-start bg-bunker-800">
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.members.title") })}</title>
-        <link rel="icon" href="/infisical.ico" />
+        <link rel="icon" href="/kms.ico" />
       </Helmet>
       <div className="mb-4 flex flex-col items-start justify-start">
         <PageHeader

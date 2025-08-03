@@ -22,8 +22,8 @@ export const AppConnectionsPage = withPermission(
     return (
       <div className="bg-bunker-800">
         <Helmet>
-          <title>Infisical | App Connections</title>
-          <link rel="icon" href="/infisical.ico" />
+          <title>KMS | App Connections</title>
+          <link rel="icon" href="/kms.ico" />
           <meta property="og:image" content="/images/message.png" />
         </Helmet>
         <div className="flex w-full justify-center bg-bunker-800 text-white">
@@ -35,7 +35,7 @@ export const AppConnectionsPage = withPermission(
                   <span>App Connections</span>
                   <a
                     className="-mt-1.5"
-                    href="https://infisical.com/docs/integrations/app-connections/overview"
+                    href="https://lux.network/docs/integrations/app-connections/overview"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -69,7 +69,7 @@ export const AppConnectionsPage = withPermission(
                   </OrgPermissionCan>
                 </div>
               }
-              description="Create and configure connections with third-party apps for re-use across Infisical projects"
+              description="Create and configure connections with third-party apps for re-use across KMS projects"
             />
             <div className="mb-6 rounded-lg border border-mineshaft-600 bg-mineshaft-900 p-4">
               <AppConnectionsTable />

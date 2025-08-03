@@ -119,7 +119,7 @@ export const ManagePlansTable = ({ billingCycle }: Props) => {
                           return;
                         }
 
-                        window.location.href = "https://infisical.com/scheduledemo";
+                        window.location.href = "https://lux.network/scheduledemo";
                       }}
                       color="mineshaft"
                       className="w-full"

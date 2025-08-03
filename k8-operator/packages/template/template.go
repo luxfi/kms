@@ -6,7 +6,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 )
 
-var customInfisicalSecretTemplateFunctions = tpl.FuncMap{
+var customKMSSecretTemplateFunctions = tpl.FuncMap{
 	"pkcs12key":      pkcs12key,
 	"pkcs12keyPass":  pkcs12keyPass,
 	"pkcs12cert":     pkcs12cert,
@@ -44,7 +44,7 @@ const (
 )
 
 func InitializeTemplateFunctions() {
-	templates := customInfisicalSecretTemplateFunctions
+	templates := customKMSSecretTemplateFunctions
 
 	sprigFuncs := sprig.TxtFuncMap()
 	// removed for security reasons
@@ -59,9 +59,9 @@ func InitializeTemplateFunctions() {
 		}
 	}
 
-	customInfisicalSecretTemplateFunctions = templates
+	customKMSSecretTemplateFunctions = templates
 }
 
 func GetTemplateFunctions() tpl.FuncMap {
-	return customInfisicalSecretTemplateFunctions
+	return customKMSSecretTemplateFunctions
 }

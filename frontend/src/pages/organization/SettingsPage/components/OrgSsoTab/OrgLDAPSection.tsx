@@ -127,7 +127,7 @@ export const OrgLDAPSection = (): JSX.Element => {
           </OrgPermissionCan>
         </div>
         <p className="text-sm text-mineshaft-300">
-          Manage how LDAP groups are mapped to internal groups in Infisical
+          Manage how LDAP groups are mapped to internal groups in KMS
         </p>
       </div>
       {data && (
@@ -148,7 +148,7 @@ export const OrgLDAPSection = (): JSX.Element => {
             </OrgPermissionCan>
           </div>
           <p className="text-sm text-mineshaft-300">
-            Allow members to authenticate into Infisical with LDAP
+            Allow members to authenticate into KMS with LDAP
           </p>
         </div>
       )}
@@ -165,7 +165,7 @@ export const OrgLDAPSection = (): JSX.Element => {
       <UpgradePlanModal
         isOpen={popUp.upgradePlan.isOpen}
         onOpenChange={(isOpen) => handlePopUpToggle("upgradePlan", isOpen)}
-        text="You can use LDAP authentication if you switch to Infisical's Enterprise plan."
+        text="You can use LDAP authentication if you switch to KMS's Enterprise plan."
       />
     </div>
   );
