@@ -31,7 +31,7 @@ export const WindmillConnectionSchema = BaseWindmillConnectionSchema.extend({
   credentials: WindmillConnectionAccessTokenCredentialsSchema
 });
 
-export const SanitizedWindmillConnectionSchema = z.discriminatedUnion("method", [
+export const SanitizedWindmillConnectionSchema = z.union([
   BaseWindmillConnectionSchema.extend({
     method: z.literal(WindmillConnectionMethod.AccessToken),
     credentials: WindmillConnectionAccessTokenCredentialsSchema.pick({

@@ -316,7 +316,7 @@ export const kmsServiceFactory = ({
       });
 
       switch (kmsDoc.externalKms.provider) {
-        case KmsProviders.Aws: {
+        case KmsProviders.AWS: {
           const decryptedProviderInput = await ExternalKmsAwsSchema.parseAsync(
             JSON.parse(decryptedProviderInputBlob.toString("utf8"))
           );
@@ -326,7 +326,7 @@ export const kmsServiceFactory = ({
           });
           break;
         }
-        case KmsProviders.Gcp: {
+        case KmsProviders.GCP: {
           const decryptedProviderInput = await ExternalKmsGcpSchema.parseAsync(
             JSON.parse(decryptedProviderInputBlob.toString("utf8"))
           );
@@ -534,7 +534,7 @@ export const kmsServiceFactory = ({
       });
 
       switch (kmsDoc.externalKms.provider) {
-        case KmsProviders.Aws: {
+        case KmsProviders.AWS: {
           const decryptedProviderInput = await ExternalKmsAwsSchema.parseAsync(
             JSON.parse(decryptedProviderInputBlob.toString("utf8"))
           );
@@ -544,7 +544,7 @@ export const kmsServiceFactory = ({
           });
           break;
         }
-        case KmsProviders.Gcp: {
+        case KmsProviders.GCP: {
           const decryptedProviderInput = await ExternalKmsGcpSchema.parseAsync(
             JSON.parse(decryptedProviderInputBlob.toString("utf8"))
           );

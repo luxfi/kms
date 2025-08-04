@@ -1,5 +1,10 @@
 import { TEnvConfig } from "@app/lib/config/env";
 
+export enum CacheType {
+  InMemory = "in-memory",
+  Redis = "redis"
+}
+
 export type TAdminSignUpDTO = {
   email: string;
   password: string;

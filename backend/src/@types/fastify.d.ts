@@ -51,6 +51,7 @@ import { TAppConnectionServiceFactory } from "@app/services/app-connection/app-c
 import { TAuthLoginFactory } from "@app/services/auth/auth-login-service";
 import { TAuthPasswordFactory } from "@app/services/auth/auth-password-service";
 import { TAuthSignupFactory } from "@app/services/auth/auth-signup-service";
+import { TCasdoorAuthServiceFactory } from "@app/services/auth/casdoor-auth-service";
 import { ActorAuthMethod, ActorType } from "@app/services/auth/auth-type";
 import { TAuthTokenServiceFactory } from "@app/services/auth-token/auth-token-service";
 import { TCertificateServiceFactory } from "@app/services/certificate/certificate-service";
@@ -197,6 +198,7 @@ declare module "fastify" {
       login: TAuthLoginFactory;
       password: TAuthPasswordFactory;
       signup: TAuthSignupFactory;
+      casdoorAuth: TCasdoorAuthServiceFactory;
       authToken: TAuthTokenServiceFactory;
       permission: TPermissionServiceFactory;
       org: TOrgServiceFactory;

@@ -1,0 +1,410 @@
+
+> backend@1.0.0 dev
+> tsx watch --clear-screen=false ./src/main.ts  | pino-pretty --colorize --colorizeObjects --singleLine
+
+(node:33500) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[20:07:44.347] [32mINFO[39m (33500): [36mCryptography module initialized in normal operation mode.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[20:07:44.370] [32mINFO[39m (33500): [36mNo migrations pending: Skipping migration process.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[20:07:44.372] [32mINFO[39m (33500): [36mInitializing pg-queue...[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+Development mode. Skipping initial check
+Welcome back!
+
+To access KMS Administrator Panel open
+http://localhost:4001/admin
+
+To access KMS server
+http://localhost:4001
+
+Welcome back!
+
+To access KMS Administrator Panel open
+http://localhost:4001/admin
+
+To access KMS server
+http://localhost:4001
+
+[20:07:44.461] [32mINFO[39m (33500): [36mhttp://[::1]:4001[39m [90m{"severity":"INFO"}[39m
+[20:07:44.469] [32mINFO[39m (33500): [36mhttp://127.0.0.1:4001[39m [90m{"severity":"INFO"}[39m
+[20:08:03.475] [32mINFO[39m (33500): [36mincoming11:00:15 PM [tsx] rerunning
+(node:80151) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[23:00:17.927] [32mINFO[39m (80151): [36mCryptography module initialized in normal operation mode.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[23:00:17.964] [32mINFO[39m (80151): [36mNo migrations pending: Skipping migration process.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[23:00:17.969] [32mINFO[39m (80151): [36mInitializing pg-queue...[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+Development mode. Skipping initial check
+node:net:1939
+    const ex = new UVExceptionWithHostPort(err, 'listen', address, port);
+               ^
+
+Error: listen EADDRINUSE: address already in use ::1:4001
+    at Server.setupListenHandle [as _listen2] (node:net:1939:16)
+    at listenInCluster (node:net:1996:12)
+    at GetAddrInfoReqWrap.callback (node:net:2205:7)
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::1',
+  port: 4001
+}
+
+Node.js v24.1.0
+11:00:42 PM [tsx] rerunning
+(node:80455) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[23:00:43.606] [32mINFO[39m (80455): [36mCryptography module initialized in normal operation mode.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[23:00:43.634] [32mINFO[39m (80455): [36mNo migrations pending: Skipping migration process.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[23:00:43.636] [32mINFO[39m (80455): [36mInitializing pg-queue...[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+Development mode. Skipping initial check
+Welcome back!
+
+To access KMS Administrator Panel open
+http://localhost:4001/admin
+
+To access KMS server
+http://localhost:4001
+
+Welcome back!
+
+To access KMS Administrator Panel open
+http://localhost:4001/admin
+
+To access KMS server
+http://localhost:4001
+
+[23:00:43.734] [32mINFO[39m (80455): [36mhttp://[::1]:4001[39m [90m{"severity":"INFO"}[39m
+[23:00:43.735] [32node:net:1939
+    const ex = new UVExceptionWithHostPort(err, 'listen', address, p11:04:44 PM [tsx] restarting
+node:internal/modules/cjs/loader:1405
+  const err = new Error(message);
+              ^
+
+Error: Cannot find module '@app/ee/routes/v1/app-connection-routers/oci-connection-router'
+Require stack:
+- /Users/z/work/lux/kms/backend/src/server/routes/v1/app-connection-routers/index.ts
+- /Users/z/work/lux/kms/backend/src/server/routes/v1/index.ts
+- /Users/z/work/lux/kms/backend/src/server/routes/index.ts
+- /Users/z/work/lux/node:internal/modules/cjs/loader:1405
+  const err = new Error(message);
+              ^
+
+Error: Cannot find module '@app/ee/routes/v1/app-connection-routers/oci-connection-router'
+Require stack:
+- /Users/z/work/lux/kms/backend/src/server/routes/v1/app-connection-routers/index.ts
+- /Users/z/work/lux/kms/backend/src/server/routes/v1/index.ts
+- /Users/z/work/lux/kms/backend/src/server/routes/index.ts
+- /Users/z/work/lux/kms/backend/src/server/app.ts
+- /Users/z/work/lux/kms/backend/src/main.ts
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1405:15)
+    at a._resolveFilename (/Users/z/work/lux/kms/backend/node_modules/tsx/dist/cjs/index.cjs:1:1588)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1061:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1066:22)
+    at Module._load (node:internal/modules/cjs/loader:1215:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1491:12)
+    at Hook.Module.require (/Users/z/work/lux/kms/backend/node_modules/dd-trace/packages/dd-trace/src/ritm.js:64:27)
+    at require (node:interna11:08:36 PM [tsx] rerunning
+node:internal/modules/cjs/loader:1405
+  const err = new Error(message);
+              ^
+
+Error: Cannot find module '@app/ee/routes/v1/app-connection-routers/oci-connection-router'
+Require stack:
+- /Users/z/work/lux/kms/backend/src/server/routes/v1/app-connection-routers/index.ts
+- /Users/z/work/lux/kms/backend/src/server/routes/v1/index.ts
+- /Users/z/work/lux/kms/backend/src/server/routes/index.ts
+- /Users/z/work/lux/node:internal/modules/cjs/loader:1405
+  const err = new Error(message);
+              ^
+
+Error: Cannot find module '@app/ee/routes/v1/app-connection-routers/oci-connection-router'
+Require stack:
+- /Users/z/work/lux/kms/backend/src/server/routes/v1/app-connection-routers/index.ts
+- /Users/z/work/lux/kms/backend/src/server/routes/v1/index.ts
+- /Users/z/work/lux/kms/backend/src/server/routes/index.ts
+- /Users/z/work/lux/kms/backend/src/server/app.ts
+- /Users/z/work/lux/kms/backend/src/main.ts
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1405:15)
+    at a._resolveFilename (/Users/z/work/lux/kms/backend/node_modules/tsx/dist/cjs/index.cjs:1:1588)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1061:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1066:22)
+    at Module._load (node:internal/modules/cjs/loader:1215:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1491:12)
+    at Hook.Module.require (/Users/z/work/lux/kms/backend/node_modules/dd-trace/packages/dd-trace/src/ritm.js:64:27)
+    at requ
+Node.js v24.1.0
+11:08:46 PM [tsx] rerunning
+node:internal/modules/cjs/loader:1405
+  const err = new Error(message);
+              ^
+
+Error: Cannot find module '@app/ee/routes/v1/app-connection-routers/oci-connection-router'
+Require stack:
+- /Users/z/work/lux/kms/backend/src/server/routes/v1/app-connection-routers/index.ts
+- /Users/z/work/lux/kms/backend/src/server/routes/v1/index.ts
+- /Users/z/work/lux/kms/backend/src/server/routes/index.ts
+- /Users/z/work/lux/kms/backend/src/server/app.ts
+- /Users/z/work/lux/kms/backend/src/main.ts
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1405:15)
+    at a._resolveFilename (/Users/z/work/lux/kms/backend/node_modules/tsx/dist/cjs/index.cjs:1:1588)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1061:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1066:22)
+    at Module._load (node:internal/modules/cjs/loader:1215:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1491:12)
+    at Hook.Module.require (/Users/z/work/lux/kms/backend/node_modules/dd-trace/packages/dd-trace/src/ritm.js:64:27)
+    at require (node:internal/modules/helpers:135:16) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/z/work/lux/kms/backend/src/server/routes/v1/app-connection-routers/index.ts',
+    '/Users/z/work/lux/kms/backend/src/server/routes/v1/index.ts',
+    '/Users/z/work/lux/kms/backend/src/server/routes/index.ts',
+    '/Users/z/work/lux/kms/backend/src/server/app.ts',
+    '/Users/z/work/lux/kms/backend/src/main.ts'
+  ]
+}
+
+Node.js v24.1.0
+1:11:54 AM [tsx] rerunning
+(node:80741) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:80741) NOTE: We are formalizing our plans to enter AWS SDK for JavaScript (v2) into maintenance mode in 2023.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the migration guide at https://a.co/7PzMCcy
+[01:11:59.844] [32mINFO[39m (80741): [36mCryptography module initialized in normal operation mode.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:11:59.904] [32mINFO[39m (80741): [36mNo migrations pending: Skipping migration process.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:11:59.906] [32mINFO[39m (80741): [36mInitializing pg-queue...[39m [90m{"reqId":"UNKNOWN[01:11:59.843] [32mINFO[39m (80742)[01:12:00.221] [31mERROR[39m (80741): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+              at registerDashboardRouter (/Users/z/work/lux/kms/backend/src/server/r[01:12:00.225] [31mERROR[39m (80742): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+ 1:13:00 AM [tsx] rerunning
+(node:81516) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:81516) NOTE: We are formalizing our plans to enter AWS SDK for JavaScript (v2) into maintenance mode in 2023.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the migration guide at https://a.co(node:815[01:13:04.755] [32mINFO[39m (81516): [36mCryptography module initialized in normal operation mode.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:13:04.836] [32mINFO[39m (81516): [36mNo migrations pending: Skipping migration process.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:13:04.838] [32mINFO[39m (81516): [36mInitializing pg-queue...[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:13:05.080] [31mERROR[39m (81516): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+              at registerDashboardRouter (/Users/z/work/lux/kms/backend/src/server/routes/v1/dashboard-router.ts:2:27208)
+              at Plugin.exec (/Users/z/work/lux/kms/backend/node_modules/avvio/lib/plugin.js:125:28)
+              at Boot._loadPlugin (/Users/z/work/lux/kms/backend/node_modules/avvio/boot.js:432:10)
+              at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+    }
+1:13:41 AM [tsx] rerunning
+(node:81969) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:81969) NOTE: We are formalizing our plans to enter AWS SDK for JavaScript (v2) into maintenance mode in 2023.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the migration guide at https://a.co/7PzMCcy
+[01:13:45.648] [32mINFO[39m (81969): [36mCryptography module initialized in normal operation mode.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:13:45.736] [32mINFO[39m (81969): [36mNo migrations pending: Skipping migration process.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:13:45.739] [32mINFO[39m (81969): [36mInitializing pg-queue...[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:13:46.000] [31mERROR[39m (81969): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+              at registerDashboardRouter (/Users/z/work/lux/kms/backend/src/server/r[01:13:46.004] [31mERROR[39m (81971): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+ 1:16:43 AM [tsx] rerunning
+(node:83724) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:83724) NOTE: We are formalizing our plans to enter AWS SDK for JavaScript (v2) into maintenance mode in 2023.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the migration guide at https://a.co/7PzMCcy
+[01:16:47.615] [32mINFO[39m (83724): [36mCryptography module initialized in normal operation mode.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:16:47.684] [32mINFO[39m (83724): [36mNo migrations pending: Skipping migration process.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:16:47.687] [32mINFO[39m (83724): [36mInitializing pg-queue...[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:16:47.930] [31mERROR[39m (83724): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+              at registerDashboardRouter (/Users/z/work/lux/kms/backend/src/server/r[01:16:47.937] [31mERROR[39m (83726): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+ 1:16:49 AM [tsx] rerunning
+(node:83780) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:83780) NOTE: We are formalizing our plans to enter AWS SDK for JavaScript (v2) into maintenance mode in 2023.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the migration guide at https://a.co/7PzMCcy
+[01:16:51.655] [32mINFO[39m (83780): [36mCryptography module initialized in normal operation mode.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:16:51.694] [32mINFO[39m (83780): [36mNo migrations pending: Skipping migration process.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:16:51.696] [32mINFO[39m (83780): [36mInitializing pg-queue...[39m [90m{"reqId":"UNKNOWN[01:16:51.652] [32mINFO[39m (83778)[01:16:51.949] [31mERROR[39m (83780): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+              at registerDashboardRouter (/Users/z/work/lux/kms/backend/src/server/r[01:16:51.948] [31mERROR[39m (83778): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+ 1:17:03 AM [tsx] rerunning
+(node:83927) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:83927) NOTE: We are formalizing our plans to enter AWS SDK for JavaScript (v2) into maintenance mode in 2023.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the migration guide at https://a.co/7PzMCcy
+[01:17:06.089] [32mINFO[39m (83927): [36mCryptography module initialized in normal operation mode.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:17:06.145] [32mINFO[39m (83927): [36mNo migrations pending: Skipping migration process.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:17:06.147] [32mINFO[39m (83927): [36mInitializing pg-queue...[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:17:06.369] [31mERROR[39m (83927): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+              at registerDashboardRouter (/Users/z/work/lux/kms/backend/src/server/routes/v1/dashboard-router.ts:2:27208)
+              at Plugin.exec (/Users/z/work/lux/kms/backend/node_modules/avvio/lib/plugin.js:125:28)
+              at Boot._loadPlugin (/Users/z/work/lux/kms/backend/node_modules/avvio/boot.js:432:10)
+              at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+    }
+1:18:02 AM [tsx] rerunning
+(node:84618) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:84618) NOTE: We are formalizing our plans to enter AWS SDK for JavaScript (v2) into maintenance mode in 2023.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the migration guide at https://a.co(node:846[01:18:06.444] [32mINFO[39m (84618): [36mCryptography module initialized in normal operation mode.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:18:06.561] [32mINFO[39m (84618): [36mNo migrations pending: Skipping migration process.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:18:06.564] [32mINFO[39m (84618): [36mInitializing pg-queue...[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:18:06.843] [31mERROR[39m (84618): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+              at registerDashboardRouter (/Users/z/work/lux/kms/backend/src/server/r[01:18:06.838] [31mERROR[39m (84617): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+ 1:18:20 AM [tsx] rerunning
+(node:84899) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:84899) NOTE: We are formalizing our plans to enter AWS SDK for JavaScript (v2) into maintenance mode in 2023.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the migration guide at https://a.co/7PzMCcy
+[01:18:24.899] [32mINFO[39m (84899): [36mCryptography module initialized in normal operation mode.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:18:24.928] [32mINFO[39m (84899): [36mNo migrations pending: Skipping migration process.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:18:24.932] [32mINFO[39m (84899): [36mInitializing pg-queue...[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:18:25.217] [31mERROR[39m (84899): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+              at registerDashboardRouter (/Users/z/work/lux/kms/backend/src/server/r[01:18:25.216] [31mERROR[39m (84900): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+ 1:19:44 AM [tsx] rerunning
+(node:86884) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:86884) NOTE: We are formalizing our plans to enter AWS SDK for JavaScript (v2) into maintenance mode in 2023.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the migration guide at https://a.co/7PzMCcy
+[01:19:49.030] [32mINFO[39m (86884): [36mCryptography module initialized in normal operation mode.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:19:49.100] [32mINFO[39m (86884): [36mNo migrations pending: Skipping migration process.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:19:49.102] [32mINFO[39m (86884): [36mInitializing pg-queue...[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:19:49.395] [31mERROR[39m (86884): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+              at registerDashboardRouter (/Users/z/work/lux/kms/backend/src/server/routes/v1/dashboard-router.ts:2:27208)
+              at Plugin.exec (/Users/z/work/lux/kms/backend/node_modules/avvio/lib/plugin.js:125:28)
+              at Boot._loadPlugin (/Users/z/work/lux/kms/backend/node_modules/avvio/boot.js:432:10)
+              at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+    }
+1:20:13 AM [tsx] rerunning
+(node:89637) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:89637) NOTE: We are formalizing our plans to enter AWS SDK for JavaScript (v2) into maintenance mode in 2023.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the migration guide at https://a.co/7PzMCcy
+[01:20:18.231] [32mINFO[39m (89637): [36mCryptography module initialized in normal operation mode.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:20:18.316] [32mINFO[39m (89637): [36mNo migrations pending: Skipping migration process.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:20:18.318] [32mINFO[39m (89637): [36mInitializing pg-queue...[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:20:18.579] [31mERROR[39m (89637): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+              at registerDashboardRouter (/Users/z/work/lux/kms/backend/src/server/routes/v1/dashboard-router.ts:2:27208)
+              at Plugin.exec (/Users/z/work/lux/kms/backend/node_modules/avvio/lib/plugin.js:125:28)
+              at Boot._loadPlugin (/Users/z/work/lux/kms/backend/node_modules/avvio/boot.js:432:10)
+              at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+    }
+1:22:02 AM [tsx] rerunning
+(node:11211) [DEP0187] DeprecationWarning: Passing invalid argument types to fs.existsSync is deprecated
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:11211) NOTE: We are formalizing our plans to enter AWS SDK for JavaScript (v2) into maintenance mode in 2023.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the migration guide at https://a.co(node:111[01:22:06.931] [32mINFO[39m (11211): [36mCryptography module initialized in normal operation mode.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:22:07.014] [32mINFO[39m (11211): [36mNo migrations pending: Skipping migration process.[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:22:07.017] [32mINFO[39m (11211): [36mInitializing pg-queue...[39m [90m{"reqId":"UNKNOWN_REQUEST_ID","severity":"INFO"}[39m
+[01:22:07.329] [31mERROR[39m (11211): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+              at registerDashboardRouter (/Users/z/work/lux/kms/backend/src/server/r[01:22:07.346] [31mERROR[39m (11192): [36mCannot read properties of undefined (reading 'array')[39m [90m{"severity":"ERROR"}[39m
+    err: {
+      "type": "TypeError",
+      "message": "Cannot read properties of undefined (reading 'array')",
+      "stack":
+          TypeError: Cannot read properties of undefined (reading 'array')
+              at registerDashboardRouter (/Users/z/work/lux/kms/backend/src/server/routes/v1/dashboard-router.ts:2:27208)
+              at Plugin.exec (/Users/z/work/lux/kms/backend/node_modules/avvio/lib/plugin.js:125:28)
+              at Boot._loadPlugin (/Users/z/work/lux/kms/backend/node_modules/avvio/boot.js:432:10)
+              at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+    }

@@ -15,7 +15,7 @@ import fastify from "fastify";
 import { Redis } from "ioredis";
 import { Knex } from "knex";
 
-import { HsmModule } from "@app/ee/services/hsm/hsm-types";
+// HSM module is optional - enterprise edition feature
 import { TKeyStoreFactory } from "@app/keystore/keystore";
 import { getConfig, IS_PACKAGED, TEnvConfig } from "@app/lib/config/env";
 import { CustomLogger } from "@app/lib/logger/logger";
@@ -42,7 +42,7 @@ type TMain = {
   logger?: CustomLogger;
   queue: TQueueServiceFactory;
   keyStore: TKeyStoreFactory;
-  hsmModule: HsmModule;
+  hsmModule?: any; // Optional HSM module for enterprise edition
   redis: Redis;
   envConfig: TEnvConfig;
   superAdminDAL: TSuperAdminDALFactory;

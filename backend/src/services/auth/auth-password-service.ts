@@ -32,8 +32,8 @@ type TAuthPasswordServiceFactoryDep = {
   totpConfigDAL: Pick<TTotpConfigDALFactory, "delete">;
 };
 
-export type TAuthPasswordFactory = ReturnType<typeof authPaswordServiceFactory>;
-export const authPaswordServiceFactory = ({
+export type TAuthPasswordFactory = ReturnType<typeof authPasswordServiceFactory>;
+export const authPasswordServiceFactory = ({
   authDAL,
   userDAL,
   tokenService,

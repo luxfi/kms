@@ -8,6 +8,7 @@ import { registerSecretSyncRouter, SECRET_SYNC_REGISTER_ROUTER_MAP } from "@app/
 
 import { registerAdminRouter } from "./admin-router";
 import { registerAuthRoutes } from "./auth-router";
+import { registerCasdoorAuthRouter } from "./casdoor-auth-router";
 import { registerProjectBotRouter } from "./bot-router";
 import { registerCaRouter } from "./certificate-authority-router";
 import { CERTIFICATE_AUTHORITY_REGISTER_ROUTER_MAP } from "./certificate-authority-routers";
@@ -62,6 +63,7 @@ export const registerV1Routes = async (server: FastifyZodProvider) => {
   await server.register(
     async (authRouter) => {
       await authRouter.register(registerAuthRoutes);
+      await authRouter.register(registerCasdoorAuthRouter, { prefix: "/casdoor" });
       await authRouter.register(registerIdentityTokenAuthRouter);
       await authRouter.register(registerIdentityUaRouter);
       await authRouter.register(registerIdentityKubernetesRouter);

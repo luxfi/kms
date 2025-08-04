@@ -1,0 +1,1 @@
+export { CasdoorCallbackPage } from "./CasdoorCallbackPage";

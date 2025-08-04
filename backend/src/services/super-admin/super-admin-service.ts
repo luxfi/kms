@@ -76,7 +76,33 @@ export let getServerCfg: () => Promise<
     defaultAuthOrgAuthEnforced?: boolean | null;
     defaultAuthOrgAuthMethod?: string | null;
   }
->;
+> = async () => {
+  // Default stub implementation for community edition
+  return {
+    id: "stub-id",
+    initialized: true,
+    version: "community",
+    instanceId: "community-instance", 
+    signUpMode: "open",
+    allowedSignUpDomain: null,
+    telemetryEnabled: false,
+    defaultAuthOrgSlug: null,
+    defaultAuthOrgAuthEnforced: false,
+    defaultAuthOrgAuthMethod: null,
+    trustSamlEmails: false,
+    trustLdapEmails: false,
+    trustOidcEmails: false,
+    serverEncryptionVersion: 1,
+    cacheType: CacheType.Redis,
+    redisUrl: null,
+    disableUserPasswords: false,
+    disableUserPasswordsExceptions: [],
+    loginMethods: [LoginMethod.EMAIL],
+    isEmailPiiProtectionEnabled: false,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  } as any;
+};
 
 let adminIntegrationsConfig: TAdminIntegrationConfig = {
   slack: {

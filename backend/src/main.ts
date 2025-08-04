@@ -4,7 +4,6 @@ import "./lib/telemetry/instrumentation";
 
 import dotenv from "dotenv";
 
-import { initializeHsmModule } from "@app/ee/services/hsm/hsm-fns";
 
 import { runMigrations } from "./auto-start-migrations";
 import { initAuditLogDbConnection, initDbConnection } from "./db";
@@ -57,14 +56,11 @@ const run = async () => {
   const keyStore = keyStoreFactory(envConfig);
   const redis = buildRedisFromConfig(envConfig);
 
-  const hsmModule = initializeHsmModule(envConfig);
-  hsmModule.initialize();
 
   const server = await main({
     db,
     auditLogDb,
     superAdminDAL,
-    hsmModule: hsmModule.getModule(),
     smtp,
     logger,
     queue,
@@ -80,7 +76,6 @@ const run = async () => {
     await queue.shutdown();
     await db.destroy();
     await removeTemporaryBaseDirectory();
-    hsmModule.finalize();
     process.exit(0);
   });
 
@@ -90,7 +85,6 @@ const run = async () => {
     await queue.shutdown();
     await db.destroy();
     await removeTemporaryBaseDirectory();
-    hsmModule.finalize();
     process.exit(0);
   });
 

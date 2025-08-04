@@ -6,6 +6,7 @@ import { Link } from "@tanstack/react-router";
 import { isLoggedIn } from "@app/hooks/api/reactQuery";
 
 import { InitialStep, SSOStep } from "./components";
+import { CasdoorLoginStep } from "./components/CasdoorLoginStep";
 import { useNavigateToSelectOrganization } from "./Login.utils";
 
 export const LoginPage = ({ isAdmin }: { isAdmin?: boolean }) => {
@@ -42,25 +43,8 @@ export const LoginPage = ({ isAdmin }: { isAdmin?: boolean }) => {
   }, []);
 
   const renderView = () => {
-    switch (step) {
-      case 0:
-        return (
-          <InitialStep
-            isAdmin={isAdmin}
-            setStep={setStep}
-            email={email}
-            setEmail={setEmail}
-            password={password}
-            setPassword={setPassword}
-          />
-        );
-      case 2:
-        return <SSOStep setStep={setStep} type="SAML" />;
-      case 3:
-        return <SSOStep setStep={setStep} type="OIDC" />;
-      default:
-        return <div />;
-    }
+    // Always use Casdoor for authentication
+    return <CasdoorLoginStep />;
   };
 
   return (
@@ -75,12 +59,12 @@ export const LoginPage = ({ isAdmin }: { isAdmin?: boolean }) => {
       <Link to="/">
         <div className="mb-4 mt-20 flex justify-center">
           <img
-            src="/images/gradientLogo.svg"
+            src="/images/lux-triangle.svg"
             style={{
               height: "90px",
-              width: "120px"
+              width: "90px"
             }}
-            alt="KMS logo"
+            alt="Lux KMS logo"
           />
         </div>
       </Link>
