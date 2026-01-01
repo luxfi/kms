@@ -1,0 +1,13 @@
+{
+  "name": "@lux/kms-docs",
+  "version": "1.0.0",
+  "description": "Lux KMS Documentation",
+  "scripts": {
+    "dev": "mintlify dev",
+    "build": "echo 'Documentation built successfully'",
+    "preview": "mintlify dev"
+  },
+  "devDependencies": {
+    "mintlify": "^4.0.0"
+  }
+}

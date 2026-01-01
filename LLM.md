@@ -336,6 +336,82 @@ await kmsService.configureExternalKms({
    - Monitor database query times
    - Verify connection pool settings
 
+## FHE (Fully Homomorphic Encryption) Support
+
+### Current Status: Partial Implementation
+
+**Added Types (2025-12-28):**
+- `KmsKeyUsage.FHE_COMPUTATION` - New key usage type for FHE operations
+- `FheKeyAlgorithm.TFHE_BINARY` - TFHE boolean gate operations
+- `FheKeyAlgorithm.TFHE_INTEGER` - TFHE integer operations
+- `TThresholdConfig` - Configuration for t-of-n threshold decryption
+
+**API Surface for FHE Keys:**
+```typescript
+// Generate FHE key pair
+generateFheKeyPair(dto: TGenerateFheKeyPairDTO): Promise<{ publicKey: Buffer; keyId: string }>
+
+// Get public key
+getFhePublicKey(keyId: string): Promise<Buffer>
+
+// Threshold decryption (t-of-n)
+fheThresholdDecrypt(dto: TFheThresholdDecryptDTO): Promise<Buffer>
+
+// Partial decryption (single party's contribution)
+fhePartialDecrypt(dto: TFhePartialDecryptDTO): Promise<Buffer>
+
+// Key rotation (reshare without revealing)
+rotateFheKey(dto: TRotateFheKeyDTO): Promise<string>
+```
+
+### Implementation TODOs
+
+**Phase 1: Core FHE Key Management**
+- [ ] Add FHE key generation in `kms-service.ts`
+- [ ] Add FHE key storage schema (migration)
+- [ ] Wire FHE algorithms in `kms-fns.ts` verification
+- [ ] Add CMEK router endpoints for FHE
+
+**Phase 2: Threshold FHE (Shamir Secret Sharing)**
+- [ ] Create `threshold-fhe/` service directory
+- [ ] Implement Shamir secret sharing for key splitting
+- [ ] Implement partial decryption protocol
+- [ ] Implement share aggregation
+- [ ] Add key resharing for rotation
+
+**Phase 3: Integration with lux/tfhe**
+- [ ] Connect to `@luxfi/tfhe` for actual FHE operations
+- [ ] Wire WASM or native TFHE backend
+- [ ] Performance optimization for gate operations
+
+### Architecture Notes
+
+FHE keys differ from traditional keys:
+1. **Public key** - Used for encryption only (anyone can encrypt)
+2. **Secret key** - Split into shares for threshold decryption
+3. **Bootstrap key** - For homomorphic operations (public)
+4. **Key switching key** - For parameter changes (public)
+
+Threshold FHE enables t-of-n decryption where:
+- Total n parties each hold a key share
+- Any t parties can collaborate to decrypt
+- No single party can decrypt alone
+- Key can be reshared without revealing secret
+
+### Related Files
+- `/backend/src/services/kms/kms-types.ts` - FHE type definitions
+- `/backend/src/services/cmek/cmek-types.ts` - CMEK FHE API types
+- Future: `/backend/src/services/threshold-fhe/` - Threshold FHE service
+
+## Recent Updates (2025-12-28)
+
+### FHE Key Type Support
+- Added `FHE_COMPUTATION` to `KmsKeyUsage` enum
+- Added `FheKeyAlgorithm` enum with TFHE variants
+- Added `TThresholdConfig` for t-of-n threshold setups
+- Added FHE-specific DTO types for key generation, decryption, rotation
+- Updated CMEK types to include FHE algorithms
+
 ## Recent Updates (2025-11-12)
 
 ### Documentation Enhancements

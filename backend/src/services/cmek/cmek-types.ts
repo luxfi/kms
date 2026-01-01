@@ -1,10 +1,10 @@
-import { SymmetricKeyAlgorithm } from "@app/lib/crypto/cipher";
+import { FheKeyAlgorithm, SymmetricKeyAlgorithm } from "@app/lib/crypto/cipher";
 import { AsymmetricKeyAlgorithm, SigningAlgorithm } from "@app/lib/crypto/sign";
 import { OrderByDirection } from "@app/lib/types";
 
-import { KmsKeyUsage } from "../kms/kms-types";
+import { KmsKeyUsage, TThresholdConfig } from "../kms/kms-types";
 
-export type TCmekKeyEncryptionAlgorithm = SymmetricKeyAlgorithm | AsymmetricKeyAlgorithm;
+export type TCmekKeyEncryptionAlgorithm = SymmetricKeyAlgorithm | AsymmetricKeyAlgorithm | FheKeyAlgorithm;
 
 export type TCreateCmekDTO = {
   orgId: string;
@@ -66,4 +66,50 @@ export type TCmekVerifyDTO = {
   signature: string;
   signingAlgorithm: SigningAlgorithm;
   isDigest: boolean;
+};
+
+// ============================================================================
+// FHE Key Management Types (CMEK API)
+// ============================================================================
+
+/**
+ * Create an FHE key pair via CMEK API
+ */
+export type TCreateFheCmekDTO = {
+  orgId: string;
+  projectId: string;
+  name: string;
+  description?: string;
+  algorithm: FheKeyAlgorithm;
+  thresholdConfig?: TThresholdConfig;
+};
+
+/**
+ * Get FHE public key via CMEK API
+ */
+export type TCmekGetFhePublicKeyDTO = {
+  keyId: string;
+};
+
+/**
+ * Request threshold decryption via CMEK API
+ * For non-threshold keys, performs direct decryption
+ * For threshold keys, returns partial decryption or aggregates if enough partials provided
+ */
+export type TCmekFheDecryptDTO = {
+  keyId: string;
+  ciphertext: string; // base64 encoded
+  // For threshold decryption - partial results from other parties
+  partialDecryptions?: Array<{
+    partyId: string;
+    partialResult: string; // base64 encoded
+  }>;
+};
+
+/**
+ * Rotate FHE key via CMEK API
+ */
+export type TCmekRotateFheKeyDTO = {
+  keyId: string;
+  newThresholdConfig?: TThresholdConfig;
 };

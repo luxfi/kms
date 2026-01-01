@@ -9,9 +9,20 @@ export enum SymmetricKeyAlgorithm {
 }
 export const SymmetricKeyAlgorithmEnum = z.enum(Object.values(SymmetricKeyAlgorithm) as [string, ...string[]]).options;
 
+// FHE-specific key algorithms
+// Defined here to avoid circular dependencies with kms-types
+export enum FheKeyAlgorithm {
+  // TFHE (Torus Fully Homomorphic Encryption) - boolean gates and integers
+  TFHE_BINARY = "tfhe-binary",
+  TFHE_INTEGER = "tfhe-integer"
+}
+export const FheKeyAlgorithmEnum = z.enum(Object.values(FheKeyAlgorithm) as [string, ...string[]]).options;
+
+// All allowed encryption key algorithms including FHE
 export const AllowedEncryptionKeyAlgorithms = z.enum([
   ...Object.values(SymmetricKeyAlgorithm),
-  ...Object.values(AsymmetricKeyAlgorithm)
+  ...Object.values(AsymmetricKeyAlgorithm),
+  ...Object.values(FheKeyAlgorithm)
 ] as [string, ...string[]]).options;
 
 export type TSymmetricEncryptionFns = {

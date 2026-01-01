@@ -1,0 +1,724 @@
+---
+title: "AWS CloudHSM Configuration"
+description: "Configure Lux KMS with AWS CloudHSM for FIPS 140-2 Level 3 validated hardware security"
+---
+
+## Overview
+
+AWS CloudHSM provides FIPS 140-2 Level 3 validated hardware security modules (HSMs) in the AWS cloud. CloudHSM is a single-tenant HSM service that gives you complete control over your cryptographic operations, making it ideal for regulatory compliance and high-security requirements.
+
+<Note>
+AWS CloudHSM requires network connectivity to your VPC and AWS IAM permissions. Ensure your KMS deployment has proper networking and credentials configured.
+</Note>
+
+## Prerequisites
+
+Before configuring AWS CloudHSM:
+
+1. **AWS Account**: Active AWS account with appropriate permissions
+2. **VPC Configuration**: VPC with private subnets in multiple availability zones
+3. **CloudHSM Cluster**: Created and initialized CloudHSM cluster
+4. **CloudHSM Client**: Installed client software on your KMS host
+5. **IAM Permissions**: Required AWS permissions (see below)
+6. **CU Credentials**: Crypto User (CU) PIN for authentication
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        AWS Region                           │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │                    Your VPC                           │  │
+│  │  ┌──────────────┐           ┌──────────────┐         │  │
+│  │  │   Subnet A   │           │   Subnet B   │         │  │
+│  │  │              │           │              │         │  │
+│  │  │  ┌────────┐  │           │  ┌────────┐  │         │  │
+│  │  │  │  HSM   │  │           │  │  HSM   │  │         │  │
+│  │  │  │ (AZ-1) │  │           │  │ (AZ-2) │  │         │  │
+│  │  │  └───┬────┘  │           │  └───┬────┘  │         │  │
+│  │  │      │       │           │      │       │         │  │
+│  │  └──────┼───────┘           └──────┼───────┘         │  │
+│  │         │                          │                 │  │
+│  │         └──────────┬───────────────┘                 │  │
+│  │                    │                                 │  │
+│  │         ┌──────────▼──────────┐                      │  │
+│  │         │   Lux KMS Instance  │                      │  │
+│  │         │  (CloudHSM Client)  │                      │  │
+│  │         └─────────────────────┘                      │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Step 1: Create CloudHSM Cluster
+
+### Option A: Using CloudFormation (Recommended)
+
+Create a CloudFormation template (see [CloudFormation Example](#cloudformation-template) below):
+
+```bash
+aws cloudformation create-stack \
+  --stack-name lux-kms-cloudhsm \
+  --template-body file://cloudhsm-cluster.yaml \
+  --parameters \
+    ParameterKey=VpcId,ParameterValue=vpc-xxxx \
+    ParameterKey=PrivateSubnetIds,ParameterValue=subnet-aaa\\,subnet-bbb \
+  --capabilities CAPABILITY_IAM
+```
+
+### Option B: Using AWS Console
+
+1. Navigate to **AWS CloudHSM Console**
+2. Click **Create cluster**
+3. Configure:
+   - **VPC**: Select your VPC
+   - **Subnets**: Choose private subnets in different AZs (minimum 2 for HA)
+4. Click **Create**
+5. Wait for cluster to reach **UNINITIALIZED** state
+6. Add HSMs:
+   - Click **Create HSM**
+   - Select availability zone
+   - Repeat for each AZ (recommend 2-3 HSMs)
+
+### Option C: Using AWS CLI
+
+```bash
+# Create cluster
+CLUSTER_ID=$(aws cloudhsmv2 create-cluster \
+  --hsm-type hsm1.medium \
+  --subnet-ids subnet-aaa subnet-bbb \
+  --query 'Cluster.ClusterId' \
+  --output text)
+
+echo "Cluster ID: $CLUSTER_ID"
+
+# Create HSMs (one per AZ for HA)
+aws cloudhsmv2 create-hsm \
+  --cluster-id $CLUSTER_ID \
+  --availability-zone us-east-1a
+
+aws cloudhsmv2 create-hsm \
+  --cluster-id $CLUSTER_ID \
+  --availability-zone us-east-1b
+
+# Wait for HSMs to become active
+aws cloudhsmv2 describe-clusters \
+  --filters clusterIds=$CLUSTER_ID \
+  --query 'Clusters[0].Hsms[*].State'
+```
+
+## Step 2: Initialize CloudHSM Cluster
+
+### Initialize First HSM
+
+```bash
+# Get cluster certificate
+aws cloudhsmv2 describe-clusters \
+  --filters clusterIds=$CLUSTER_ID \
+  --query 'Clusters[0].Certificates.ClusterCertificate' \
+  --output text > cluster.crt
+
+# Get HSM IP address
+HSM_IP=$(aws cloudhsmv2 describe-clusters \
+  --filters clusterIds=$CLUSTER_ID \
+  --query 'Clusters[0].Hsms[0].EniIp' \
+  --output text)
+
+# Connect and initialize HSM
+/opt/cloudhsm/bin/cloudhsm_mgmt_util /opt/cloudhsm/etc/cloudhsm_mgmt_util.cfg
+
+# In cloudhsm_mgmt_util:
+# server connect -a $HSM_IP -u admin -p admin
+# user create CO admin <strong-password>
+# quit
+
+# Activate cluster
+aws cloudhsmv2 initialize-cluster \
+  --cluster-id $CLUSTER_ID \
+  --signed-cert file://signed-cert.crt \
+  --trust-anchor file://trust-anchor.crt
+```
+
+## Step 3: Install CloudHSM Client
+
+### Amazon Linux 2 / RHEL / CentOS
+
+```bash
+# Download and install client
+wget https://s3.amazonaws.com/cloudhsmv2-software/CloudHsmClient/EL7/cloudhsm-client-latest.el7.x86_64.rpm
+
+sudo yum install -y ./cloudhsm-client-latest.el7.x86_64.rpm
+
+# Install PKCS#11 library
+sudo yum install -y cloudhsm-client-pkcs11
+```
+
+### Ubuntu / Debian
+
+```bash
+# Download and install client
+wget https://s3.amazonaws.com/cloudhsmv2-software/CloudHsmClient/Bionic/cloudhsm-client_latest_u18.04_amd64.deb
+
+sudo apt install -y ./cloudhsm-client_latest_u18.04_amd64.deb
+
+# Install PKCS#11 library
+sudo apt install -y cloudhsm-client-pkcs11
+```
+
+### Docker
+
+```dockerfile
+FROM ubuntu:22.04
+
+# Install CloudHSM client
+RUN apt-get update && apt-get install -y wget
+RUN wget https://s3.amazonaws.com/cloudhsmv2-software/CloudHsmClient/Jammy/cloudhsm-client_latest_u22.04_amd64.deb
+RUN apt-get install -y ./cloudhsm-client_latest_u22.04_amd64.deb cloudhsm-client-pkcs11
+
+# Configure client
+COPY cluster.crt /opt/cloudhsm/etc/
+RUN /opt/cloudhsm/bin/configure -a <HSM_IP>
+
+CMD ["/usr/bin/node", "dist/main.js"]
+```
+
+## Step 4: Configure CloudHSM Client
+
+```bash
+# Copy cluster certificate
+sudo cp cluster.crt /opt/cloudhsm/etc/
+
+# Configure client (use HSM IP from cluster)
+sudo /opt/cloudhsm/bin/configure -a $HSM_IP
+
+# Verify configuration
+cat /opt/cloudhsm/etc/cloudhsm_client.cfg
+```
+
+Expected output:
+```
+{
+  "server": {
+    "hostname": "10.0.1.5:2223",
+    "enable_ssl": "true"
+  },
+  "hsm_ca_file": "/opt/cloudhsm/etc/cluster.crt"
+}
+```
+
+## Step 5: Create Crypto User (CU)
+
+```bash
+# Start CloudHSM management utility
+/opt/cloudhsm/bin/cloudhsm_mgmt_util /opt/cloudhsm/etc/cloudhsm_mgmt_util.cfg
+
+# In cloudhsm_mgmt_util:
+enable_e2e
+loginHSM CO admin <co-password>
+createUser CU luxkms <strong-pin>
+quit
+```
+
+**Important**: Save the CU PIN securely. This will be used in `AWS_CLOUDHSM_PIN` environment variable.
+
+## Step 6: Generate Keys in CloudHSM
+
+### Using key_mgmt_util
+
+```bash
+# Start key management utility
+/opt/cloudhsm/bin/key_mgmt_util
+
+# Login as CU
+loginHSM -u CU -s luxkms -p <cu-pin>
+
+# Generate AES-256 key
+genSymKey -t 31 -s 32 -l lux-kms-key
+
+# Generate EC key pair (P-256)
+genECCKeyPair -i 8 -l lux-kms-key-pub -k lux-kms-key-priv
+
+# List keys
+findKey -l lux-kms-key
+
+# Logout
+quit
+```
+
+## Step 7: Configure Lux KMS
+
+### Environment Variables
+
+```bash
+# AWS CloudHSM Configuration
+export AWS_CLOUDHSM_CLUSTER_ID="cluster-abc123xyz"
+export AWS_CLOUDHSM_PIN="<cu-pin-from-step5>"
+export AWS_CLOUDHSM_LIB_PATH="/opt/cloudhsm/lib/libcloudhsm_pkcs11.so"
+export AWS_REGION="us-east-1"
+export HSM_SLOT="0"
+export HSM_KEY_LABEL="lux-kms-key"
+
+# Optional: Disable health check (not recommended for production)
+# export AWS_CLOUDHSM_HEALTH_CHECK="false"
+
+# AWS Credentials (for cluster management API)
+export AWS_ACCESS_KEY_ID="AKIA..."
+export AWS_SECRET_ACCESS_KEY="..."
+
+# Or use IAM instance role (recommended)
+```
+
+### Docker Compose
+
+```yaml
+version: '3.8'
+
+services:
+  kms:
+    image: luxfi/kms:latest
+    environment:
+      # AWS CloudHSM
+      AWS_CLOUDHSM_CLUSTER_ID: "cluster-abc123xyz"
+      AWS_CLOUDHSM_PIN: "${AWS_CLOUDHSM_PIN}"
+      AWS_CLOUDHSM_LIB_PATH: "/opt/cloudhsm/lib/libcloudhsm_pkcs11.so"
+      AWS_REGION: "us-east-1"
+      HSM_SLOT: "0"
+      HSM_KEY_LABEL: "lux-kms-key"
+
+      # AWS Credentials (use IAM role in production)
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+
+    volumes:
+      # Mount CloudHSM client libraries
+      - /opt/cloudhsm:/opt/cloudhsm:ro
+
+    network_mode: "host"  # Required for HSM connectivity
+
+    # Or use specific VPC network
+    # networks:
+    #   - hsm_network
+
+# networks:
+#   hsm_network:
+#     driver: bridge
+```
+
+### Kubernetes
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloudhsm-credentials
+type: Opaque
+stringData:
+  pin: "<cu-pin>"
+  cluster-id: "cluster-abc123xyz"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lux-kms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: lux-kms
+  template:
+    metadata:
+      labels:
+        app: lux-kms
+    spec:
+      containers:
+      - name: kms
+        image: luxfi/kms:latest
+        env:
+        - name: AWS_CLOUDHSM_CLUSTER_ID
+          valueFrom:
+            secretKeyRef:
+              name: cloudhsm-credentials
+              key: cluster-id
+        - name: AWS_CLOUDHSM_PIN
+          valueFrom:
+            secretKeyRef:
+              name: cloudhsm-credentials
+              key: pin
+        - name: AWS_CLOUDHSM_LIB_PATH
+          value: "/opt/cloudhsm/lib/libcloudhsm_pkcs11.so"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: HSM_KEY_LABEL
+          value: "lux-kms-key"
+        volumeMounts:
+        - name: cloudhsm-client
+          mountPath: /opt/cloudhsm
+          readOnly: true
+      volumes:
+      - name: cloudhsm-client
+        hostPath:
+          path: /opt/cloudhsm
+          type: Directory
+      # Use IAM roles for service accounts (IRSA)
+      serviceAccountName: kms-service-account
+```
+
+## IAM Permissions
+
+### Required Permissions
+
+Create an IAM policy for KMS application:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudhsm:DescribeClusters",
+        "cloudhsm:ListTags"
+      ],
+      "Resource": "arn:aws:cloudhsm:*:*:cluster/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudhsm:CreateHsm",
+        "cloudhsm:DeleteHsm"
+      ],
+      "Resource": "arn:aws:cloudhsm:*:*:cluster/<cluster-id>"
+    }
+  ]
+}
+```
+
+### Minimal Permissions (Read-Only)
+
+For production deployments where KMS only uses HSM (no management):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudhsm:DescribeClusters"
+      ],
+      "Resource": "arn:aws:cloudhsm:*:*:cluster/<cluster-id>"
+    }
+  ]
+}
+```
+
+## CloudFormation Template
+
+Complete CloudFormation template for deploying CloudHSM cluster:
+
+```yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudHSM Cluster for Lux KMS'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC for CloudHSM cluster
+
+  PrivateSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Private subnets in different AZs (minimum 2)
+
+  HsmType:
+    Type: String
+    Default: hsm1.medium
+    AllowedValues:
+      - hsm1.medium
+    Description: HSM instance type
+
+Resources:
+  CloudHSMCluster:
+    Type: AWS::CloudHSM::Cluster
+    Properties:
+      HsmType: !Ref HsmType
+      SubnetIds: !Ref PrivateSubnetIds
+      Tags:
+        - Key: Name
+          Value: lux-kms-cluster
+        - Key: Environment
+          Value: production
+
+  CloudHSM1:
+    Type: AWS::CloudHSM::Hsm
+    Properties:
+      ClusterId: !Ref CloudHSMCluster
+      AvailabilityZone: !Select [0, !GetAZs '']
+
+  CloudHSM2:
+    Type: AWS::CloudHSM::Hsm
+    Properties:
+      ClusterId: !Ref CloudHSMCluster
+      AvailabilityZone: !Select [1, !GetAZs '']
+
+  # IAM Role for KMS application (optional)
+  KMSInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref CloudHSMPolicy
+
+  CloudHSMPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - cloudhsm:DescribeClusters
+              - cloudhsm:ListTags
+            Resource: !Sub 'arn:aws:cloudhsm:${AWS::Region}:${AWS::AccountId}:cluster/*'
+          - Effect: Allow
+            Action:
+              - cloudhsm:CreateHsm
+              - cloudhsm:DeleteHsm
+            Resource: !GetAtt CloudHSMCluster.ClusterId
+
+Outputs:
+  ClusterId:
+    Description: CloudHSM Cluster ID
+    Value: !Ref CloudHSMCluster
+    Export:
+      Name: !Sub '${AWS::StackName}-ClusterId'
+
+  ClusterState:
+    Description: CloudHSM Cluster State
+    Value: !GetAtt CloudHSMCluster.State
+
+  ClusterSecurityGroup:
+    Description: Security Group ID
+    Value: !GetAtt CloudHSMCluster.SecurityGroup
+
+  IAMRoleArn:
+    Description: IAM Role ARN for KMS
+    Value: !GetAtt KMSInstanceRole.Arn
+```
+
+## High Availability Setup
+
+### Multi-HSM Deployment
+
+For production, deploy at least 2 HSMs in different availability zones:
+
+```bash
+# Create HSM in us-east-1a
+aws cloudhsmv2 create-hsm \
+  --cluster-id $CLUSTER_ID \
+  --availability-zone us-east-1a
+
+# Create HSM in us-east-1b
+aws cloudhsmv2 create-hsm \
+  --cluster-id $CLUSTER_ID \
+  --availability-zone us-east-1b
+
+# Optional: Add third HSM for even higher availability
+aws cloudhsmv2 create-hsm \
+  --cluster-id $CLUSTER_ID \
+  --availability-zone us-east-1c
+```
+
+### Load Balancing
+
+CloudHSM client automatically load balances requests across HSMs in the cluster. No additional configuration needed.
+
+### Failover
+
+If an HSM becomes unhealthy:
+
+1. CloudHSM client detects failure
+2. Requests automatically route to healthy HSMs
+3. Replace failed HSM:
+
+```bash
+# Delete failed HSM
+aws cloudhsmv2 delete-hsm \
+  --cluster-id $CLUSTER_ID \
+  --hsm-id <failed-hsm-id>
+
+# Create replacement
+aws cloudhsmv2 create-hsm \
+  --cluster-id $CLUSTER_ID \
+  --availability-zone us-east-1a
+```
+
+## Monitoring and Maintenance
+
+### Health Checks
+
+KMS performs automatic health checks:
+
+```typescript
+// Programmatic health check
+const hsm = new AWSCloudHSM(config);
+await hsm.initialize();
+
+const health = await hsm.healthCheck();
+console.log(health);
+// {
+//   clusterActive: true,
+//   sessionActive: true,
+//   hsmCount: 2,
+//   lastCheckTime: '2025-11-22T...'
+// }
+```
+
+### CloudWatch Metrics
+
+Monitor CloudHSM via CloudWatch:
+
+```bash
+# Get cluster metrics
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/CloudHSM \
+  --metric-name HSMActiveCount \
+  --dimensions Name=ClusterId,Value=$CLUSTER_ID \
+  --start-time 2025-11-22T00:00:00Z \
+  --end-time 2025-11-22T23:59:59Z \
+  --period 3600 \
+  --statistics Average
+```
+
+Key metrics:
+- `HSMActiveCount`: Number of active HSMs
+- `HSMTemperature`: HSM temperature (health indicator)
+- `HSMUnhealthyCount`: Number of unhealthy HSMs
+
+### Backup Strategy
+
+AWS CloudHSM automatically creates daily backups. To create manual backup:
+
+```bash
+# Note: Backups are automatic and continuous
+# To restore, create new cluster from backup:
+
+aws cloudhsmv2 restore-backup \
+  --backup-id <backup-id>
+```
+
+## Troubleshooting
+
+### Connection Issues
+
+**Problem**: "No AWS CloudHSM slots found"
+
+```bash
+# Verify client configuration
+cat /opt/cloudhsm/etc/cloudhsm_client.cfg
+
+# Test connectivity
+ping <hsm-ip-address>
+
+# Check CloudHSM client service
+sudo service cloudhsm-client status
+
+# Restart client service
+sudo service cloudhsm-client restart
+
+# Verify HSM state
+aws cloudhsmv2 describe-clusters --filters clusterIds=$CLUSTER_ID
+```
+
+### Authentication Errors
+
+**Problem**: "Login failed"
+
+- Verify CU PIN is correct
+- Check if CU user exists:
+
+```bash
+/opt/cloudhsm/bin/cloudhsm_mgmt_util
+loginHSM CO admin <co-password>
+listUsers
+```
+
+### Performance Issues
+
+**Problem**: Slow cryptographic operations
+
+- Add more HSMs to cluster (horizontal scaling)
+- Check network latency to HSMs
+- Verify HSM is not at capacity
+
+```bash
+# Check HSM capacity
+aws cloudhsm describe-clusters \
+  --filters clusterIds=$CLUSTER_ID \
+  --query 'Clusters[0].Hsms[*].State'
+```
+
+## Security Best Practices
+
+1. **Network Isolation**: Deploy CloudHSM in private subnets only
+2. **Credential Management**: Store CU PIN in AWS Secrets Manager:
+
+```bash
+aws secretsmanager create-secret \
+  --name cloudhsm-cu-pin \
+  --secret-string "<cu-pin>"
+
+# Retrieve in application
+export AWS_CLOUDHSM_PIN=$(aws secretsmanager get-secret-value \
+  --secret-id cloudhsm-cu-pin \
+  --query SecretString \
+  --output text)
+```
+
+3. **Audit Logging**: Enable CloudTrail for CloudHSM API calls
+4. **Multi-Factor Delete**: Enable MFA for HSM deletion
+5. **Regular Backups**: Verify automatic backups are running
+6. **Access Control**: Use IAM roles instead of access keys
+7. **Key Rotation**: Rotate CU PINs regularly
+
+## Cost Optimization
+
+AWS CloudHSM pricing (as of 2025):
+- **HSM Instance**: ~$1.60/hour per HSM
+- **Minimum Recommendation**: 2 HSMs (HA) = ~$2,300/month
+- **No Data Transfer Costs**: Within same VPC
+
+Tips:
+- Use CloudFormation for reproducible deployments
+- Delete test clusters when not in use
+- Monitor CloudWatch for unused capacity
+
+## Migration from Other HSMs
+
+### From Thales Luna
+
+Keys must be re-generated in CloudHSM (no direct migration).
+
+### From On-Premises HSM
+
+1. Export keys from old HSM (if supported)
+2. Generate new keys in CloudHSM
+3. Re-encrypt data with new keys
+4. Decommission old HSM
+
+## Support
+
+- **AWS Support**: CloudHSM is covered by AWS Support plans
+- **Documentation**: https://docs.aws.amazon.com/cloudhsm/
+- **Community**: AWS Developer Forums
+
+## Next Steps
+
+- [Configure KMS Integration](./integration)
+- [Set Up Backup and Recovery](./backup)
+- [Monitor HSM Health](./monitoring)
+- [Scale HSM Cluster](./scaling)

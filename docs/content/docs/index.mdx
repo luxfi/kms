@@ -1,0 +1,1180 @@
+---
+title: "Lux KMS - Comprehensive Documentation"
+description: "Complete guide to Lux Key Management Service architecture, implementation, and best practices"
+---
+
+# Lux Key Management Service (KMS)
+
+## Overview
+
+Lux KMS is an enterprise-grade key management service providing centralized cryptographic key management, hardware security module (HSM) integration, and comprehensive security controls for protecting sensitive data across your infrastructure.
+
+## Table of Contents
+
+1. [Architecture & Design](#architecture--design)
+2. [Key Generation & Storage](#key-generation--storage)
+3. [Cryptographic Operations](#cryptographic-operations)
+4. [HSM Integration](#hsm-integration)
+5. [Access Control & Policies](#access-control--policies)
+6. [Key Rotation Strategies](#key-rotation-strategies)
+7. [Backup & Recovery](#backup--recovery)
+8. [API Reference](#api-reference)
+9. [Security Best Practices](#security-best-practices)
+10. [Audit Logging](#audit-logging)
+
+## Architecture & Design
+
+### Core Components
+
+The Lux KMS architecture consists of several key components working in concert:
+
+#### 1. Key Management Layer
+- **Internal KMS**: Software-based key management using AES-GCM encryption
+- **External KMS**: Integration with AWS KMS, GCP KMS, and other providers
+- **HSM Integration**: Hardware security module support for root key protection
+
+#### 2. Storage Architecture
+```
+┌─────────────────────────────────────────┐
+│           Application Layer              │
+├─────────────────────────────────────────┤
+│            KMS Service                   │
+├─────────────────────────────────────────┤
+│     Key Store (Memory/Database)         │
+├─────────────────────────────────────────┤
+│  Encryption Layer (AES-GCM/RSA/ECC)    │
+├─────────────────────────────────────────┤
+│    HSM/Software Root Key Provider       │
+└─────────────────────────────────────────┘
+```
+
+#### 3. Service Dependencies
+- **Database**: PostgreSQL for metadata and encrypted key storage
+- **Key Store**: In-memory cache with Redis backing for performance
+- **HSM Service**: PKCS#11 interface for hardware security modules
+- **Audit Service**: Comprehensive logging of all cryptographic operations
+
+### Data Flow
+
+1. **Key Creation Flow**:
+   - Client requests key generation
+   - KMS generates key material (software or HSM)
+   - Key encrypted with KEK (Key Encryption Key)
+   - Encrypted key stored in database
+   - Metadata recorded in audit log
+
+2. **Encryption/Decryption Flow**:
+   - Client provides plaintext/ciphertext + key ID
+   - KMS retrieves and decrypts key material
+   - Performs cryptographic operation
+   - Returns result without storing data
+   - Operation logged for audit
+
+### Key Hierarchy
+
+```
+Root Key (HSM or Software)
+    ├── Organization KEK
+    │   ├── Project KEK
+    │   │   ├── Data Encryption Keys (DEK)
+    │   │   └── Signing Keys
+    │   └── Service Account Keys
+    └── System Keys
+        ├── Database Encryption Key
+        └── Backup Encryption Key
+```
+
+## Key Generation & Storage
+
+### Supported Key Types
+
+#### Symmetric Keys
+- **AES-128-GCM**: 128-bit AES in Galois/Counter Mode
+- **AES-256-GCM**: 256-bit AES in Galois/Counter Mode
+
+#### Asymmetric Keys
+- **RSA-2048**: 2048-bit RSA for signing/encryption
+- **RSA-4096**: 4096-bit RSA for enhanced security
+- **ECC-P256**: NIST P-256 elliptic curve
+- **ECC-P384**: NIST P-384 elliptic curve
+
+### Key Generation Process
+
+```typescript
+// Key generation with KMS service
+const generateKey = async ({
+  orgId,
+  projectId,
+  name,
+  keyUsage,
+  algorithm,
+  description
+}: GenerateKeyParams) => {
+  // Validate key type and algorithm compatibility
+  verifyKeyTypeAndAlgorithm(keyUsage, algorithm);
+
+  // Generate key material
+  const keyMaterial = await generateKeyMaterial(algorithm);
+
+  // Encrypt with KEK
+  const encryptedKey = await encryptWithKEK(keyMaterial, orgId);
+
+  // Store in database
+  const key = await kmsDAL.create({
+    id: generateKeyId(),
+    orgId,
+    projectId,
+    name: slugify(name),
+    algorithm,
+    keyUsage,
+    encryptedKey,
+    description,
+    isReserved: false,
+    isDisabled: false
+  });
+
+  // Audit log
+  await auditLog.record('KEY_GENERATED', key);
+
+  return key;
+};
+```
+
+### Key Storage Security
+
+#### Encryption at Rest
+- All keys encrypted using AES-256-GCM
+- Root keys protected by HSM or environment variable
+- Database encryption for metadata
+- Secure key deletion with crypto-shredding
+
+#### Key Material Protection
+```typescript
+// Key encryption structure
+interface EncryptedKey {
+  version: string;        // KMS version (e.g., "v01")
+  algorithm: string;      // Encryption algorithm
+  encryptedData: Buffer;  // Encrypted key material
+  authTag: Buffer;        // Authentication tag
+  iv: Buffer;            // Initialization vector
+}
+```
+
+## Cryptographic Operations
+
+### Encryption & Decryption
+
+#### Supported Algorithms
+- **AES-GCM**: Authenticated encryption with associated data
+- **RSA-OAEP**: Optimal Asymmetric Encryption Padding
+- **Hybrid Encryption**: RSA key exchange + AES data encryption
+
+#### API Examples
+
+##### Encrypt Data
+```bash
+curl -X POST https://kms.lux.network/api/v1/kms/keys/{keyId}/encrypt \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "plaintext": "SGVsbG8gV29ybGQh",  # Base64 encoded
+    "aad": "context-data"               # Optional AAD
+  }'
+```
+
+##### Decrypt Data
+```bash
+curl -X POST https://kms.lux.network/api/v1/kms/keys/{keyId}/decrypt \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ciphertext": "encrypted-data-base64",
+    "aad": "context-data"
+  }'
+```
+
+### Digital Signatures
+
+#### Signing Algorithms
+- **RSA-PSS**: Probabilistic Signature Scheme
+  - RSASSA-PSS-SHA-256
+  - RSASSA-PSS-SHA-384
+  - RSASSA-PSS-SHA-512
+- **RSA-PKCS#1 v1.5**: Deterministic signatures
+  - RSASSA-PKCS1-V1_5-SHA-256
+  - RSASSA-PKCS1-V1_5-SHA-384
+  - RSASSA-PKCS1-V1_5-SHA-512
+- **ECDSA**: Elliptic Curve Digital Signature
+  - ECDSA-SHA-256
+  - ECDSA-SHA-384
+  - ECDSA-SHA-512
+
+#### Sign & Verify Operations
+
+```typescript
+// Sign data
+async function signData(keyId: string, data: Buffer, algorithm: SigningAlgorithm) {
+  const key = await getKey(keyId);
+
+  if (key.keyUsage !== KmsKeyUsage.SIGN_VERIFY) {
+    throw new Error('Key not configured for signing');
+  }
+
+  const signature = await signingService.sign({
+    key: key.material,
+    data,
+    algorithm
+  });
+
+  await auditLog.record('DATA_SIGNED', { keyId, algorithm });
+
+  return signature;
+}
+
+// Verify signature
+async function verifySignature(
+  keyId: string,
+  data: Buffer,
+  signature: Buffer,
+  algorithm: SigningAlgorithm
+) {
+  const key = await getKey(keyId);
+
+  const isValid = await signingService.verify({
+    key: key.material,
+    data,
+    signature,
+    algorithm
+  });
+
+  await auditLog.record('SIGNATURE_VERIFIED', { keyId, isValid });
+
+  return isValid;
+}
+```
+
+## HSM Integration
+
+### Supported HSM Providers
+
+1. **AWS CloudHSM**
+   - FIPS 140-2 Level 3 validated
+   - High availability cluster support
+   - Automated backup and recovery
+
+2. **Thales Luna HSM**
+   - Network-attached HSM
+   - PKCS#11 interface
+   - High-performance cryptography
+
+3. **SoftHSM (Development)**
+   - Software-based HSM emulation
+   - PKCS#11 compatible
+   - Testing and development use
+
+### HSM Configuration
+
+```yaml
+# HSM Configuration Example
+hsm:
+  enabled: true
+  type: "pkcs11"
+  library: "/usr/lib/softhsm/libsofthsm2.so"
+  slot: 0
+  pin: "${HSM_PIN}"
+  keyLabel: "kms-root-key"
+
+  # High Availability Configuration
+  ha:
+    enabled: true
+    nodes:
+      - host: hsm1.internal
+        port: 1792
+      - host: hsm2.internal
+        port: 1792
+    replicationMode: "active-active"
+```
+
+### Root Key Management with HSM
+
+```typescript
+// HSM root key initialization
+class HSMRootKeyProvider {
+  async initialize() {
+    const session = await this.openSession();
+
+    try {
+      // Check if root key exists
+      const existingKey = await this.findKey('kms-root-key');
+
+      if (!existingKey) {
+        // Generate new root key in HSM
+        const keyHandle = await this.generateKey({
+          mechanism: CKM_AES_KEY_GEN,
+          keySize: 256,
+          label: 'kms-root-key',
+          persistent: true,
+          extractable: false
+        });
+
+        await this.auditLog('ROOT_KEY_GENERATED_IN_HSM');
+      }
+
+      // Set up key wrapping for KEK operations
+      await this.setupKeyWrapping();
+
+    } finally {
+      await this.closeSession(session);
+    }
+  }
+
+  async wrapKey(kek: Buffer): Promise<Buffer> {
+    // Wrap KEK using HSM root key
+    return this.performOperation(CKM_AES_KEY_WRAP, kek);
+  }
+
+  async unwrapKey(wrappedKek: Buffer): Promise<Buffer> {
+    // Unwrap KEK using HSM root key
+    return this.performOperation(CKM_AES_KEY_UNWRAP, wrappedKek);
+  }
+}
+```
+
+## Access Control & Policies
+
+### Role-Based Access Control (RBAC)
+
+#### Predefined Roles
+
+1. **KMS Administrator**
+   - Full key management permissions
+   - Policy management
+   - Audit log access
+   - HSM configuration
+
+2. **Key Manager**
+   - Create and delete keys
+   - Enable/disable keys
+   - View key metadata
+   - Cannot export keys
+
+3. **Crypto User**
+   - Encrypt/decrypt operations
+   - Sign/verify operations
+   - Cannot manage keys
+
+4. **Auditor**
+   - Read-only access to audit logs
+   - View key metadata
+   - Generate compliance reports
+
+### Key Policies
+
+```json
+{
+  "version": "1.0",
+  "statement": [
+    {
+      "sid": "Enable IAM policies",
+      "effect": "Allow",
+      "principal": {
+        "AWS": "arn:aws:iam::ACCOUNT:root"
+      },
+      "action": "kms:*",
+      "resource": "*"
+    },
+    {
+      "sid": "Allow use of the key for encryption",
+      "effect": "Allow",
+      "principal": {
+        "AWS": "arn:aws:iam::ACCOUNT:role/ApplicationRole"
+      },
+      "action": [
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:GenerateDataKey"
+      ],
+      "resource": "*",
+      "condition": {
+        "StringEquals": {
+          "kms:EncryptionContext:project": "production"
+        }
+      }
+    }
+  ]
+}
+```
+
+### Attribute-Based Access Control (ABAC)
+
+```typescript
+// ABAC policy evaluation
+interface AccessContext {
+  user: {
+    id: string;
+    roles: string[];
+    attributes: Record<string, any>;
+  };
+  resource: {
+    type: 'key';
+    id: string;
+    attributes: Record<string, any>;
+  };
+  action: string;
+  environment: {
+    sourceIp: string;
+    timestamp: Date;
+    mfaAuthenticated: boolean;
+  };
+}
+
+async function evaluateAccess(context: AccessContext): Promise<boolean> {
+  // Compile applicable policies
+  const policies = await getPoliciesForContext(context);
+
+  // Evaluate each policy
+  for (const policy of policies) {
+    const decision = await evaluatePolicy(policy, context);
+
+    if (decision === 'DENY') {
+      await auditLog.record('ACCESS_DENIED', context);
+      return false;
+    }
+  }
+
+  await auditLog.record('ACCESS_GRANTED', context);
+  return true;
+}
+```
+
+## Key Rotation Strategies
+
+### Automatic Key Rotation
+
+#### Configuration
+```yaml
+keyRotation:
+  enabled: true
+  schedule: "0 0 1 * *"  # Monthly
+  algorithm: "AES-256-GCM"
+  retainOldKeys: 90  # days
+
+  strategies:
+    - type: "age-based"
+      maxAge: 365  # days
+    - type: "usage-based"
+      maxOperations: 1000000
+    - type: "compliance"
+      standard: "PCI-DSS"
+```
+
+#### Rotation Process
+
+```typescript
+class KeyRotationService {
+  async rotateKey(keyId: string): Promise<void> {
+    // Begin transaction
+    const tx = await db.transaction();
+
+    try {
+      // Get current key
+      const currentKey = await getKey(keyId);
+
+      // Generate new key version
+      const newKeyMaterial = await generateKeyMaterial(currentKey.algorithm);
+
+      // Create new key version
+      const newVersion = await createKeyVersion({
+        keyId,
+        version: currentKey.version + 1,
+        keyMaterial: newKeyMaterial,
+        status: 'PENDING_ACTIVATION'
+      });
+
+      // Schedule activation
+      await scheduleActivation(newVersion.id, new Date(Date.now() + 3600000));
+
+      // Archive old version
+      await archiveKeyVersion(currentKey.version);
+
+      // Update crypto operations to use new key
+      await updateCryptoOperations(keyId, newVersion.version);
+
+      // Commit transaction
+      await tx.commit();
+
+      // Audit log
+      await auditLog.record('KEY_ROTATED', {
+        keyId,
+        oldVersion: currentKey.version,
+        newVersion: newVersion.version
+      });
+
+    } catch (error) {
+      await tx.rollback();
+      throw error;
+    }
+  }
+
+  async reencryptWithNewKey(keyId: string): Promise<void> {
+    // Re-encrypt all data encrypted with old key
+    const encryptedItems = await findItemsEncryptedWith(keyId);
+
+    for (const item of encryptedItems) {
+      // Decrypt with old key
+      const plaintext = await decryptWithVersion(
+        item.ciphertext,
+        item.keyVersion
+      );
+
+      // Encrypt with new key
+      const newCiphertext = await encryptWithCurrentVersion(
+        plaintext,
+        keyId
+      );
+
+      // Update stored ciphertext
+      await updateEncryptedItem(item.id, newCiphertext);
+    }
+  }
+}
+```
+
+### Manual Key Rotation
+
+1. **Create New Key Version**
+   ```bash
+   kms key rotate --key-id <key-id> --algorithm AES-256-GCM
+   ```
+
+2. **Test New Key**
+   ```bash
+   kms key test --key-id <key-id> --version latest
+   ```
+
+3. **Activate New Version**
+   ```bash
+   kms key activate --key-id <key-id> --version <version>
+   ```
+
+4. **Deactivate Old Version**
+   ```bash
+   kms key deactivate --key-id <key-id> --version <old-version>
+   ```
+
+## Backup & Recovery
+
+### Backup Strategies
+
+#### 1. Database Backups
+- **Frequency**: Every 6 hours
+- **Retention**: 30 days
+- **Encryption**: AES-256-GCM with separate backup key
+- **Storage**: Geographically distributed S3 buckets
+
+#### 2. Key Material Backup
+
+```typescript
+class KeyBackupService {
+  async backupKeys(): Promise<void> {
+    const keys = await getAllKeys();
+
+    for (const key of keys) {
+      // Export key material (encrypted)
+      const exportedKey = await exportKey(key.id);
+
+      // Create backup package
+      const backup = {
+        keyId: key.id,
+        metadata: key.metadata,
+        encryptedMaterial: exportedKey,
+        timestamp: new Date(),
+        checksum: calculateChecksum(exportedKey)
+      };
+
+      // Encrypt backup with backup KEK
+      const encryptedBackup = await encryptBackup(backup);
+
+      // Store in multiple locations
+      await Promise.all([
+        storeInS3(encryptedBackup),
+        storeInGlacier(encryptedBackup),
+        storeInHSMBackup(encryptedBackup)
+      ]);
+
+      await auditLog.record('KEY_BACKED_UP', { keyId: key.id });
+    }
+  }
+
+  async verifyBackup(backupId: string): Promise<boolean> {
+    const backup = await getBackup(backupId);
+
+    // Verify checksum
+    const calculatedChecksum = calculateChecksum(backup.encryptedMaterial);
+    if (calculatedChecksum !== backup.checksum) {
+      return false;
+    }
+
+    // Test decryption
+    try {
+      await decryptBackup(backup);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+```
+
+### Disaster Recovery
+
+#### Recovery Procedures
+
+1. **HSM Failure Recovery**
+   ```bash
+   # Restore from HSM backup
+   hsm-util restore --backup-id <backup-id> --target-hsm <hsm-id>
+
+   # Verify root key
+   kms verify-root-key --hsm <hsm-id>
+
+   # Re-initialize KMS
+   kms init --hsm <hsm-id> --verify
+   ```
+
+2. **Database Recovery**
+   ```sql
+   -- Restore from point-in-time backup
+   RESTORE DATABASE kms_db
+   FROM BACKUP 'backup-2024-01-01.bak'
+   WITH RECOVERY;
+
+   -- Verify data integrity
+   SELECT verify_checksum(*) FROM kms_keys;
+   ```
+
+3. **Complete System Recovery**
+   ```yaml
+   # Recovery runbook
+   recovery:
+     steps:
+       - name: "Restore HSM"
+         command: "hsm-restore.sh"
+         timeout: 300
+
+       - name: "Restore Database"
+         command: "db-restore.sh"
+         timeout: 600
+
+       - name: "Verify Keys"
+         command: "kms-verify-all.sh"
+         timeout: 900
+
+       - name: "Test Operations"
+         command: "kms-test-suite.sh"
+         timeout: 300
+   ```
+
+## API Reference
+
+### Authentication
+
+All API requests must include authentication:
+
+```bash
+Authorization: Bearer <access-token>
+X-API-Key: <api-key>  # Alternative
+```
+
+### Core Endpoints
+
+#### Key Management
+
+##### Create Key
+`POST /api/v1/kms/keys`
+
+```json
+{
+  "projectId": "proj_123",
+  "name": "app-encryption-key",
+  "keyUsage": "ENCRYPT_DECRYPT",
+  "algorithm": "AES-256-GCM",
+  "description": "Application data encryption key"
+}
+```
+
+##### List Keys
+`GET /api/v1/kms/keys?projectId=<project-id>`
+
+##### Get Key Metadata
+`GET /api/v1/kms/keys/{keyId}`
+
+##### Update Key
+`PATCH /api/v1/kms/keys/{keyId}`
+
+##### Delete Key
+`DELETE /api/v1/kms/keys/{keyId}`
+
+#### Cryptographic Operations
+
+##### Encrypt
+`POST /api/v1/kms/keys/{keyId}/encrypt`
+
+```json
+{
+  "plaintext": "base64-encoded-data",
+  "aad": "optional-additional-data"
+}
+```
+
+##### Decrypt
+`POST /api/v1/kms/keys/{keyId}/decrypt`
+
+```json
+{
+  "ciphertext": "base64-encoded-ciphertext",
+  "aad": "optional-additional-data"
+}
+```
+
+##### Sign
+`POST /api/v1/kms/keys/{keyId}/sign`
+
+```json
+{
+  "data": "base64-encoded-data",
+  "signingAlgorithm": "RSASSA_PSS_SHA_256",
+  "isDigest": false
+}
+```
+
+##### Verify
+`POST /api/v1/kms/keys/{keyId}/verify`
+
+```json
+{
+  "data": "base64-encoded-data",
+  "signature": "base64-encoded-signature",
+  "signingAlgorithm": "RSASSA_PSS_SHA_256",
+  "isDigest": false
+}
+```
+
+##### Generate Data Key
+`POST /api/v1/kms/keys/{keyId}/generate-data-key`
+
+```json
+{
+  "algorithm": "AES-256-GCM",
+  "includePlaintext": true
+}
+```
+
+### SDK Examples
+
+#### Node.js
+```javascript
+const { KMSClient } = require('@lux/kms-sdk');
+
+const kms = new KMSClient({
+  endpoint: 'https://kms.lux.network',
+  apiKey: process.env.KMS_API_KEY
+});
+
+// Encrypt data
+const encrypted = await kms.encrypt({
+  keyId: 'key_123',
+  plaintext: Buffer.from('sensitive data')
+});
+
+// Decrypt data
+const decrypted = await kms.decrypt({
+  keyId: 'key_123',
+  ciphertext: encrypted.ciphertext
+});
+```
+
+#### Python
+```python
+from lux_kms import KMSClient
+
+kms = KMSClient(
+    endpoint='https://kms.lux.network',
+    api_key=os.environ['KMS_API_KEY']
+)
+
+# Encrypt data
+encrypted = kms.encrypt(
+    key_id='key_123',
+    plaintext=b'sensitive data'
+)
+
+# Decrypt data
+decrypted = kms.decrypt(
+    key_id='key_123',
+    ciphertext=encrypted['ciphertext']
+)
+```
+
+## Security Best Practices
+
+### Key Management Best Practices
+
+1. **Principle of Least Privilege**
+   - Grant minimum required permissions
+   - Use separate keys for different purposes
+   - Implement time-bound access
+
+2. **Key Segregation**
+   - Separate keys for development/staging/production
+   - Different keys for encryption vs. signing
+   - Isolate keys by data classification
+
+3. **Regular Key Rotation**
+   - Rotate encryption keys annually minimum
+   - Rotate signing keys based on usage
+   - Immediate rotation on compromise
+
+4. **Strong Key Generation**
+   ```typescript
+   // Use cryptographically secure random generation
+   const generateStrongKey = async (algorithm: string): Promise<Buffer> => {
+     const keySize = getKeySizeForAlgorithm(algorithm);
+
+     // Use multiple entropy sources
+     const entropy = await combineEntropy([
+       crypto.randomBytes(keySize),
+       await getHardwareRandom(keySize),
+       await getTimingEntropy(keySize)
+     ]);
+
+     // Apply key derivation function
+     return await deriveKey(entropy, algorithm);
+   };
+   ```
+
+### Operational Security
+
+1. **Multi-Factor Authentication**
+   - Require MFA for all administrative operations
+   - Hardware tokens for HSM access
+   - Time-based OTP for API access
+
+2. **Network Security**
+   - TLS 1.3 for all communications
+   - Mutual TLS for service-to-service
+   - IP allowlisting for management APIs
+
+3. **Monitoring & Alerting**
+   ```yaml
+   alerts:
+     - name: "Unusual Key Access"
+       condition: "access_count > 1000 per hour"
+       severity: "HIGH"
+
+     - name: "Failed Decryption Attempts"
+       condition: "failed_decrypt > 10 per minute"
+       severity: "CRITICAL"
+
+     - name: "Key Rotation Overdue"
+       condition: "key_age > 365 days"
+       severity: "MEDIUM"
+   ```
+
+### Compliance & Standards
+
+#### PCI-DSS Requirements
+- Key strength: Minimum 256-bit for AES
+- Key rotation: Annual minimum
+- Split knowledge and dual control
+- Secure key storage (HSM recommended)
+
+#### FIPS 140-2 Compliance
+- Level 2: Tamper-evident hardware
+- Level 3: Physical security mechanisms
+- Validated cryptographic modules
+- Secure key generation and storage
+
+#### GDPR Considerations
+- Right to erasure (crypto-shredding)
+- Data portability (key export controls)
+- Breach notification (key compromise)
+- Privacy by design
+
+## Audit Logging
+
+### Comprehensive Audit Trail
+
+Every operation is logged with:
+- **Timestamp**: Microsecond precision
+- **Actor**: User/service identity
+- **Action**: Operation performed
+- **Resource**: Key or object affected
+- **Result**: Success/failure
+- **Context**: IP, session, MFA status
+
+### Audit Log Structure
+
+```json
+{
+  "timestamp": "2024-01-15T10:30:45.123456Z",
+  "eventId": "evt_abc123def456",
+  "eventType": "KEY_DECRYPT",
+  "actor": {
+    "type": "USER",
+    "id": "user_123",
+    "name": "john.doe@example.com",
+    "ipAddress": "192.168.1.100",
+    "userAgent": "kms-sdk-nodejs/1.2.3"
+  },
+  "resource": {
+    "type": "KEY",
+    "id": "key_456",
+    "name": "production-encryption-key"
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/kms/keys/key_456/decrypt",
+    "parameters": {
+      "algorithm": "AES-256-GCM"
+    }
+  },
+  "response": {
+    "status": 200,
+    "duration": 45
+  },
+  "metadata": {
+    "mfaVerified": true,
+    "sessionId": "sess_789",
+    "projectId": "proj_123",
+    "environment": "production"
+  }
+}
+```
+
+### Audit Log Analysis
+
+```sql
+-- Detect unusual access patterns
+SELECT
+  actor_id,
+  COUNT(*) as access_count,
+  COUNT(DISTINCT resource_id) as unique_keys
+FROM audit_logs
+WHERE
+  event_type IN ('KEY_ENCRYPT', 'KEY_DECRYPT')
+  AND timestamp > NOW() - INTERVAL '1 hour'
+GROUP BY actor_id
+HAVING COUNT(*) > 100;
+
+-- Find failed operations
+SELECT
+  actor_id,
+  resource_id,
+  COUNT(*) as failure_count,
+  MAX(timestamp) as last_failure
+FROM audit_logs
+WHERE
+  response_status >= 400
+  AND timestamp > NOW() - INTERVAL '24 hours'
+GROUP BY actor_id, resource_id
+ORDER BY failure_count DESC;
+```
+
+### Compliance Reporting
+
+```typescript
+class ComplianceReporter {
+  async generateReport(standard: 'PCI-DSS' | 'SOC2' | 'HIPAA'): Promise<Report> {
+    const requirements = getRequirements(standard);
+    const results = [];
+
+    for (const requirement of requirements) {
+      const evidence = await collectEvidence(requirement);
+      const status = await evaluateCompliance(requirement, evidence);
+
+      results.push({
+        requirement: requirement.id,
+        description: requirement.description,
+        status,
+        evidence: evidence.map(e => e.summary),
+        recommendations: status !== 'COMPLIANT' ?
+          await generateRecommendations(requirement) : []
+      });
+    }
+
+    return {
+      standard,
+      timestamp: new Date(),
+      overallStatus: calculateOverallStatus(results),
+      details: results
+    };
+  }
+}
+```
+
+## Performance Optimization
+
+### Caching Strategy
+
+```typescript
+class KMSCache {
+  private cache: LRUCache<string, CachedKey>;
+
+  constructor() {
+    this.cache = new LRUCache({
+      max: 1000,  // Maximum cached keys
+      ttl: 300000, // 5 minutes TTL
+      updateAgeOnGet: true
+    });
+  }
+
+  async getKey(keyId: string): Promise<Key> {
+    // Check cache first
+    const cached = this.cache.get(keyId);
+    if (cached && !cached.expired) {
+      return cached.key;
+    }
+
+    // Fetch from database
+    const key = await fetchKeyFromDB(keyId);
+
+    // Cache for future use
+    this.cache.set(keyId, {
+      key,
+      timestamp: Date.now(),
+      expired: false
+    });
+
+    return key;
+  }
+
+  invalidate(keyId: string): void {
+    this.cache.delete(keyId);
+  }
+}
+```
+
+### Connection Pooling
+
+```yaml
+database:
+  pool:
+    min: 10
+    max: 100
+    acquireTimeout: 30000
+    createTimeout: 30000
+    idleTimeout: 10000
+
+redis:
+  pool:
+    min: 5
+    max: 50
+    connectTimeout: 10000
+
+hsm:
+  sessions:
+    min: 2
+    max: 10
+    reuseTimeout: 60000
+```
+
+## Troubleshooting Guide
+
+### Common Issues
+
+1. **HSM Connection Failures**
+   ```bash
+   # Check HSM connectivity
+   hsm-util test --slot 0 --pin $HSM_PIN
+
+   # Restart HSM client
+   systemctl restart hsm-client
+
+   # Verify PKCS#11 library
+   ldd /usr/lib/softhsm/libsofthsm2.so
+   ```
+
+2. **Key Rotation Failures**
+   ```sql
+   -- Check rotation status
+   SELECT * FROM key_rotations
+   WHERE status = 'FAILED'
+   AND created_at > NOW() - INTERVAL '24 hours';
+
+   -- Manual rotation retry
+   CALL retry_key_rotation('key_id');
+   ```
+
+3. **Performance Issues**
+   ```bash
+   # Check cache hit rate
+   redis-cli INFO stats | grep keyspace_hits
+
+   # Monitor slow queries
+   SELECT * FROM pg_stat_statements
+   WHERE mean_exec_time > 100
+   ORDER BY mean_exec_time DESC;
+   ```
+
+## Migration Guide
+
+### Migrating from External KMS
+
+```typescript
+class KMSMigrationService {
+  async migrateFromAWSKMS(region: string): Promise<MigrationResult> {
+    const awsKms = new AWS.KMS({ region });
+    const keys = await awsKms.listKeys().promise();
+
+    const results = [];
+    for (const key of keys.Keys) {
+      try {
+        // Get key metadata
+        const metadata = await awsKms.describeKey({
+          KeyId: key.KeyId
+        }).promise();
+
+        // Export data key (if allowed)
+        const dataKey = await awsKms.generateDataKey({
+          KeyId: key.KeyId,
+          KeySpec: 'AES_256'
+        }).promise();
+
+        // Import to Lux KMS
+        const luxKey = await this.importKey({
+          name: metadata.KeyMetadata.Description,
+          algorithm: mapAwsAlgorithm(metadata.KeyMetadata.KeyUsage),
+          keyMaterial: dataKey.Plaintext
+        });
+
+        results.push({
+          awsKeyId: key.KeyId,
+          luxKeyId: luxKey.id,
+          status: 'SUCCESS'
+        });
+
+      } catch (error) {
+        results.push({
+          awsKeyId: key.KeyId,
+          status: 'FAILED',
+          error: error.message
+        });
+      }
+    }
+
+    return {
+      total: keys.Keys.length,
+      successful: results.filter(r => r.status === 'SUCCESS').length,
+      failed: results.filter(r => r.status === 'FAILED').length,
+      details: results
+    };
+  }
+}
+```
+
+## Conclusion
+
+Lux KMS provides a comprehensive, secure, and scalable key management solution suitable for enterprise deployments. With support for HSM integration, automatic key rotation, comprehensive audit logging, and flexible access controls, it meets the stringent requirements of modern cryptographic key management while maintaining ease of use and high performance.
+
+For additional support, consult the API documentation at https://kms.lux.network/docs or contact the security team at security@lux.network.

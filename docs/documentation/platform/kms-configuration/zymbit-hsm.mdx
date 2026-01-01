@@ -1,0 +1,587 @@
+---
+title: "Zymbit HSM Configuration"
+description: "Configure KMS with Zymbit Secure Compute Module for IoT/Edge deployments"
+---
+
+## Overview
+
+Zymbit SCM (Secure Compute Module) provides hardware security for embedded and edge computing platforms. This guide shows how to integrate Zymbit HSM with KMS for IoT validators, edge nodes, and embedded applications.
+
+## Supported Platforms
+
+- **Raspberry Pi**: Pi 4, Pi 5, Pi Zero 2 W
+- **NVIDIA Jetson**: Nano, Xavier NX, AGX Xavier, Orin
+- **Generic Linux**: ARM64/x86_64 with Zymbit module
+
+## Hardware Requirements
+
+- Zymbit SCM (Secure Compute Module) or HSM4 device
+- Supported host platform (see above)
+- I2C or SPI interface availability
+
+## Software Requirements
+
+- Zymbit SDK and drivers installed
+- Zymbit PKCS#11 library (`libzk_pkcs11.so`)
+- KMS v0.91.0+ with FIPS image (`kms/kms-fips`)
+- Docker or Kubernetes (for containerized deployment)
+
+## Installation
+
+### Step 1: Install Zymbit Hardware
+
+<Steps>
+  <Step title="Physically install Zymbit module">
+    Connect the Zymbit SCM to your device following the [Zymbit installation guide](https://www.zymbit.com/docs/installation/).
+
+    For Raspberry Pi:
+    - Power off the device
+    - Connect Zymbit to GPIO header
+    - Ensure proper seating of all pins
+    - Power on the device
+  </Step>
+
+  <Step title="Verify device detection">
+    Check that the Zymbit device is detected:
+    ```bash
+    # Check I2C device
+    sudo i2cdetect -y 1
+
+    # Should show device at address 0x30 or 0x70
+    ```
+  </Step>
+</Steps>
+
+### Step 2: Install Zymbit Software
+
+<Steps>
+  <Step title="Install Zymbit SDK">
+    Run the Zymbit installation script:
+    ```bash
+    # Download and install Zymbit software
+    curl -G https://s3.amazonaws.com/zk-sw-repo/install_zk_sw.sh | sudo bash
+
+    # Reboot to load kernel modules
+    sudo reboot
+    ```
+  </Step>
+
+  <Step title="Install PKCS#11 library">
+    Install the Zymbit PKCS#11 interface:
+    ```bash
+    # Install PKCS#11 package
+    sudo apt-get update
+    sudo apt-get install zymbit-pkcs11
+
+    # Verify installation
+    ls -l /usr/lib/libzk_pkcs11.so
+    ```
+  </Step>
+
+  <Step title="Verify Zymbit device">
+    Check device status:
+    ```bash
+    # Should show /dev/zymkey or /dev/zymkey0
+    ls -l /dev/zymkey*
+    ```
+  </Step>
+</Steps>
+
+### Step 3: Initialize Zymbit Module
+
+<Steps>
+  <Step title="Bind to I2C bus">
+    For Raspberry Pi, bind Zymbit to the I2C bus:
+    ```bash
+    # Bind to I2C bus 1 (Raspberry Pi)
+    sudo zkbind -i2c 1
+
+    # For Jetson, use appropriate bus number
+    # sudo zkbind -i2c 0
+    ```
+  </Step>
+
+  <Step title="Set Zymbit PIN">
+    Configure the PKCS#11 PIN (minimum 4 digits):
+    ```bash
+    # Interactive PIN setup
+    sudo zksetpin
+
+    # You will be prompted to enter a PIN twice
+    # Store this PIN securely - it will be needed for KMS configuration
+    ```
+  </Step>
+
+  <Step title="Test PKCS#11 interface">
+    Verify PKCS#11 functionality:
+    ```bash
+    # List slots
+    pkcs11-tool --module /usr/lib/libzk_pkcs11.so --list-slots
+
+    # Expected output:
+    # Available slots:
+    # Slot 0 (0x0): Zymbit HSM
+    #   token label        : Zymbit Token
+    #   token manufacturer : Zymbit
+    ```
+  </Step>
+</Steps>
+
+### Step 4: Generate Encryption Key
+
+<Steps>
+  <Step title="Create AES key for KMS">
+    Generate an encryption key in the Zymbit HSM:
+    ```bash
+    # Generate 256-bit AES key
+    pkcs11-tool --module /usr/lib/libzk_pkcs11.so \
+      --login \
+      --keypairgen \
+      --key-type AES:32 \
+      --label "lux-kms-key"
+
+    # You will be prompted for the PIN
+    ```
+  </Step>
+
+  <Step title="Verify key creation">
+    List stored keys:
+    ```bash
+    pkcs11-tool --module /usr/lib/libzk_pkcs11.so \
+      --login \
+      --list-objects
+
+    # Should show lux-kms-key
+    ```
+  </Step>
+</Steps>
+
+## Configuration
+
+### Environment Variables
+
+Configure KMS to use Zymbit HSM with these environment variables:
+
+```bash
+# Enable HSM support
+export HSM_ENABLED="true"
+
+# HSM provider (auto-detected from library path)
+export HSM_PROVIDER="zymbit"
+
+# Path to Zymbit PKCS#11 library
+export HSM_LIB_PATH="/usr/lib/libzk_pkcs11.so"
+
+# Zymbit PIN (set during zksetpin)
+export HSM_PIN="your-zymbit-pin"
+
+# HSM slot (usually 0 for Zymbit)
+export HSM_SLOT="0"
+
+# Key label (matches the key created earlier)
+export HSM_KEY_LABEL="lux-kms-key"
+
+# Optional: Zymbit device path
+export ZYMBIT_DEVICE_PATH="/dev/zymkey"
+
+# Optional: Enable tamper detection (default: true)
+export ZYMBIT_TAMPER_CHECK="true"
+
+# Standard KMS configuration
+export ENCRYPTION_KEY="<32-byte-hex-key>"
+export AUTH_SECRET="<random-secret>"
+export DB_CONNECTION_URI="postgresql://..."
+```
+
+### Docker Deployment
+
+Run KMS with Zymbit HSM in Docker:
+
+```bash
+docker run -d \
+  --name kms-zymbit \
+  -p 80:8080 \
+  --device /dev/zymkey \
+  --device /dev/i2c-1 \
+  -v /usr/lib/libzk_pkcs11.so:/usr/lib/libzk_pkcs11.so:ro \
+  -e HSM_ENABLED="true" \
+  -e HSM_PROVIDER="zymbit" \
+  -e HSM_LIB_PATH="/usr/lib/libzk_pkcs11.so" \
+  -e HSM_PIN="your-pin" \
+  -e HSM_SLOT="0" \
+  -e HSM_KEY_LABEL="lux-kms-key" \
+  -e ZYMBIT_DEVICE_PATH="/dev/zymkey" \
+  -e ENCRYPTION_KEY="<key>" \
+  -e AUTH_SECRET="<secret>" \
+  -e DB_CONNECTION_URI="<uri>" \
+  kms/kms-fips:latest
+```
+
+**Important Docker Notes:**
+- `--device /dev/zymkey` - Required for Zymbit device access
+- `--device /dev/i2c-1` - Required for I2C communication
+- `-v /usr/lib/libzk_pkcs11.so:...` - Mount PKCS#11 library
+- Container must run with sufficient privileges for device access
+
+### Kubernetes Deployment
+
+Deploy KMS with Zymbit on Kubernetes:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kms-zymbit-config
+data:
+  HSM_ENABLED: "true"
+  HSM_PROVIDER: "zymbit"
+  HSM_LIB_PATH: "/usr/lib/libzk_pkcs11.so"
+  HSM_SLOT: "0"
+  HSM_KEY_LABEL: "lux-kms-key"
+  ZYMBIT_DEVICE_PATH: "/dev/zymkey"
+  ZYMBIT_TAMPER_CHECK: "true"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kms-zymbit-secrets
+type: Opaque
+stringData:
+  HSM_PIN: "your-zymbit-pin"
+  ENCRYPTION_KEY: "<32-byte-hex-key>"
+  AUTH_SECRET: "<random-secret>"
+  DB_CONNECTION_URI: "postgresql://..."
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kms-zymbit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kms-zymbit
+  template:
+    metadata:
+      labels:
+        app: kms-zymbit
+    spec:
+      # Node selector for devices with Zymbit
+      nodeSelector:
+        hardware.zymbit.com/hsm: "true"
+
+      containers:
+      - name: kms
+        image: kms/kms-fips:latest
+        ports:
+        - containerPort: 8080
+
+        envFrom:
+        - configMapRef:
+            name: kms-zymbit-config
+        - secretRef:
+            name: kms-zymbit-secrets
+
+        securityContext:
+          privileged: true  # Required for device access
+
+        volumeMounts:
+        - name: zymbit-lib
+          mountPath: /usr/lib/libzk_pkcs11.so
+          readOnly: true
+        - name: zymbit-device
+          mountPath: /dev/zymkey
+        - name: i2c-device
+          mountPath: /dev/i2c-1
+
+      volumes:
+      - name: zymbit-lib
+        hostPath:
+          path: /usr/lib/libzk_pkcs11.so
+          type: File
+      - name: zymbit-device
+        hostPath:
+          path: /dev/zymkey
+          type: CharDevice
+      - name: i2c-device
+        hostPath:
+          path: /dev/i2c-1
+          type: CharDevice
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kms-zymbit
+spec:
+  selector:
+    app: kms-zymbit
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: LoadBalancer
+```
+
+**Kubernetes Notes:**
+- Use `nodeSelector` to target nodes with Zymbit hardware
+- Label nodes: `kubectl label nodes <node-name> hardware.zymbit.com/hsm=true`
+- Requires `privileged: true` for device access
+- Consider using DaemonSet for edge deployments
+
+## Security Features
+
+### Tamper Detection
+
+Zymbit provides hardware tamper detection that can trigger key erasure:
+
+```typescript
+import { ZymbitHSM } from './hsm/providers/zymbit';
+
+const zymbit = new ZymbitHSM(config);
+zymbit.initialize();
+
+// Check tamper status before sensitive operations
+if (!zymbit.checkTamperStatus()) {
+  console.error('ALERT: Tamper detected! Device may be compromised');
+  process.exit(1);
+}
+
+// Get detailed device information
+const deviceInfo = zymbit.getDeviceInfo();
+console.log(`Serial: ${deviceInfo.serial}`);
+console.log(`Firmware: ${deviceInfo.firmware}`);
+console.log(`Tamper Status: ${deviceInfo.tamperStatus ? 'OK' : 'TAMPERED'}`);
+```
+
+### Secure Boot
+
+Enable secure boot to ensure only signed firmware boots:
+
+```bash
+# Enable secure boot
+sudo zk_set_secure_boot_state -e
+
+# Verify secure boot status
+sudo zk_get_secure_boot_state
+```
+
+### Secure Erase on Tamper
+
+Configure automatic key erasure on tamper detection:
+
+```bash
+# Enable tamper response
+sudo zk_set_tamper_response -a erase
+
+# Verify configuration
+sudo zk_get_tamper_response
+```
+
+## Monitoring and Diagnostics
+
+### Health Check
+
+Verify Zymbit HSM health:
+
+```bash
+# Check device status
+curl http://localhost/api/v1/hsm/health
+
+# Expected response:
+# {
+#   "healthy": true,
+#   "provider": "zymbit",
+#   "tamperStatus": true,
+#   "deviceInfo": {
+#     "serial": "ZK-...",
+#     "firmware": "1.2.3"
+#   }
+# }
+```
+
+### Performance Monitoring
+
+Monitor HSM performance metrics:
+
+```bash
+# View Prometheus metrics
+curl http://localhost/metrics | grep hsm
+
+# Key metrics:
+# - hsm_operations_total{operation="encrypt"}
+# - hsm_operations_total{operation="decrypt"}
+# - hsm_operation_duration_seconds{operation="encrypt"}
+# - hsm_tamper_checks_total
+```
+
+## Troubleshooting
+
+### Error: "Cannot open /dev/zymkey"
+
+**Cause**: Zymbit device not bound or not accessible
+
+**Solution**:
+```bash
+# Rebind device
+sudo zkbind -i2c 1
+
+# Check device permissions
+ls -l /dev/zymkey
+# Should be: crw-rw---- 1 root zymbit
+
+# Add user to zymbit group
+sudo usermod -a -G zymbit $(whoami)
+```
+
+### Error: "PKCS#11 library not found"
+
+**Cause**: Zymbit PKCS#11 library not installed
+
+**Solution**:
+```bash
+# Install library
+sudo apt-get install zymbit-pkcs11
+
+# Verify installation
+dpkg -L zymbit-pkcs11
+```
+
+### Error: "Slot not found"
+
+**Cause**: Incorrect slot number or device not initialized
+
+**Solution**:
+```bash
+# List available slots
+pkcs11-tool --module /usr/lib/libzk_pkcs11.so --list-slots
+
+# Use slot 0 (default for Zymbit)
+export HSM_SLOT="0"
+```
+
+### Error: "Invalid PIN"
+
+**Cause**: Incorrect PIN or PIN not set
+
+**Solution**:
+```bash
+# Reset PIN
+sudo zksetpin
+
+# Ensure PIN matches HSM_PIN environment variable
+```
+
+### Error: "Tamper detected"
+
+**Cause**: Physical tamper attempt detected by Zymbit
+
+**Solution**:
+1. Investigate physical security of device
+2. If false positive, disable tamper check: `ZYMBIT_TAMPER_CHECK=false`
+3. If legitimate tamper, device may need replacement
+
+### Error: "Key not found"
+
+**Cause**: Encryption key not created in HSM
+
+**Solution**:
+```bash
+# Create key
+pkcs11-tool --module /usr/lib/libzk_pkcs11.so \
+  --login \
+  --keypairgen \
+  --key-type AES:32 \
+  --label "lux-kms-key"
+
+# Verify label matches HSM_KEY_LABEL
+echo $HSM_KEY_LABEL
+```
+
+## Performance Considerations
+
+### Operation Latency
+
+Typical Zymbit HSM operation times:
+
+| Operation | Latency |
+|-----------|---------|
+| Key generation | ~100ms |
+| Encryption (1KB) | ~10ms |
+| Decryption (1KB) | ~10ms |
+| Signature (ECDSA) | ~50ms |
+| Verification (ECDSA) | ~50ms |
+
+### Throughput
+
+Expected throughput on Raspberry Pi 4:
+
+- Encryption: ~100 operations/second
+- Decryption: ~100 operations/second
+- Signatures: ~20 operations/second
+
+### Optimization Tips
+
+1. **Batch Operations**: Group multiple encryption/decryption operations
+2. **Connection Pooling**: Reuse PKCS#11 sessions
+3. **Key Caching**: Cache key handles to avoid repeated lookups
+4. **Async Processing**: Use async/await for non-blocking operations
+
+## Best Practices
+
+1. **Physical Security**:
+   - Install Zymbit in tamper-evident enclosure
+   - Monitor tamper detection events
+   - Enable secure boot
+
+2. **PIN Management**:
+   - Use strong PINs (8+ digits)
+   - Store PIN in secure secrets management
+   - Rotate PINs periodically
+
+3. **Backup and Recovery**:
+   - Zymbit keys are hardware-bound and cannot be backed up
+   - Use key replication across multiple Zymbit devices
+   - Maintain backup devices for disaster recovery
+
+4. **Monitoring**:
+   - Monitor tamper detection status
+   - Track HSM operation metrics
+   - Set up alerts for anomalies
+
+5. **Updates**:
+   - Keep Zymbit firmware updated
+   - Test updates in staging environment
+   - Maintain rollback capability
+
+## Production Deployment Checklist
+
+- [ ] Zymbit hardware properly installed and detected
+- [ ] Zymbit SDK and PKCS#11 library installed
+- [ ] PIN configured and securely stored
+- [ ] Encryption keys generated in HSM
+- [ ] Environment variables configured
+- [ ] Docker/Kubernetes deployment tested
+- [ ] Tamper detection enabled and tested
+- [ ] Secure boot configured (if applicable)
+- [ ] Monitoring and alerting configured
+- [ ] Backup Zymbit device available
+- [ ] Documentation and runbooks created
+- [ ] Disaster recovery plan tested
+
+## References
+
+- [Zymbit Documentation](https://www.zymbit.com/docs/)
+- [Zymbit PKCS#11 Guide](https://www.zymbit.com/docs/tutorials/pkcs11/)
+- [Zymbit API Reference](https://www.zymbit.com/docs/api/)
+- [KMS HSM Integration](/documentation/platform/kms/hsm-integration)
+- [PKCS#11 Specification](http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html)
+
+## Support
+
+For Zymbit-specific issues:
+- [Zymbit Support](https://support.zymbit.com/)
+- [Zymbit Community Forum](https://community.zymbit.com/)
+
+For KMS integration issues:
+- [KMS Documentation](/documentation)
+- [KMS GitHub Issues](https://github.com/lux/kms/issues)

@@ -1,0 +1,662 @@
+---
+title: "Google Cloud KMS HSM Configuration"
+description: "Configure Google Cloud Key Management Service for hardware-backed key protection"
+---
+
+# Google Cloud KMS HSM Integration
+
+Google Cloud Key Management Service (KMS) provides cloud-based hardware security module (HSM) capabilities for enterprise deployments. This guide covers complete setup and configuration.
+
+## Overview
+
+**Google Cloud KMS Benefits:**
+- **Global Key Management**: Keys available across all GCP regions
+- **Hardware-Backed Security**: FIPS 140-2 Level 3 validated HSMs
+- **Automatic Rotation**: Scheduled key rotation policies
+- **Multi-Region Replication**: High availability across regions
+- **IAM Integration**: Fine-grained access control
+- **Audit Logging**: Complete audit trail via Cloud Audit Logs
+
+**Use Cases:**
+- GCP cloud deployments
+- Multi-region redundancy requirements
+- Compliance (HIPAA, PCI-DSS, SOC 2)
+- Disaster recovery with geo-replication
+
+## Prerequisites
+
+### 1. GCP Project Setup
+
+Create or select a GCP project:
+
+```bash
+# Create new project
+gcloud projects create lux-kms-production --name="Lux KMS Production"
+
+# Set as active project
+gcloud config set project lux-kms-production
+
+# Enable Cloud KMS API
+gcloud services enable cloudkms.googleapis.com
+```
+
+### 2. IAM Permissions
+
+Create a service account with appropriate permissions:
+
+```bash
+# Create service account
+gcloud iam service-accounts create lux-kms-sa \
+  --display-name="Lux KMS Service Account" \
+  --description="Service account for Lux KMS HSM operations"
+
+# Grant Cloud KMS permissions
+gcloud projects add-iam-policy-binding lux-kms-production \
+  --member="serviceAccount:lux-kms-sa@lux-kms-production.iam.gserviceaccount.com" \
+  --role="roles/cloudkms.cryptoKeyEncrypterDecrypter"
+
+# Optional: Grant admin access for key management
+gcloud projects add-iam-policy-binding lux-kms-production \
+  --member="serviceAccount:lux-kms-sa@lux-kms-production.iam.gserviceaccount.com" \
+  --role="roles/cloudkms.admin"
+```
+
+**Required Roles:**
+- `roles/cloudkms.cryptoKeyEncrypterDecrypter` - Encrypt/decrypt operations (minimum)
+- `roles/cloudkms.admin` - Full key management (recommended for automation)
+- `roles/cloudkms.viewer` - Read-only access for monitoring
+
+### 3. Service Account Key
+
+Download service account credentials:
+
+```bash
+# Generate JSON key file
+gcloud iam service-accounts keys create ~/lux-kms-credentials.json \
+  --iam-account=lux-kms-sa@lux-kms-production.iam.gserviceaccount.com
+
+# Secure the key file
+chmod 600 ~/lux-kms-credentials.json
+```
+
+## Key Ring and Crypto Key Setup
+
+### Create Key Ring
+
+Key rings are logical groupings of crypto keys in a specific location:
+
+```bash
+# Global key ring (available worldwide)
+gcloud kms keyrings create lux-kms-keyring \
+  --location=global
+
+# Regional key ring (for data residency requirements)
+gcloud kms keyrings create lux-kms-keyring \
+  --location=us-east1
+```
+
+**Location Options:**
+- `global` - Available in all regions (recommended for multi-region)
+- `us-east1`, `us-west1`, `us-central1` - US regions
+- `europe-west1`, `europe-north1` - European regions
+- `asia-east1`, `asia-northeast1` - Asian regions
+
+### Create Crypto Key
+
+Create an HSM-backed symmetric encryption key:
+
+```bash
+# HSM-backed key (FIPS 140-2 Level 3)
+gcloud kms keys create lux-kms-key \
+  --location=global \
+  --keyring=lux-kms-keyring \
+  --purpose=encryption \
+  --protection-level=hsm
+
+# Software key (for testing/development)
+gcloud kms keys create lux-kms-key-dev \
+  --location=global \
+  --keyring=lux-kms-keyring \
+  --purpose=encryption \
+  --protection-level=software
+```
+
+**Protection Levels:**
+- `hsm` - Hardware-backed (FIPS 140-2 Level 3) - **Recommended for production**
+- `software` - Software-backed (cheaper, for dev/test)
+- `external` - External key manager integration
+
+### Enable Automatic Rotation
+
+Configure automatic key rotation (recommended):
+
+```bash
+# Rotate every 90 days
+gcloud kms keys update lux-kms-key \
+  --location=global \
+  --keyring=lux-kms-keyring \
+  --rotation-period=90d \
+  --next-rotation-time=$(date -u -d "+90 days" +%Y-%m-%dT%H:%M:%SZ)
+```
+
+## Lux KMS Configuration
+
+### Environment Variables
+
+Configure Lux KMS to use Google Cloud KMS:
+
+```bash
+# .env file
+HSM_ENABLED=true
+HSM_PROVIDER=google-cloud
+
+# Google Cloud Configuration
+GOOGLE_CLOUD_PROJECT_ID=lux-kms-production
+GOOGLE_CLOUD_LOCATION=global
+GOOGLE_CLOUD_KEY_RING=lux-kms-keyring
+GOOGLE_CLOUD_CRYPTO_KEY=lux-kms-key
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/lux-kms-credentials.json
+
+# Protection Level (HSM or SOFTWARE)
+GOOGLE_CLOUD_PROTECTION_LEVEL=HSM
+
+# Automatic Rotation (optional)
+GOOGLE_CLOUD_AUTO_ROTATE=true
+GOOGLE_CLOUD_ROTATION_PERIOD=7776000s  # 90 days in seconds
+```
+
+### Docker Deployment
+
+#### Docker Compose
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+
+services:
+  lux-kms:
+    image: lux/kms:latest
+    environment:
+      - HSM_ENABLED=true
+      - HSM_PROVIDER=google-cloud
+      - GOOGLE_CLOUD_PROJECT_ID=lux-kms-production
+      - GOOGLE_CLOUD_LOCATION=global
+      - GOOGLE_CLOUD_KEY_RING=lux-kms-keyring
+      - GOOGLE_CLOUD_CRYPTO_KEY=lux-kms-key
+      - GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/gcp-credentials
+      - GOOGLE_CLOUD_PROTECTION_LEVEL=HSM
+      - GOOGLE_CLOUD_AUTO_ROTATE=true
+      - GOOGLE_CLOUD_ROTATION_PERIOD=7776000s
+    secrets:
+      - gcp-credentials
+    volumes:
+      - kms-data:/app/data
+    ports:
+      - "8080:8080"
+
+secrets:
+  gcp-credentials:
+    file: ./lux-kms-credentials.json
+
+volumes:
+  kms-data:
+```
+
+Run with Docker Compose:
+
+```bash
+docker-compose up -d
+```
+
+### Kubernetes Deployment
+
+#### Using Workload Identity (Recommended)
+
+Workload Identity allows pods to authenticate as GCP service accounts without storing credentials:
+
+```yaml
+# kubernetes-deployment.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: lux-kms-sa
+  annotations:
+    iam.gke.io/gcp-service-account: lux-kms-sa@lux-kms-production.iam.gserviceaccount.com
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lux-kms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: lux-kms
+  template:
+    metadata:
+      labels:
+        app: lux-kms
+    spec:
+      serviceAccountName: lux-kms-sa
+      containers:
+      - name: lux-kms
+        image: lux/kms:latest
+        env:
+        - name: HSM_ENABLED
+          value: "true"
+        - name: HSM_PROVIDER
+          value: "google-cloud"
+        - name: GOOGLE_CLOUD_PROJECT_ID
+          value: "lux-kms-production"
+        - name: GOOGLE_CLOUD_LOCATION
+          value: "global"
+        - name: GOOGLE_CLOUD_KEY_RING
+          value: "lux-kms-keyring"
+        - name: GOOGLE_CLOUD_CRYPTO_KEY
+          value: "lux-kms-key"
+        - name: GOOGLE_CLOUD_PROTECTION_LEVEL
+          value: "HSM"
+        - name: GOOGLE_CLOUD_AUTO_ROTATE
+          value: "true"
+        - name: GOOGLE_CLOUD_ROTATION_PERIOD
+          value: "7776000s"
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lux-kms
+spec:
+  selector:
+    app: lux-kms
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: LoadBalancer
+```
+
+Set up Workload Identity:
+
+```bash
+# Enable Workload Identity on GKE cluster
+gcloud container clusters update CLUSTER_NAME \
+  --workload-pool=lux-kms-production.svc.id.goog
+
+# Create Kubernetes service account
+kubectl create serviceaccount lux-kms-sa
+
+# Bind Kubernetes SA to GCP SA
+gcloud iam service-accounts add-iam-policy-binding \
+  lux-kms-sa@lux-kms-production.iam.gserviceaccount.com \
+  --role roles/iam.workloadIdentityUser \
+  --member "serviceAccount:lux-kms-production.svc.id.goog[default/lux-kms-sa]"
+
+# Annotate Kubernetes SA
+kubectl annotate serviceaccount lux-kms-sa \
+  iam.gke.io/gcp-service-account=lux-kms-sa@lux-kms-production.iam.gserviceaccount.com
+
+# Deploy
+kubectl apply -f kubernetes-deployment.yaml
+```
+
+#### Using Secret (Alternative)
+
+If not using Workload Identity:
+
+```yaml
+# Create secret from credentials
+kubectl create secret generic gcp-credentials \
+  --from-file=key.json=./lux-kms-credentials.json
+
+# Deployment with mounted secret
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lux-kms
+spec:
+  template:
+    spec:
+      containers:
+      - name: lux-kms
+        env:
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /var/secrets/google/key.json
+        volumeMounts:
+        - name: gcp-credentials
+          mountPath: /var/secrets/google
+          readOnly: true
+      volumes:
+      - name: gcp-credentials
+        secret:
+          secretName: gcp-credentials
+```
+
+## Terraform Configuration
+
+Automate infrastructure setup with Terraform:
+
+```hcl
+# main.tf
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
+# Enable Cloud KMS API
+resource "google_project_service" "cloudkms" {
+  service = "cloudkms.googleapis.com"
+  disable_on_destroy = false
+}
+
+# Create Key Ring
+resource "google_kms_key_ring" "lux_kms" {
+  name     = "lux-kms-keyring"
+  location = var.location
+
+  depends_on = [google_project_service.cloudkms]
+}
+
+# Create Crypto Key
+resource "google_kms_crypto_key" "lux_kms" {
+  name            = "lux-kms-key"
+  key_ring        = google_kms_key_ring.lux_kms.id
+  rotation_period = "7776000s"  # 90 days
+
+  version_template {
+    algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
+    protection_level = "HSM"
+  }
+
+  lifecycle {
+    prevent_destroy = true  # Prevent accidental deletion
+  }
+}
+
+# Create Service Account
+resource "google_service_account" "lux_kms" {
+  account_id   = "lux-kms-sa"
+  display_name = "Lux KMS Service Account"
+  description  = "Service account for Lux KMS HSM operations"
+}
+
+# Grant permissions
+resource "google_kms_crypto_key_iam_member" "lux_kms_encrypter_decrypter" {
+  crypto_key_id = google_kms_crypto_key.lux_kms.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:${google_service_account.lux_kms.email}"
+}
+
+# Generate service account key
+resource "google_service_account_key" "lux_kms" {
+  service_account_id = google_service_account.lux_kms.name
+}
+
+# Output credentials (store securely!)
+output "service_account_key" {
+  value     = google_service_account_key.lux_kms.private_key
+  sensitive = true
+}
+
+output "key_ring_id" {
+  value = google_kms_key_ring.lux_kms.id
+}
+
+output "crypto_key_id" {
+  value = google_kms_crypto_key.lux_kms.id
+}
+```
+
+Variables file:
+
+```hcl
+# variables.tf
+variable "project_id" {
+  description = "GCP Project ID"
+  type        = string
+  default     = "lux-kms-production"
+}
+
+variable "region" {
+  description = "GCP Region"
+  type        = string
+  default     = "us-east1"
+}
+
+variable "location" {
+  description = "KMS Key Location"
+  type        = string
+  default     = "global"
+}
+```
+
+Deploy with Terraform:
+
+```bash
+terraform init
+terraform plan
+terraform apply
+
+# Save credentials
+terraform output -raw service_account_key | base64 -d > lux-kms-credentials.json
+```
+
+## Multi-Region Setup
+
+For high availability across regions:
+
+```bash
+# Create regional key rings
+for region in us-east1 us-west1 europe-west1; do
+  gcloud kms keyrings create lux-kms-keyring-$region \
+    --location=$region
+
+  gcloud kms keys create lux-kms-key \
+    --location=$region \
+    --keyring=lux-kms-keyring-$region \
+    --purpose=encryption \
+    --protection-level=hsm \
+    --rotation-period=90d
+done
+```
+
+Configure failover in Lux KMS:
+
+```bash
+# Primary region
+GOOGLE_CLOUD_LOCATION=us-east1
+
+# Fallback regions (comma-separated)
+GOOGLE_CLOUD_FALLBACK_LOCATIONS=us-west1,europe-west1
+```
+
+## Monitoring and Logging
+
+### Enable Cloud Audit Logs
+
+```bash
+# View KMS operations
+gcloud logging read "resource.type=cloudkms_cryptokey" \
+  --limit 50 \
+  --format json
+```
+
+### Prometheus Metrics
+
+Lux KMS exposes Google Cloud KMS metrics:
+
+```
+# HELP lux_kms_google_cloud_encrypt_total Total encryption operations
+# TYPE lux_kms_google_cloud_encrypt_total counter
+lux_kms_google_cloud_encrypt_total{key="lux-kms-key",location="global"} 1234
+
+# HELP lux_kms_google_cloud_decrypt_total Total decryption operations
+# TYPE lux_kms_google_cloud_decrypt_total counter
+lux_kms_google_cloud_decrypt_total{key="lux-kms-key",location="global"} 1200
+
+# HELP lux_kms_google_cloud_operation_duration_seconds Operation duration
+# TYPE lux_kms_google_cloud_operation_duration_seconds histogram
+lux_kms_google_cloud_operation_duration_seconds_bucket{operation="encrypt",le="0.1"} 1150
+```
+
+## Cost Optimization
+
+**Pricing (as of 2025):**
+- HSM key versions: $2.50/month per active version
+- Software key versions: $0.06/month per active version
+- Operations: $0.03 per 10,000 operations
+
+**Optimization Tips:**
+1. Use `global` location to avoid regional data transfer costs
+2. Destroy old key versions after rotation
+3. Use software keys for dev/test environments
+4. Batch encrypt/decrypt operations when possible
+
+```bash
+# List and destroy old key versions
+gcloud kms keys versions list \
+  --location=global \
+  --keyring=lux-kms-keyring \
+  --key=lux-kms-key \
+  --filter="state=DISABLED"
+
+# Destroy specific version
+gcloud kms keys versions destroy 1 \
+  --location=global \
+  --keyring=lux-kms-keyring \
+  --key=lux-kms-key
+```
+
+## Security Best Practices
+
+1. **Principle of Least Privilege**
+   - Grant only `cryptoKeyEncrypterDecrypter` role for production workloads
+   - Limit `admin` role to automation/DevOps accounts
+
+2. **Credential Security**
+   - Use Workload Identity instead of service account keys when possible
+   - Rotate service account keys regularly (90 days)
+   - Store credentials in Secret Manager, not in git/config files
+
+3. **Key Rotation**
+   - Enable automatic rotation (90 days recommended)
+   - Test key rotation in staging before production
+   - Keep at least 2 active versions during rotation
+
+4. **Audit Logging**
+   - Enable Cloud Audit Logs for all KMS operations
+   - Set up alerts for suspicious activity
+   - Retain logs for compliance (minimum 1 year)
+
+5. **Network Security**
+   - Use VPC Service Controls to restrict KMS API access
+   - Enable Private Google Access for VPC
+   - Configure firewall rules to limit egress
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue**: "Permission denied" errors
+
+```bash
+# Verify service account has correct role
+gcloud projects get-iam-policy lux-kms-production \
+  --flatten="bindings[].members" \
+  --filter="bindings.members:lux-kms-sa@lux-kms-production.iam.gserviceaccount.com"
+
+# Grant missing permissions
+gcloud projects add-iam-policy-binding lux-kms-production \
+  --member="serviceAccount:lux-kms-sa@lux-kms-production.iam.gserviceaccount.com" \
+  --role="roles/cloudkms.cryptoKeyEncrypterDecrypter"
+```
+
+**Issue**: "Key not found" errors
+
+```bash
+# Verify key exists
+gcloud kms keys describe lux-kms-key \
+  --location=global \
+  --keyring=lux-kms-keyring
+
+# Check key state
+gcloud kms keys versions list \
+  --location=global \
+  --keyring=lux-kms-keyring \
+  --key=lux-kms-key
+```
+
+**Issue**: Application Default Credentials not working
+
+```bash
+# Set explicit credentials
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/lux-kms-credentials.json
+
+# Or authenticate gcloud
+gcloud auth application-default login
+```
+
+## Migration Guide
+
+### From Software Keys to HSM
+
+Cannot directly convert, must create new HSM key:
+
+```bash
+# Create new HSM key
+gcloud kms keys create lux-kms-key-hsm \
+  --location=global \
+  --keyring=lux-kms-keyring \
+  --purpose=encryption \
+  --protection-level=hsm
+
+# Update Lux KMS configuration
+GOOGLE_CLOUD_CRYPTO_KEY=lux-kms-key-hsm
+
+# Re-encrypt secrets with new key (handled by Lux KMS migration)
+```
+
+### From On-Premises HSM to Google Cloud KMS
+
+1. Export encrypted data from on-premises system
+2. Set up Google Cloud KMS (this guide)
+3. Run Lux KMS migration tool:
+
+```bash
+lux-kms migrate \
+  --from=on-premises \
+  --to=google-cloud \
+  --source-hsm=/path/to/pkcs11.so \
+  --target-project=lux-kms-production
+```
+
+## Next Steps
+
+- [AWS CloudHSM Integration](/docs/kms-configuration/aws-cloudhsm)
+- [Thales Luna HSM Integration](/docs/kms-configuration/thales-hsm)
+- [HSM Performance Comparison](/docs/kms-configuration/hsm-comparison)
+- [Disaster Recovery Setup](/docs/kms-configuration/disaster-recovery)
+
+## References
+
+- [Google Cloud KMS Documentation](https://cloud.google.com/kms/docs)
+- [FIPS 140-2 Validation](https://cloud.google.com/security/compliance/fips-140-2-validated)
+- [Cloud KMS Pricing](https://cloud.google.com/kms/pricing)
+- [Best Practices for Cloud KMS](https://cloud.google.com/kms/docs/best-practices)

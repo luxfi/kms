@@ -1,4 +1,4 @@
-import { SymmetricKeyAlgorithm } from "@app/lib/crypto/cipher";
+import { FheKeyAlgorithm, SymmetricKeyAlgorithm } from "@app/lib/crypto/cipher";
 import { AsymmetricKeyAlgorithm } from "@app/lib/crypto/sign";
 import { BadRequestError } from "@app/lib/errors";
 
@@ -18,7 +18,7 @@ export const getByteLengthForSymmetricEncryptionAlgorithm = (encryptionAlgorithm
 
 export const verifyKeyTypeAndAlgorithm = (
   keyUsage: KmsKeyUsage,
-  algorithm: SymmetricKeyAlgorithm | AsymmetricKeyAlgorithm,
+  algorithm: SymmetricKeyAlgorithm | AsymmetricKeyAlgorithm | FheKeyAlgorithm,
   extra?: {
     forceType?: KmsKeyUsage;
   }
@@ -43,6 +43,17 @@ export const verifyKeyTypeAndAlgorithm = (
     if (!Object.values(AsymmetricKeyAlgorithm).includes(algorithm as AsymmetricKeyAlgorithm)) {
       throw new BadRequestError({
         message: `Unsupported sign/verify algorithm for sign/verify key: ${algorithm as string}`
+      });
+    }
+
+    return true;
+  }
+
+  // FHE key type validation
+  if (keyUsage === KmsKeyUsage.FHE_COMPUTATION) {
+    if (!Object.values(FheKeyAlgorithm).includes(algorithm as FheKeyAlgorithm)) {
+      throw new BadRequestError({
+        message: `Unsupported FHE algorithm for fhe-computation key: ${algorithm as string}`
       });
     }
 

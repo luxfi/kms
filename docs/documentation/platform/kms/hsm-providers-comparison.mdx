@@ -1,0 +1,1404 @@
+---
+title: "HSM Provider Comparison"
+description: "Compare all supported Hardware Security Module providers for Lux KMS"
+---
+
+# HSM Provider Comparison
+
+Lux KMS supports 6 Hardware Security Module (HSM) providers across cloud, on-premise, and embedded platforms. This guide helps you choose the right provider for your deployment.
+
+## Overview
+
+| Provider | Type | Use Case | FIPS Level | Interface | Status |
+|----------|------|----------|------------|-----------|--------|
+| **Thales Luna** | Cloud/On-prem | Enterprise | 140-2 L3 | PKCS#11 | ✅ Production |
+| **AWS CloudHSM** | AWS Cloud | AWS native | 140-2 L3 | PKCS#11 | ✅ Production |
+| **Google Cloud KMS** | GCP Cloud | GCP native | 140-2 L3 | REST/gRPC | ✅ Production |
+| **Fortanix HSM** | Cloud | Multi-cloud | 140-2 L3 | PKCS#11 | ✅ Production |
+| **Zymbit SCM** | Embedded | IoT/Edge | Physical | PKCS#11 | ✅ Production |
+| **Azure Managed HSM** | Azure Cloud | Azure native | 140-2 L3 | REST | 🚧 Planned |
+
+### Open-Source & Affordable Options
+
+| Provider | Type | Use Case | FIPS Level | Interface | Pricing | Status |
+|----------|------|----------|------------|-----------|---------|--------|
+| **SoftHSM2** | Software | Dev/Test | - | PKCS#11 | Free (BSD-2) | ✅ Available |
+| **Nitrokey HSM** | Hardware | Dev/Small Prod | - | PKCS#11 (OpenSC) | €69-89 | ✅ Available |
+| **YubiHSM 2 FIPS** | USB Hardware | Small Prod | 140-2 L3 | PKCS#11 | $650 | ✅ Available |
+
+> **Note**: Open-source HSMs are ideal for development, testing, and small-scale production deployments where budget constraints exist. For mission-critical production systems, enterprise-grade HSMs with full compliance certifications are recommended.
+
+## Quick Start by Provider
+
+### Thales Luna Cloud HSM
+
+**Best for:** Enterprise deployments, regulatory compliance, vendor neutrality
+
+```bash
+# Environment configuration
+export HSM_LIB_PATH="/usr/safenet/lunaclient/libs/64/libCryptoki2.so"
+export HSM_PIN="<luna-partition-pin>"
+export HSM_SLOT=0
+export HSM_TOKEN_LABEL="LuxValidator"
+```
+
+**Setup Steps:**
+1. Provision Luna Cloud HSM partition
+2. Install Luna client software
+3. Register client with partition
+4. Configure KMS environment variables
+
+[Full Configuration Guide →](/kms-configuration/thales-luna-hsm)
+
+---
+
+### AWS CloudHSM
+
+**Best for:** AWS-native deployments, dedicated HSM requirements
+
+```bash
+# Environment configuration
+export AWS_CLOUDHSM_CLUSTER_ID="cluster-abc123def456"
+export AWS_CLOUDHSM_LIB_PATH="/opt/cloudhsm/lib/libcloudhsm_pkcs11.so"
+export AWS_CLOUDHSM_PIN="<crypto-user-pin>"
+export AWS_REGION="us-east-1"
+export HSM_SLOT=0
+```
+
+**Setup Steps:**
+1. Create CloudHSM cluster in AWS
+2. Initialize cluster and create Crypto User (CU)
+3. Install CloudHSM client on KMS server
+4. Configure client to connect to cluster
+
+[Full Configuration Guide →](/kms-configuration/aws-cloudhsm)
+
+---
+
+### Google Cloud KMS
+
+**Best for:** GCP deployments, high-volume operations, pay-per-use pricing
+
+```bash
+# Environment configuration
+export GOOGLE_CLOUD_PROJECT_ID="lux-validator-prod"
+export GOOGLE_CLOUD_LOCATION="global"
+export GOOGLE_CLOUD_KEY_RING="lux-kms-keyring"
+export GOOGLE_CLOUD_CRYPTO_KEY="validator-signing-key"
+export GOOGLE_APPLICATION_CREDENTIALS="/etc/kms/gcp-service-account.json"
+```
+
+**Setup Steps:**
+1. Create GCP project and enable Cloud KMS API
+2. Create key ring and crypto key
+3. Create service account with Cloud KMS permissions
+4. Download service account JSON key
+
+[Full Configuration Guide →](/kms-configuration/google-cloud-hsm)
+
+---
+
+### Fortanix HSM
+
+**Best for:** Multi-cloud portability, policy-based encryption
+
+```bash
+# Environment configuration
+export HSM_LIB_PATH="/etc/fortanix-hsm/fortanix_pkcs11.so"
+export HSM_PIN="<fortanix-api-key>"
+export FORTANIX_PKCS11_CONFIG_PATH="/etc/fortanix-hsm/pkcs11.conf"
+export FORTANIX_APP_UUID="<app-uuid>"
+export HSM_SLOT=0
+```
+
+**Setup Steps:**
+1. Create Fortanix DSM account
+2. Create application in Fortanix portal
+3. Generate API key
+4. Install Fortanix PKCS#11 library
+
+[Full Configuration Guide →](/kms-configuration/fortanix-hsm)
+
+---
+
+### Zymbit SCM
+
+**Best for:** Edge validators, Raspberry Pi deployments, IoT devices
+
+```bash
+# Environment configuration
+export HSM_LIB_PATH="/usr/lib/libzk_pkcs11.so"
+export HSM_PIN="<zymbit-pin>"
+export ZYMBIT_DEVICE_PATH="/dev/zymkey"
+export HSM_SLOT=0
+```
+
+**Setup Steps:**
+1. Install Zymbit hardware on Raspberry Pi
+2. Install Zymbit SDK and PKCS#11 library
+3. Initialize Zymbit module
+4. Configure PIN
+
+[Full Configuration Guide →](/kms-configuration/zymbit-hsm)
+
+---
+
+## Open-Source & Affordable HSM Solutions
+
+### SoftHSM2 (Software-Based)
+
+**Best for:** Development, testing, CI/CD pipelines without physical hardware
+
+```bash
+# Installation (Ubuntu/Debian)
+sudo apt-get install softhsm2
+
+# Installation (macOS)
+brew install softhsm
+
+# Environment configuration
+export HSM_LIB_PATH="/usr/lib/softhsm/libsofthsm2.so"  # Linux
+# export HSM_LIB_PATH="/usr/local/lib/softhsm/libsofthsm2.so"  # macOS
+export SOFTHSM2_CONF="/etc/softhsm/softhsm2.conf"
+export HSM_SLOT=0
+```
+
+**Setup Steps:**
+1. Install SoftHSM2 package
+2. Initialize token:
+```bash
+softhsm2-util --init-token --slot 0 --label "LuxKMSTest" --pin 1234 --so-pin 5678
+```
+3. Configure KMS to use SoftHSM2 library path
+4. Generate test keys
+
+**Key Features:**
+- ✅ **Free & Open Source** - BSD-2-Clause license
+- ✅ **PKCS#11 Compatible** - Drop-in replacement for testing
+- ✅ **Multi-Platform** - Linux, macOS, Windows, BSD
+- ✅ **No Hardware Required** - Perfect for CI/CD
+- ✅ **OpenSSL Backend** - Uses standard crypto libraries
+- ❌ **Not Production-Safe** - Keys stored on filesystem
+- ❌ **No Physical Security** - Software-only protection
+- ❌ **No FIPS Certification** - Development/testing only
+
+**Use Cases:**
+- Local development without HSM hardware
+- CI/CD test pipelines
+- Integration testing
+- PKCS#11 application development
+- Pre-production validation
+
+**Storage Location:**
+```bash
+# Default token storage
+ls /var/lib/softhsm/tokens/
+```
+
+**Performance:**
+- **Signing Speed**: 5,000+ ops/sec (no network latency)
+- **Latency**: <1ms (in-process)
+
+[SoftHSM Documentation](https://github.com/softhsm/SoftHSMv2) | [OpenDNSSEC Guide](https://opendnssec.docs.nlnetlabs.nl/en/latest/softhsm/)
+
+---
+
+### Nitrokey HSM
+
+**Best for:** Budget-conscious small deployments, hobbyist validators, development with real hardware
+
+```bash
+# Environment configuration
+export HSM_LIB_PATH="/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so"  # Linux
+# export HSM_LIB_PATH="/usr/local/lib/opensc-pkcs11.so"  # macOS
+export HSM_PIN="<nitrokey-pin>"
+export HSM_SLOT=0
+```
+
+**Setup Steps:**
+1. Install OpenSC PKCS#11 library:
+```bash
+# Ubuntu/Debian
+sudo apt-get install opensc
+
+# macOS
+brew install opensc
+
+# Fedora/RHEL
+sudo dnf install opensc
+```
+
+2. Initialize Nitrokey HSM:
+```bash
+# Insert Nitrokey HSM device
+sc-hsm-tool --initialize --so-pin 3537363231383830 --pin 648219
+
+# Generate key on device
+pkcs11-tool --module /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so \
+  --login --keypairgen \
+  --key-type EC:secp256k1 \
+  --label "validator-key"
+```
+
+3. Configure KMS environment variables
+4. Test signing operation
+
+**Key Features:**
+- ✅ **Hardware Security** - Physical tamper resistance
+- ✅ **PKCS#11 via OpenSC** - Standard interface
+- ✅ **Affordable** - €69-89 (~$75-95 USD)
+- ✅ **USB Form Factor** - Portable, easy deployment
+- ✅ **Open Source Firmware** - Community audited
+- ✅ **Multiple Algorithms** - RSA, ECDSA, AES
+- ⚠️ **Not FIPS Certified** - But SmartCard-HSM compatible
+- ❌ **Limited Support** - Community-driven
+
+**Specifications:**
+- **Security Chip**: Infineon SLE78 (CC EAL 5+)
+- **Algorithms**: RSA (2048/4096), ECC (secp256r1, secp384r1, brainpool)
+- **Key Storage**: Up to 38 key pairs
+- **RNG**: True hardware random number generator
+- **Form Factor**: USB-A stick
+
+**Use Cases:**
+- Home validators on budget
+- Development with real HSM hardware
+- Small business deployments
+- Educational/learning purposes
+- Backup HSM for testing failover
+
+**Pricing** (as of 2024):
+- Nitrokey HSM 2: €69
+- Nitrokey HSM 2 (USB-C): €89
+
+[Nitrokey Documentation](https://docs.nitrokey.com/) | [OpenSC SmartCard-HSM Guide](https://github.com/OpenSC/OpenSC/wiki/SmartCardHSM)
+
+---
+
+### YubiHSM 2 FIPS
+
+**Best for:** Small to medium production deployments requiring FIPS certification at affordable price
+
+```bash
+# Environment configuration
+export HSM_LIB_PATH="/usr/lib/x86_64-linux-gnu/pkcs11/yubihsm_pkcs11.so"
+export YUBIHSM_PKCS11_CONF="/etc/yubihsm_pkcs11.conf"
+export HSM_PIN="<yubihsm-auth-key>"
+export HSM_SLOT=0
+```
+
+**Setup Steps:**
+1. Install YubiHSM 2 SDK:
+```bash
+# Ubuntu/Debian
+wget https://developers.yubico.com/YubiHSM2/Releases/yubihsm2-sdk-<version>-ubuntu<ver>-amd64.tar.gz
+tar -xzf yubihsm2-sdk-*.tar.gz
+sudo dpkg -i yubihsm2-sdk_*_amd64.deb
+
+# macOS
+brew install yubihsm-shell
+```
+
+2. Connect YubiHSM 2 and configure connector:
+```bash
+# Start connector daemon
+sudo systemctl start yubihsm-connector
+
+# Verify device detected
+yubihsm-shell
+yubihsm> connect
+yubihsm> session open 1 password
+yubihsm> list objects
+```
+
+3. Create authentication key and signing key:
+```bash
+yubihsm-shell
+yubihsm> put authkey 0 0 "KMS Auth Key" all sign-ecdsa:sign-eddsa:exportable-under-wrap:export-wrapped <new-password>
+yubihsm> generate asymmetric 0 0 "Validator Sign Key" all sign-ecdsa ecp256k1
+```
+
+4. Configure PKCS#11 interface:
+```bash
+cat > /etc/yubihsm_pkcs11.conf <<EOF
+connector = http://127.0.0.1:12345
+EOF
+```
+
+**Key Features:**
+- ✅ **FIPS 140-2 Level 3** - Certified hardware security
+- ✅ **PKCS#11 Interface** - Standard integration
+- ✅ **Affordable** - $650 (90% cheaper than traditional HSMs)
+- ✅ **Compact** - USB-A nano form factor
+- ✅ **Audit Logging** - Tamper-evident operation log
+- ✅ **M-of-N Wrap Keys** - Multi-admin backup
+- ✅ **Made in USA/Sweden** - Trusted manufacturing
+- ✅ **Extensive Algorithms** - RSA, ECDSA, EdDSA, HMAC, AES, Wrap/Unwrap
+- ⚠️ **Single Device** - No built-in HA (use multiple devices)
+- ⚠️ **USB Only** - Not network-attached
+
+**Specifications:**
+- **FIPS Certification**: 140-2 Overall Level 3
+- **Algorithms**: RSA 2048/3072/4096, ECDSA (P-256/384/521, secp256k1), Ed25519, HMAC-SHA256/384/512, AES-128/192/256
+- **Key Storage**: 256 objects
+- **Audit Log**: Chained hash log of all operations
+- **Interface**: USB-A, PKCS#11, native SDK
+- **Power**: Bus-powered, no battery
+- **Durability**: IP68 rated, crush resistant
+
+**Use Cases:**
+- Small/medium validators needing FIPS compliance
+- Code signing operations
+- Certificate authority root key protection
+- Cryptocurrency custody
+- Database encryption key management
+
+**Pricing**:
+- YubiHSM 2 FIPS: **$650** USD
+- 90% cost reduction vs traditional HSMs ($5,000-10,000)
+
+**Performance Benchmarks**:
+- **Signing**: 100-300 ops/sec (depending on algorithm)
+- **Latency**: 5-15ms (USB interface)
+- **Throughput**: Suitable for small to medium validator operations
+
+[YubiHSM 2 Product Page](https://www.yubico.com/product/yubihsm-2-fips/) | [YubiHSM 2 Documentation](https://developers.yubico.com/YubiHSM2/)
+
+---
+
+## Feature Comparison
+
+### Security & Compliance
+
+| Feature | Thales | AWS | Google | Fortanix | Zymbit | YubiHSM 2 | Nitrokey | SoftHSM2 |
+|---------|--------|-----|--------|----------|--------|-----------|----------|----------|
+| **FIPS 140-2 Level 3** | ✅ | ✅ | ✅ | ✅ | ❌* | ✅ | ❌§ | ❌ |
+| **Physical tamper detection** | ✅ | ✅ | N/A† | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **Key extraction impossible** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌∥ |
+| **Secure key generation** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Audit logging** | ✅ | ✅ | ✅ | ✅ | ⚠️‡ | ✅ | ⚠️ | ❌ |
+| **SOC 2 Type II** | ✅ | ✅ | ✅ | ✅ | N/A | ✅¶ | N/A | N/A |
+
+*Zymbit provides physical tamper detection but not FIPS certification
+†Cloud HSMs provide logical security boundaries
+‡Basic logging available, not as comprehensive as cloud providers
+§Nitrokey HSM has CC EAL 5+ but not FIPS certification
+∥SoftHSM2 stores keys on filesystem - not secure against local attacks
+¶Yubico (YubiHSM manufacturer) is SOC 2 Type II certified
+
+### Operational Features
+
+| Feature | Thales | AWS | Google | Fortanix | Zymbit | YubiHSM 2 | Nitrokey | SoftHSM2 |
+|---------|--------|-----|--------|----------|--------|-----------|----------|----------|
+| **Multi-region support** | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅* |
+| **Auto key rotation** | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ | ❌ | ❌ |
+| **High availability** | ✅ | ✅ | ✅ | ✅ | ⚠️§ | ⚠️§ | ⚠️§ | ✅* |
+| **Automatic backups** | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️† | ❌ | ✅* |
+| **Key versioning** | ✅ | ⚠️ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
+| **Managed updates** | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ | ❌ | ✅* |
+
+*SoftHSM2 is software-based, can be deployed anywhere with filesystem backup
+§Requires manual hardware redundancy (multiple devices)
+†YubiHSM supports M-of-N wrapped backups but requires manual process
+
+### Technical Integration
+
+| Feature | Thales | AWS | Google | Fortanix | Zymbit | YubiHSM 2 | Nitrokey | SoftHSM2 |
+|---------|--------|-----|--------|----------|--------|-----------|----------|----------|
+| **PKCS#11 interface** | ✅ | ✅ | ❌∥ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **REST API** | ⚠️ | ⚠️ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ |
+| **gRPC support** | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Cloud-native** | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅* |
+| **Embedded support** | ❌ | ❌ | ❌ | ❌ | ✅ | ⚠️† | ⚠️† | ✅ |
+| **Container compatible** | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅‡ | ✅‡ | ✅ |
+
+∥Google uses REST/gRPC instead of PKCS#11
+*SoftHSM2 runs anywhere, including cloud containers
+†USB-based HSMs require USB passthrough to containers
+‡Works in containers with USB device mapping
+
+### Algorithm Support
+
+| Algorithm | Thales | AWS | Google | Fortanix | Zymbit | YubiHSM 2 | Nitrokey | SoftHSM2 |
+|-----------|--------|-----|--------|----------|--------|-----------|----------|----------|
+| **BLS12-381** | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ⚠️* |
+| **ECDSA secp256k1** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️† | ✅ |
+| **ML-DSA (Dilithium)** | ✅ | ⚠️¶ | ⚠️ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Ed25519** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| **RSA 2048/4096** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+*SoftHSM2 depends on OpenSSL version - check compatibility
+†Nitrokey HSM supports NIST curves (P-256, P-384, brainpool), not secp256k1
+¶Post-quantum support varies by provider and firmware version
+
+## Cost Comparison
+
+### Monthly Operating Cost
+
+**Small Deployment** (1M signing operations/month):
+
+| Provider | Base Cost | Operation Cost | Total |
+|----------|-----------|----------------|-------|
+| **SoftHSM2** | $0 | $0 | **$0** |
+| **Nitrokey HSM** | $75-95 (one-time) | $0 | **$0/mo** |
+| **Zymbit SCM** | $125-155 (one-time) | $0 | **$0/mo** |
+| **Google Cloud KMS** | $0 | ~$30 | **$30** |
+| **YubiHSM 2 FIPS** | $650 (one-time) | $0 | **$0/mo** |
+| **AWS CloudHSM** | $1,152 (24x7) | $0 | **$1,152** |
+| **Fortanix HSM** | ~$1,000 | Included | **$1,000** |
+| **Thales Luna** | ~$1,200 | Included | **$1,200** |
+
+**Medium Deployment** (10M operations/month):
+
+| Provider | Base Cost | Operation Cost | Total |
+|----------|-----------|----------------|-------|
+| **SoftHSM2** | $0 | $0 | **$0** |
+| **Nitrokey HSM** | $75-95 (one-time) | $0 | **$0/mo** |
+| **Zymbit SCM** | $125-155 (one-time) | $0 | **$0/mo** |
+| **Google Cloud KMS** | $0 | ~$300 | **$300** |
+| **YubiHSM 2 FIPS** | $650 (one-time) | $0 | **$0/mo** |
+| **AWS CloudHSM** | $1,152 | $0 | **$1,152** |
+| **Fortanix HSM** | ~$1,000 | Included | **$1,000** |
+| **Thales Luna** | ~$1,200 | Included | **$1,200** |
+
+**Large Deployment** (100M operations/month):
+
+| Provider | Base Cost | Operation Cost | Total |
+|----------|-----------|----------------|-------|
+| **SoftHSM2** | $0 | $0 | **$0** |
+| **Nitrokey HSM** | $75-95 (one-time) | $0 | **$0/mo** |
+| **Zymbit SCM** | $125-155 (one-time) | $0 | **$0/mo** |
+| **YubiHSM 2 FIPS** | $650 (one-time) | $0 | **$0/mo** |
+| **AWS CloudHSM** | $1,152 | $0 | **$1,152** |
+| **Fortanix HSM** | ~$1,000 | Included | **$1,000** |
+| **Thales Luna** | ~$1,200 | Included | **$1,200** |
+| **Google Cloud KMS** | $0 | ~$3,000 | **$3,000** |
+
+### 3-Year Total Cost of Ownership (TCO)
+
+| Provider | Year 1 | Year 2 | Year 3 | Total 3-Year |
+|----------|--------|--------|--------|--------------|
+| **SoftHSM2** (10M ops/mo) | $0 | $0 | $0 | **$0** |
+| **Nitrokey HSM** (10M ops/mo) | $75-95 | $0 | $0 | **$75-95** |
+| **Zymbit** (10M ops/mo) | $125-155 | $0 | $0 | **$125-155** |
+| **YubiHSM 2 FIPS** (10M ops/mo) | $650 | $0 | $0 | **$650** |
+| **Google** (10M ops/mo) | $3,600 | $3,600 | $3,600 | **$10,800** |
+| **AWS CloudHSM** | $13,824 | $13,824 | $13,824 | **$41,472** |
+| **Fortanix** | $12,000 | $12,000 | $12,000 | **$36,000** |
+| **Thales Luna** | $14,400 | $14,400 | $14,400 | **$43,200** |
+
+*Costs are estimates and vary by region, contract terms, and usage patterns*
+
+> **💡 Cost Savings Insight**: Open-source and affordable HSMs (SoftHSM2, Nitrokey, Zymbit, YubiHSM 2) offer **99% cost reduction** over 3 years compared to enterprise HSMs, making them ideal for budget-conscious deployments, development, and small-scale production systems.
+
+## Architecture Patterns
+
+### Pattern 1: Multi-Cloud (Thales Luna)
+
+```
+┌─────────────────────────────────────────┐
+│         Thales Luna Cloud HSM           │
+│  ┌──────────┐  ┌──────────┐  ┌────────┐│
+│  │ AWS VPC  │  │ GCP VPC  │  │ On-Prem││
+│  │ Validator│  │ Validator│  │Validator││
+│  └────┬─────┘  └────┬─────┘  └───┬────┘│
+│       └─────────────┴────────────┘     │
+│              Luna Partition             │
+└─────────────────────────────────────────┘
+```
+
+**Best for:**
+- Vendor neutrality requirements
+- Multi-cloud deployments
+- On-premise + cloud hybrid
+- Strict regulatory compliance
+
+**Advantages:**
+- True vendor independence
+- Consistent FIPS 140-2 L3 everywhere
+- Can move between clouds without key migration
+
+**Disadvantages:**
+- Higher cost
+- More complex setup
+- Network latency to HSM
+
+---
+
+### Pattern 2: AWS-Native (AWS CloudHSM)
+
+```
+┌──────────────────────────────────────┐
+│           AWS Region                 │
+│  ┌────────────────────────────────┐  │
+│  │   CloudHSM Cluster             │  │
+│  │  ┌──────┐  ┌──────┐  ┌──────┐ │  │
+│  │  │ HSM  │  │ HSM  │  │ HSM  │ │  │
+│  │  │ AZ-1 │  │ AZ-2 │  │ AZ-3 │ │  │
+│  │  └───┬──┘  └───┬──┘  └───┬──┘ │  │
+│  └──────┼─────────┼─────────┼────┘  │
+│         │         │         │       │
+│  ┌──────▼──┐ ┌───▼────┐ ┌──▼─────┐ │
+│  │Validator│ │Validator│ │Validator││
+│  │  AZ-1   │ │  AZ-2   │ │  AZ-3  ││
+│  └─────────┘ └─────────┘ └────────┘ │
+└──────────────────────────────────────┘
+```
+
+**Best for:**
+- AWS-only deployments
+- Need dedicated HSM hardware
+- FIPS 140-2 L3 compliance required
+- Low-latency requirements
+
+**Advantages:**
+- Native AWS integration
+- Low latency (same VPC)
+- Dedicated hardware
+- No egress costs
+
+**Disadvantages:**
+- AWS vendor lock-in
+- Higher cost than Google KMS
+- Complex cluster management
+
+---
+
+### Pattern 3: GCP-Native (Google Cloud KMS)
+
+```
+┌──────────────────────────────────────┐
+│        Google Cloud Project          │
+│  ┌────────────────────────────────┐  │
+│  │   Cloud KMS (Global)           │  │
+│  │  ┌──────────────────────────┐  │  │
+│  │  │   Key Ring: lux-kms      │  │  │
+│  │  │  ┌────────────────────┐  │  │  │
+│  │  │  │ Crypto Key: BLS    │  │  │  │
+│  │  │  │ Versions: 1,2,3... │  │  │  │
+│  │  │  └────────────────────┘  │  │  │
+│  │  └──────────┬───────────────┘  │  │
+│  └─────────────┼──────────────────┘  │
+│                │                     │
+│  ┌─────────────▼────────────────┐   │
+│  │  Validator Instances (GKE)   │   │
+│  │  ┌────┐ ┌────┐ ┌────┐ ┌────┐│   │
+│  │  │Val1│ │Val2│ │Val3│ │Val4││   │
+│  │  └────┘ └────┘ └────┘ └────┘│   │
+│  └──────────────────────────────┘   │
+└──────────────────────────────────────┘
+```
+
+**Best for:**
+- GCP-only deployments
+- High operation volume (cost-effective at scale)
+- Need automatic key rotation
+- Prefer pay-per-use pricing
+
+**Advantages:**
+- Lowest cost for high volume
+- Automatic key versioning
+- Global key replication
+- Managed service (zero ops)
+
+**Disadvantages:**
+- GCP vendor lock-in
+- REST API only (no PKCS#11)
+- Higher latency than CloudHSM
+- Not suitable for ultra-low latency
+
+---
+
+### Pattern 4: Hybrid Cloud (Fortanix)
+
+```
+┌──────────────────────────────────────────────┐
+│         Fortanix Data Security Manager        │
+│  ┌────────────────────────────────────────┐  │
+│  │    Multi-Cloud Key Management          │  │
+│  │  ┌──────┐  ┌──────┐  ┌──────┐  ┌────┐ │  │
+│  │  │ AWS  │  │ GCP  │  │Azure │  │On- │ │  │
+│  │  │ Keys │  │ Keys │  │ Keys │  │Prem│ │  │
+│  │  └───┬──┘  └───┬──┘  └───┬──┘  └─┬──┘ │  │
+│  └──────┼─────────┼─────────┼───────┼────┘  │
+│         └─────────┴─────────┴───────┘       │
+│            Unified Policy Engine             │
+└──────────────┬───────────────────────────────┘
+               │
+    ┌──────────┼──────────┐
+    │          │          │
+┌───▼───┐  ┌──▼────┐  ┌──▼─────┐
+│  AWS  │  │  GCP  │  │ On-Prem│
+│Cluster│  │Cluster│  │ Cluster│
+└───────┘  └───────┘  └────────┘
+```
+
+**Best for:**
+- Multi-cloud portability requirements
+- Need centralized policy management
+- Complex compliance requirements
+- Want cloud-agnostic architecture
+
+**Advantages:**
+- Single pane of glass for all clouds
+- Policy-based encryption
+- Comprehensive audit logging
+- No cloud vendor lock-in
+
+**Disadvantages:**
+- Additional vendor dependency
+- Higher complexity
+- Premium pricing
+- Learning curve for DSM platform
+
+---
+
+### Pattern 5: Edge/IoT (Zymbit)
+
+```
+┌────────────────────────────────────┐
+│      Edge Validator Network        │
+│                                    │
+│  ┌─────────────────────────────┐  │
+│  │   Raspberry Pi 4/5 + Zymbit │  │
+│  │  ┌────────────────────────┐ │  │
+│  │  │  Zymbit SCM Hardware   │ │  │
+│  │  │  (Physical Security)   │ │  │
+│  │  └───────────┬────────────┘ │  │
+│  │              │              │  │
+│  │  ┌───────────▼────────────┐ │  │
+│  │  │   PKCS#11 Interface    │ │  │
+│  │  └───────────┬────────────┘ │  │
+│  │              │              │  │
+│  │  ┌───────────▼────────────┐ │  │
+│  │  │   Lux KMS Client      │ │  │
+│  │  └───────────┬────────────┘ │  │
+│  │              │              │  │
+│  │  ┌───────────▼────────────┐ │  │
+│  │  │  Validator Software    │ │  │
+│  │  └────────────────────────┘ │  │
+│  └─────────────────────────────┘  │
+│                                    │
+│  Physical Deployment Locations:    │
+│  • Home validators                 │
+│  • Small data centers              │
+│  • Remote monitoring stations      │
+│  • Mobile validators               │
+└────────────────────────────────────┘
+```
+
+**Best for:**
+- Edge validator deployments
+- Raspberry Pi-based nodes
+- Physical security requirements
+- Low-cost, low-power operations
+
+**Advantages:**
+- Extremely low cost ($125-155 hardware)
+- Physical tamper detection
+- No recurring fees
+- Low power consumption
+- Small form factor
+
+**Disadvantages:**
+- No high availability (single device)
+- Manual backup required
+- Limited to ARM platforms
+- No enterprise support
+
+---
+
+## Selection Guide
+
+### Decision Tree
+
+```
+┌─────────────────────────────┐
+│  What's your deployment?    │
+└──────────┬──────────────────┘
+           │
+    ┌──────┴───────┐
+    │              │
+┌───▼────┐    ┌───▼────────┐
+│ Cloud  │    │ Edge/IoT   │
+└───┬────┘    └───┬────────┘
+    │             │
+    │         ┌───▼────────────┐
+    │         │  Zymbit SCM    │
+    │         └────────────────┘
+    │
+┌───▼─────────────────────┐
+│  Which cloud provider?   │
+└───┬─────────────────────┘
+    │
+    ├─── AWS only? ──────► AWS CloudHSM
+    │
+    ├─── GCP only? ──────► Google Cloud KMS
+    │
+    ├─── Multi-cloud? ───► Fortanix HSM
+    │                       or Thales Luna
+    │
+    └─── On-prem mix? ───► Thales Luna
+```
+
+### Use Case Recommendations
+
+#### Enterprise Production Validators
+
+**Primary Choice:** Thales Luna or AWS CloudHSM
+- **Why:** FIPS 140-2 L3 certified
+- **Why:** Proven at scale
+- **Why:** Comprehensive audit trails
+- **Cost:** $1,000-1,200/month
+
+**Alternative:** Google Cloud KMS (if GCP-native)
+- **Why:** Lower cost for high volume
+- **Why:** Automatic key rotation
+- **Cost:** $30-3,000/month (usage-based)
+
+---
+
+#### Small to Medium Validators (< 100 nodes)
+
+**Primary Choice:** Google Cloud KMS
+- **Why:** Pay-per-use pricing
+- **Why:** Zero maintenance
+- **Why:** Scales automatically
+- **Cost:** $30-300/month
+
+**Alternative:** AWS CloudHSM (if AWS-native)
+- **Why:** Dedicated hardware
+- **Why:** Lower latency
+- **Cost:** $1,152/month
+
+---
+
+#### Home/Hobbyist Validators
+
+**Primary Choice:** Zymbit SCM
+- **Why:** One-time $125-155 cost
+- **Why:** Physical security
+- **Why:** Raspberry Pi compatible
+- **Cost:** $125-155 one-time
+
+**Alternative:** Google Cloud KMS
+- **Why:** No hardware to manage
+- **Why:** $30/month for typical usage
+- **Cost:** $30-100/month
+
+---
+
+#### Multi-Cloud Enterprise
+
+**Primary Choice:** Thales Luna
+- **Why:** Cloud-agnostic
+- **Why:** Consistent security across clouds
+- **Why:** Single HSM for AWS+GCP+Azure
+- **Cost:** $1,200/month
+
+**Alternative:** Fortanix HSM
+- **Why:** Centralized policy management
+- **Why:** Multi-cloud by design
+- **Cost:** $1,000/month
+
+---
+
+#### Development/Testing
+
+**Primary Choice:** Google Cloud KMS
+- **Why:** Pay only for test operations
+- **Why:** No minimum cost
+- **Why:** Easy setup
+- **Cost:** < $10/month
+
+**Alternative:** Software KMS (no HSM)
+- **Why:** Free
+- **Why:** Fast development iteration
+- **Cost:** $0
+
+---
+
+## Migration Between Providers
+
+### Migration Strategy
+
+All providers support key export/import for controlled migration:
+
+#### Step 1: Export Keys from Source HSM
+
+```bash
+# Example: Export from AWS CloudHSM
+export SOURCE_HSM="aws-cloudhsm"
+export SOURCE_KEY_LABEL="validator-key-1"
+
+# Export wrapped key (encrypted)
+kms-cli export-key \
+  --hsm-type=$SOURCE_HSM \
+  --key-label=$SOURCE_KEY_LABEL \
+  --output=/tmp/exported-key.enc
+```
+
+#### Step 2: Import Keys to Destination HSM
+
+```bash
+# Example: Import to Google Cloud KMS
+export DEST_HSM="google-cloud-kms"
+export DEST_KEY_NAME="validator-key-1"
+
+kms-cli import-key \
+  --hsm-type=$DEST_HSM \
+  --key-name=$DEST_KEY_NAME \
+  --input=/tmp/exported-key.enc
+```
+
+#### Step 3: Update Configuration
+
+```bash
+# Update KMS configuration
+cat > /etc/kms/config.yaml <<EOF
+hsm:
+  provider: google-cloud-kms
+  project_id: lux-validator-prod
+  location: global
+  key_ring: lux-kms-keyring
+  crypto_key: validator-key-1
+EOF
+```
+
+#### Step 4: Verify and Test
+
+```bash
+# Test signing with new HSM
+kms-cli test-sign \
+  --message="test migration" \
+  --key-label=validator-key-1
+
+# Verify signature
+kms-cli verify \
+  --message="test migration" \
+  --signature=/tmp/test.sig \
+  --public-key=/tmp/test.pub
+```
+
+#### Step 5: Gradual Rollout
+
+```bash
+# Use blue-green deployment
+# Keep old HSM active during transition
+
+# Route 10% traffic to new HSM
+validator-ctl set-hsm-weight google-cloud-kms 10
+
+# Monitor for 24 hours
+validator-ctl monitor-hsm-health
+
+# Increase to 50%
+validator-ctl set-hsm-weight google-cloud-kms 50
+
+# Monitor for 24 hours
+validator-ctl monitor-hsm-health
+
+# Full cutover
+validator-ctl set-hsm-weight google-cloud-kms 100
+
+# Decommission old HSM after 7 days
+```
+
+### Common Migration Paths
+
+#### Path 1: Software KMS → Cloud HSM
+
+**Recommended:** Google Cloud KMS (easiest)
+
+**Steps:**
+1. Generate new keys in Cloud HSM
+2. Update validator configuration
+3. Restart validator with new keys
+4. **Note:** Cannot import existing software keys to HSM (security policy)
+
+**Downtime:** 2-5 minutes (validator restart)
+
+---
+
+#### Path 2: AWS CloudHSM → Google Cloud KMS
+
+**Complexity:** Medium
+
+**Steps:**
+1. Export keys from CloudHSM (wrapped)
+2. Import to Google Cloud KMS
+3. Update KMS configuration
+4. Gradual rollout (see above)
+
+**Downtime:** Zero (with gradual rollout)
+
+---
+
+#### Path 3: Google Cloud KMS → Thales Luna
+
+**Complexity:** Medium
+
+**Steps:**
+1. Export keys from Google Cloud KMS
+2. Import to Luna partition
+3. Update KMS configuration
+4. Test thoroughly before cutover
+
+**Downtime:** 2-5 minutes (with blue-green)
+
+---
+
+#### Path 4: Zymbit → Cloud HSM
+
+**Complexity:** Low
+
+**Steps:**
+1. Generate new keys in Cloud HSM
+2. Update validator pointing to cloud
+3. Keep Zymbit as backup signer
+
+**Downtime:** 2-5 minutes
+
+**Note:** Recommended to generate fresh keys rather than export
+
+---
+
+## Multi-HSM Deployment
+
+### High Availability Configuration
+
+Run multiple HSM providers simultaneously for redundancy:
+
+```yaml
+# /etc/kms/config.yaml
+hsm:
+  mode: multi-hsm
+
+  primary:
+    provider: aws-cloudhsm
+    cluster_id: cluster-123
+    region: us-east-1
+    slot: 0
+    weight: 70  # 70% of operations
+
+  backup:
+    provider: thales-luna
+    slot: 0
+    token_label: LuxBackup
+    weight: 30  # 30% of operations
+
+  failover:
+    enabled: true
+    strategy: automatic
+    health_check_interval: 30s
+    failure_threshold: 3
+
+  load_balancing:
+    algorithm: weighted-round-robin
+    sticky_sessions: false
+```
+
+### Failover Behavior
+
+```
+Primary HSM Healthy:
+┌──────────────┐
+│ AWS CloudHSM │ ──► 70% of signing operations
+└──────────────┘
+┌──────────────┐
+│ Thales Luna  │ ──► 30% of signing operations
+└──────────────┘
+
+Primary HSM Failed (3 consecutive health checks):
+┌──────────────┐
+│ AWS CloudHSM │ ──► OFFLINE
+└──────────────┘
+┌──────────────┐
+│ Thales Luna  │ ──► 100% of signing operations
+└──────────────┘
+
+Primary HSM Recovered:
+┌──────────────┐
+│ AWS CloudHSM │ ──► Gradual ramp-up to 70%
+└──────────────┘
+┌──────────────┐
+│ Thales Luna  │ ──► Gradual ramp-down to 30%
+└──────────────┘
+```
+
+### Geographic Distribution
+
+Deploy HSMs across regions for disaster recovery:
+
+```yaml
+hsm:
+  mode: multi-region
+
+  us-east-1:
+    provider: aws-cloudhsm
+    cluster_id: cluster-us-east-1
+    weight: 50
+
+  us-west-2:
+    provider: aws-cloudhsm
+    cluster_id: cluster-us-west-2
+    weight: 50
+
+  routing:
+    strategy: latency-based
+    fallback: round-robin
+```
+
+---
+
+## Troubleshooting by Provider
+
+### Thales Luna Cloud HSM
+
+#### Issue: "CKR_TOKEN_NOT_PRESENT" error
+
+**Symptoms:** KMS cannot find Luna token/partition
+
+**Solutions:**
+1. Check client registration:
+```bash
+/usr/safenet/lunaclient/bin/vtl verify
+```
+
+2. Verify partition assignment:
+```bash
+/usr/safenet/lunaclient/bin/lunacm
+lunacm> partition showPartition
+```
+
+3. Check network connectivity to Luna appliance:
+```bash
+ping <luna-appliance-ip>
+telnet <luna-appliance-ip> 1792
+```
+
+---
+
+#### Issue: "CKR_PIN_INCORRECT" error
+
+**Solutions:**
+1. Verify PIN environment variable:
+```bash
+echo $HSM_PIN
+```
+
+2. Reset PIN (requires partition admin):
+```bash
+lunacm> partition changePwd -partition <name>
+```
+
+3. Check partition is not in "locked" state
+
+---
+
+### AWS CloudHSM
+
+#### Issue: "Cluster not found" error
+
+**Solutions:**
+1. Verify cluster ID:
+```bash
+aws cloudhsmv2 describe-clusters \
+  --region us-east-1 \
+  --query 'Clusters[*].[ClusterId,State]'
+```
+
+2. Check IAM permissions:
+```bash
+aws sts get-caller-identity
+# Verify role has cloudhsm:DescribeClusters permission
+```
+
+3. Verify region matches cluster location
+
+---
+
+#### Issue: "Connection timeout" to HSM
+
+**Solutions:**
+1. Check security group allows port 2223-2225:
+```bash
+aws ec2 describe-security-groups \
+  --group-ids <sg-id> \
+  --query 'SecurityGroups[*].IpPermissions'
+```
+
+2. Verify ENI is in correct subnet:
+```bash
+aws cloudhsmv2 describe-clusters \
+  --cluster-ids <cluster-id> \
+  --query 'Clusters[*].SubnetMapping'
+```
+
+3. Check CloudHSM client configuration:
+```bash
+cat /opt/cloudhsm/etc/cloudhsm_client.cfg
+# Should contain cluster ENI IPs
+```
+
+---
+
+### Google Cloud KMS
+
+#### Issue: "Permission denied" errors
+
+**Solutions:**
+1. Verify service account permissions:
+```bash
+gcloud projects get-iam-policy lux-validator-prod \
+  --flatten="bindings[].members" \
+  --filter="bindings.members:serviceAccount:<sa-email>"
+```
+
+2. Grant required roles:
+```bash
+gcloud projects add-iam-policy-binding lux-validator-prod \
+  --member="serviceAccount:<sa-email>" \
+  --role="roles/cloudkms.cryptoKeyEncrypterDecrypter"
+```
+
+3. Check API is enabled:
+```bash
+gcloud services list --enabled | grep cloudkms
+```
+
+---
+
+#### Issue: "Crypto key version not found"
+
+**Solutions:**
+1. List available key versions:
+```bash
+gcloud kms keys versions list \
+  --key=<key-name> \
+  --keyring=<keyring-name> \
+  --location=global
+```
+
+2. Create new key version:
+```bash
+gcloud kms keys versions create \
+  --key=<key-name> \
+  --keyring=<keyring-name> \
+  --location=global \
+  --primary
+```
+
+---
+
+### Fortanix HSM
+
+#### Issue: "API authentication failed"
+
+**Solutions:**
+1. Verify API key is valid:
+```bash
+curl -H "Authorization: Basic <api-key>" \
+  https://sdkms.fortanix.com/sys/v1/session/auth
+```
+
+2. Regenerate API key in Fortanix portal
+
+3. Check app UUID is correct:
+```bash
+echo $FORTANIX_APP_UUID
+```
+
+---
+
+#### Issue: "PKCS#11 library not found"
+
+**Solutions:**
+1. Install Fortanix PKCS#11 library:
+```bash
+# Download from Fortanix portal
+sudo dpkg -i fortanix-pkcs11_<version>.deb
+```
+
+2. Verify library path:
+```bash
+ls -la $HSM_LIB_PATH
+# Should exist and be readable
+```
+
+3. Check PKCS#11 config:
+```bash
+cat $FORTANIX_PKCS11_CONFIG_PATH
+# Should contain API endpoint and credentials
+```
+
+---
+
+### Zymbit SCM
+
+#### Issue: "Device not found" error
+
+**Solutions:**
+1. Check Zymbit hardware is connected:
+```bash
+ls -la /dev/zymkey*
+# Should show device nodes
+```
+
+2. Verify I2C is enabled:
+```bash
+sudo raspi-config
+# Interface Options → I2C → Enable
+```
+
+3. Check Zymbit service is running:
+```bash
+sudo systemctl status zkifc
+```
+
+---
+
+#### Issue: "Permission denied" accessing /dev/zymkey
+
+**Solutions:**
+1. Add user to zymbit group:
+```bash
+sudo usermod -a -G zymbit $USER
+# Logout and login again
+```
+
+2. Check device permissions:
+```bash
+ls -la /dev/zymkey
+# Should be readable by zymbit group
+```
+
+---
+
+### General PKCS#11 Issues
+
+#### Issue: "CKR_CRYPTOKI_NOT_INITIALIZED"
+
+**Solutions:**
+1. Initialize PKCS#11 library in code:
+```go
+import "github.com/miekg/pkcs11"
+
+p := pkcs11.New(os.Getenv("HSM_LIB_PATH"))
+err := p.Initialize()
+```
+
+2. Check library loads successfully:
+```bash
+ldd $HSM_LIB_PATH
+# Should show all dependencies resolved
+```
+
+---
+
+#### Issue: "CKR_SESSION_COUNT"
+
+**Solutions:**
+1. Close sessions properly:
+```go
+defer session.Close()
+```
+
+2. Increase max sessions in HSM configuration
+
+3. Check for session leaks in application code
+
+---
+
+## Performance Benchmarks
+
+### Signing Performance (operations/sec)
+
+| Provider | BLS Sign | ECDSA Sign | Latency (p50) | Latency (p99) |
+|----------|----------|------------|---------------|---------------|
+| **SoftHSM2** | N/A* | 5,000+ | <1ms | <1ms |
+| **AWS CloudHSM** | 800 | 3,000 | 1ms | 3ms |
+| **Fortanix** | 600 | 2,500 | 2ms | 6ms |
+| **Thales Luna** | 500 | 2,000 | 2ms | 5ms |
+| **YubiHSM 2** | N/A | 100-300 | 5ms | 15ms |
+| **Zymbit** | 100 | 300 | 5ms | 15ms |
+| **Google Cloud KMS** | 200 | 500 | 10ms | 50ms |
+| **Nitrokey HSM** | N/A | 50-100 | 10ms | 25ms |
+
+*SoftHSM2 is in-process, no BLS support in standard builds
+Benchmarks run from same region/AZ as HSM. USB-based HSMs (YubiHSM, Nitrokey, Zymbit) measured with direct USB connection.
+
+### Network Latency Impact
+
+| Provider | Same Region | Cross-Region | Global |
+|----------|-------------|--------------|--------|
+| **AWS CloudHSM** | 1-2ms | 50-100ms | N/A |
+| **Google Cloud KMS** | 10-20ms | 100-200ms | 200-500ms |
+| **Thales Luna** | 5-10ms | 100-150ms | N/A |
+
+---
+
+## Security Considerations
+
+### Key Extraction Resistance
+
+| Provider | Key Extraction | Export Format | Audit Trail |
+|----------|----------------|---------------|-------------|
+| **All HSMs** | Impossible | Wrapped only | Complete |
+
+All supported HSM providers prevent raw key extraction. Keys can only be exported in encrypted/wrapped format, and all operations are logged.
+
+### Compliance Certifications
+
+| Provider | FIPS 140-2 | Common Criteria | SOC 2 | PCI DSS |
+|----------|------------|-----------------|-------|---------|
+| **Thales Luna** | Level 3 | EAL 4+ | Type II | Compliant |
+| **AWS CloudHSM** | Level 3 | - | Type II | Compliant |
+| **Google Cloud KMS** | Level 3 | - | Type II | Compliant |
+| **Fortanix** | Level 3 | - | Type II | Compliant |
+| **YubiHSM 2 FIPS** | Level 3 | - | Type II* | Compliant |
+| **Nitrokey HSM** | - | EAL 5+ | - | - |
+| **Zymbit** | - | - | - | - |
+| **SoftHSM2** | - | - | - | - |
+
+*Yubico (manufacturer) is SOC 2 Type II certified
+
+---
+
+## Next Steps
+
+### Getting Started
+
+1. **Evaluate Requirements**: Use decision tree above
+2. **Choose Provider**: Based on deployment type
+3. **Follow Setup Guide**: Click provider-specific guide
+4. **Test Integration**: Use KMS test commands
+5. **Deploy Production**: Gradual rollout recommended
+
+### Additional Resources
+
+**Enterprise HSM Providers:**
+- [Thales Luna Configuration →](/kms-configuration/thales-luna-hsm)
+- [AWS CloudHSM Configuration →](/kms-configuration/aws-cloudhsm)
+- [Google Cloud KMS Configuration →](/kms-configuration/google-cloud-hsm)
+- [Fortanix HSM Configuration →](/kms-configuration/fortanix-hsm)
+
+**Open-Source & Affordable HSMs:**
+- [SoftHSM2 Documentation](https://github.com/softhsm/SoftHSMv2)
+- [Nitrokey HSM Documentation](https://docs.nitrokey.com/)
+- [YubiHSM 2 Documentation](https://developers.yubico.com/YubiHSM2/)
+- [Zymbit SCM Configuration →](/kms-configuration/zymbit-hsm)
+
+**General:**
+- [KMS API Reference →](/api-reference/kms)
+
+### Support
+
+- **Documentation Issues**: [GitHub Issues](https://github.com/luxfi/kms/issues)
+- **HSM Provider Support**: Contact respective vendor
+- **Community**: [Discord #kms-support](https://discord.gg/luxnetwork)
+
+---
+
+*Last Updated: 2025-11-14*
+*Documentation Version: 1.0.0*

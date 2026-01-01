@@ -4,7 +4,7 @@ import { InternalKmsSchema, KmsKeysSchema } from "@app/db/schemas";
 import { EventType } from "@app/ee/services/audit-log/audit-log-types";
 import { ApiDocsTags, KMS } from "@app/lib/api-docs";
 import { getBase64SizeInBytes, isBase64 } from "@app/lib/base64";
-import { AllowedEncryptionKeyAlgorithms, SymmetricKeyAlgorithm } from "@app/lib/crypto/cipher";
+import { AllowedEncryptionKeyAlgorithms, FheKeyAlgorithm, SymmetricKeyAlgorithm } from "@app/lib/crypto/cipher";
 import { AsymmetricKeyAlgorithm, SigningAlgorithm } from "@app/lib/crypto/sign";
 import { OrderByDirection } from "@app/lib/types";
 import { readLimit, writeLimit } from "@app/server/config/rateLimiter";
@@ -85,6 +85,17 @@ export const registerCmekRouter = async (server: FastifyZodProvider) => {
               code: z.ZodIssueCode.custom,
               message: `encryptionAlgorithm must be a valid asymmetric sign-verify algorithm. Valid options are: ${Object.values(
                 AsymmetricKeyAlgorithm
+              ).join(", ")}`
+            });
+          }
+          if (
+            data.keyUsage === KmsKeyUsage.FHE_COMPUTATION &&
+            !Object.values(FheKeyAlgorithm).includes(data.encryptionAlgorithm as FheKeyAlgorithm)
+          ) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `encryptionAlgorithm must be a valid FHE algorithm. Valid options are: ${Object.values(
+                FheKeyAlgorithm
               ).join(", ")}`
             });
           }

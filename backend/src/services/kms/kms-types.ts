@@ -16,7 +16,24 @@ export enum KmsType {
 
 export enum KmsKeyUsage {
   ENCRYPT_DECRYPT = "encrypt-decrypt",
-  SIGN_VERIFY = "sign-verify"
+  SIGN_VERIFY = "sign-verify",
+  // FHE key usage - for fully homomorphic encryption operations
+  // Supports threshold decryption where multiple parties hold key shares
+  FHE_COMPUTATION = "fhe-computation"
+}
+
+// Re-export FheKeyAlgorithm from cipher/types to avoid circular deps
+// The canonical definition is in @app/lib/crypto/cipher/types
+export { FheKeyAlgorithm } from "@app/lib/crypto/cipher/types";
+
+// Threshold FHE types for t-of-n decryption
+export type TThresholdConfig = {
+  // Threshold (t) - minimum parties required for decryption
+  threshold: number;
+  // Total parties (n) - total number of key shares
+  totalParties: number;
+  // Party identifiers
+  partyIds: string[];
 }
 
 export type TEncryptWithKmsDataKeyDTO =
@@ -99,4 +116,62 @@ export type TImportKeyMaterialDTO = {
   projectId: string;
   orgId: string;
   keyUsage: KmsKeyUsage;
+};
+
+// ============================================================================
+// FHE Key Management Types
+// ============================================================================
+
+/**
+ * Generate an FHE key pair
+ * Returns public key and internal keyId for later operations
+ */
+export type TGenerateFheKeyPairDTO = {
+  orgId: string;
+  projectId: string;
+  name?: string;
+  description?: string;
+  algorithm: FheKeyAlgorithm;
+  // Optional threshold config for t-of-n decryption
+  thresholdConfig?: TThresholdConfig;
+};
+
+/**
+ * Get public key for an FHE key
+ */
+export type TGetFhePublicKeyDTO = {
+  keyId: string;
+};
+
+/**
+ * FHE threshold decryption request
+ * Requires t-of-n partial decryptions to complete
+ */
+export type TFheThresholdDecryptDTO = {
+  keyId: string;
+  ciphertext: Buffer;
+  // Partial decryptions from threshold parties
+  partialDecryptions?: Array<{
+    partyId: string;
+    partialResult: Buffer;
+  }>;
+};
+
+/**
+ * Request partial decryption from this KMS instance
+ * Used in threshold FHE where each party produces a partial result
+ */
+export type TFhePartialDecryptDTO = {
+  keyId: string;
+  ciphertext: Buffer;
+  partyId: string;
+};
+
+/**
+ * Rotate FHE key (reshare without revealing secret)
+ */
+export type TRotateFheKeyDTO = {
+  keyId: string;
+  // New threshold config (optional - keeps existing if not provided)
+  newThresholdConfig?: TThresholdConfig;
 };
