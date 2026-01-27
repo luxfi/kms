@@ -1,4 +1,3 @@
-import opentelemetry from "@opentelemetry/api";
 import { AxiosError } from "axios";
 import { Job } from "bullmq";
 
@@ -144,20 +143,6 @@ export const secretSyncQueueFactory = ({
   gatewayService
 }: TSecretSyncQueueFactoryDep) => {
   const appCfg = getConfig();
-
-  const integrationMeter = opentelemetry.metrics.getMeter("SecretSyncs");
-  const syncSecretsErrorHistogram = integrationMeter.createHistogram("secret_sync_sync_secrets_errors", {
-    description: "Secret Sync - sync secrets errors",
-    unit: "1"
-  });
-  const importSecretsErrorHistogram = integrationMeter.createHistogram("secret_sync_import_secrets_errors", {
-    description: "Secret Sync - import secrets errors",
-    unit: "1"
-  });
-  const removeSecretsErrorHistogram = integrationMeter.createHistogram("secret_sync_remove_secrets_errors", {
-    description: "Secret Sync - remove secrets errors",
-    unit: "1"
-  });
 
   const $createManySecretsRawFn = createManySecretsRawFnFactory({
     projectDAL,
@@ -496,18 +481,6 @@ export const secretSyncQueueFactory = ({
         `SecretSync Sync Error [syncId=${secretSync.id}] [destination=${secretSync.destination}] [projectId=${secretSync.projectId}] [folderId=${secretSync.folderId}] [connectionId=${secretSync.connectionId}]`
       );
 
-      if (appCfg.OTEL_TELEMETRY_COLLECTION_ENABLED) {
-        syncSecretsErrorHistogram.record(1, {
-          version: 1,
-          destination: secretSync.destination,
-          syncId: secretSync.id,
-          projectId: secretSync.projectId,
-          type: err instanceof AxiosError ? "AxiosError" : err?.constructor?.name || "UnknownError",
-          status: err instanceof AxiosError ? err.response?.status : undefined,
-          name: err instanceof Error ? err.name : undefined
-        });
-      }
-
       syncMessage = parseSyncErrorMessage(err);
 
       if (err instanceof SecretSyncError && !err.shouldRetry) {
@@ -615,18 +588,6 @@ export const secretSyncQueueFactory = ({
         err,
         `SecretSync Import Error [syncId=${secretSync.id}] [destination=${secretSync.destination}] [projectId=${secretSync.projectId}] [folderId=${secretSync.folderId}] [connectionId=${secretSync.connectionId}]`
       );
-
-      if (appCfg.OTEL_TELEMETRY_COLLECTION_ENABLED) {
-        importSecretsErrorHistogram.record(1, {
-          version: 1,
-          destination: secretSync.destination,
-          syncId: secretSync.id,
-          projectId: secretSync.projectId,
-          type: err instanceof AxiosError ? "AxiosError" : err?.constructor?.name || "UnknownError",
-          status: err instanceof AxiosError ? err.response?.status : undefined,
-          name: err instanceof Error ? err.name : undefined
-        });
-      }
 
       importMessage = parseSyncErrorMessage(err);
 
@@ -746,18 +707,6 @@ export const secretSyncQueueFactory = ({
         err,
         `SecretSync Remove Error [syncId=${secretSync.id}] [destination=${secretSync.destination}] [projectId=${secretSync.projectId}] [folderId=${secretSync.folderId}] [connectionId=${secretSync.connectionId}]`
       );
-
-      if (appCfg.OTEL_TELEMETRY_COLLECTION_ENABLED) {
-        removeSecretsErrorHistogram.record(1, {
-          version: 1,
-          destination: secretSync.destination,
-          syncId: secretSync.id,
-          projectId: secretSync.projectId,
-          type: err instanceof AxiosError ? "AxiosError" : err?.constructor?.name || "UnknownError",
-          status: err instanceof AxiosError ? err.response?.status : undefined,
-          name: err instanceof Error ? err.name : undefined
-        });
-      }
 
       removeMessage = parseSyncErrorMessage(err);
 

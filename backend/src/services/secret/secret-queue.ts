@@ -1,5 +1,4 @@
 /* eslint-disable no-await-in-loop */
-import opentelemetry from "@opentelemetry/api";
 import { AxiosError } from "axios";
 import { Knex } from "knex";
 
@@ -174,12 +173,6 @@ export const secretQueueFactory = ({
   folderCommitService,
   reminderService
 }: TSecretQueueFactoryDep) => {
-  const integrationMeter = opentelemetry.metrics.getMeter("Integrations");
-  const errorHistogram = integrationMeter.createHistogram("integration_secret_sync_errors", {
-    description: "Integration secret sync errors",
-    unit: "1"
-  });
-
   const removeSecretReminder = async ({ deleteRecipients = true, ...dto }: TRemoveSecretReminderDTO, tx?: Knex) => {
     if (deleteRecipients) {
       await reminderService.deleteReminderBySecretId(dto.secretId, dto.projectId, tx);
@@ -963,19 +956,6 @@ export const secretQueueFactory = ({
               err,
               `Secret integration sync error [projectId=${job.data.projectId}] [environment=${environment}]  [secretPath=${job.data.secretPath}]`
             );
-
-            const appCfg = getConfig();
-            if (appCfg.OTEL_TELEMETRY_COLLECTION_ENABLED) {
-              errorHistogram.record(1, {
-                version: 1,
-                integration: integration.integration,
-                integrationId: integration.id,
-                type: err instanceof AxiosError ? "AxiosError" : err?.constructor?.name || "UnknownError",
-                status: err instanceof AxiosError ? err.response?.status : undefined,
-                name: err instanceof Error ? err.name : undefined,
-                projectId: integration.projectId
-              });
-            }
 
             const { secretKey } = (err as { secretKey: string }) || {};
 

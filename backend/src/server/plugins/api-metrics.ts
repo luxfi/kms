@@ -1,21 +1,21 @@
-import opentelemetry from "@opentelemetry/api";
+// OpenTelemetry removed - using simple logging for metrics
 import fp from "fastify-plugin";
 
-export const apiMetrics = fp(async (fastify) => {
-  const apiMeter = opentelemetry.metrics.getMeter("API");
-  const latencyHistogram = apiMeter.createHistogram("API_latency", {
-    unit: "ms"
-  });
+import { logger } from "@app/lib/logger";
 
+export const apiMetrics = fp(async (fastify) => {
   fastify.addHook("onResponse", async (request, reply) => {
     const { method } = request;
     const route = request.routerPath;
     const { statusCode } = reply;
 
-    latencyHistogram.record(reply.elapsedTime, {
+    // Log latency for observability (can be scraped by log aggregators)
+    logger.debug({
+      msg: "api_latency",
       route,
       method,
-      statusCode
+      statusCode,
+      latencyMs: reply.elapsedTime
     });
   });
 });
