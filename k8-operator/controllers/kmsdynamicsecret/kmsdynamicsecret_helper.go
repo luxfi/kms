@@ -17,7 +17,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	kmsSdk "github.com/kms/go-sdk"
+	kmsSdk "github.com/luxfi/kms-go"
 	k8Errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"

@@ -12,7 +12,7 @@ import (
 
 	"github.com/luxfi/kms/k8-operator/api/v1alpha1"
 	"github.com/aws/smithy-go/ptr"
-	kmsSdk "github.com/kms/go-sdk"
+	kmsSdk "github.com/luxfi/kms-go"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

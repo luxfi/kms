@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	generatorUtil "github.com/luxfi/kms/k8-operator/packages/generator"
-	kmsSdk "github.com/kms/go-sdk"
+	kmsSdk "github.com/luxfi/kms-go"
 	k8Errors "k8s.io/apimachinery/pkg/api/errors"
 )
 

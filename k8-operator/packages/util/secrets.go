@@ -8,7 +8,7 @@ import (
 	"github.com/luxfi/kms/k8-operator/packages/api"
 	"github.com/luxfi/kms/k8-operator/packages/model"
 	"github.com/go-resty/resty/v2"
-	kms "github.com/kms/go-sdk"
+	kms "github.com/luxfi/kms-go"
 )
 
 type DecodedSymmetricEncryptionDetails = struct {

@@ -3,7 +3,7 @@ package util
 import (
 	"context"
 
-	kmsSdk "github.com/kms/go-sdk"
+	kmsSdk "github.com/luxfi/kms-go"
 )
 
 type ResourceVariables struct {

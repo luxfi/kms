@@ -15,11 +15,11 @@ import (
 
 	defaultErrors "errors"
 
+	"github.com/go-logr/logr"
 	secretsv1alpha1 "github.com/luxfi/kms/k8-operator/api/v1alpha1"
 	"github.com/luxfi/kms/k8-operator/packages/api"
 	controllerhelpers "github.com/luxfi/kms/k8-operator/packages/controllerhelpers"
 	"github.com/luxfi/kms/k8-operator/packages/util"
-	"github.com/go-logr/logr"
 )
 
 // KMSSecretReconciler reconciles a KMSSecret object

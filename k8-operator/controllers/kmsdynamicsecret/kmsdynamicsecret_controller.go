@@ -15,12 +15,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/go-logr/logr"
 	secretsv1alpha1 "github.com/luxfi/kms/k8-operator/api/v1alpha1"
 	"github.com/luxfi/kms/k8-operator/packages/api"
 	"github.com/luxfi/kms/k8-operator/packages/constants"
 	controllerhelpers "github.com/luxfi/kms/k8-operator/packages/controllerhelpers"
 	"github.com/luxfi/kms/k8-operator/packages/util"
-	"github.com/go-logr/logr"
 )
 
 // KMSDynamicSecretReconciler reconciles a KMSDynamicSecret object
