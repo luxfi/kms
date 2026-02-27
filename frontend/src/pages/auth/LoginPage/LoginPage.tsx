@@ -1,33 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Helmet } from "react-helmet";
-import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
 
 import { isLoggedIn } from "@app/hooks/api/reactQuery";
+import { getBrand } from "@app/lib/branding";
 
-import { InitialStep, SSOStep } from "./components";
 import { CasdoorLoginStep } from "./components/CasdoorLoginStep";
 import { useNavigateToSelectOrganization } from "./Login.utils";
 
-export const LoginPage = ({ isAdmin }: { isAdmin?: boolean }) => {
-  const { t } = useTranslation();
-  const [step, setStep] = useState<number | null>(null);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export const LoginPage = (_props: { isAdmin?: boolean }) => {
   const { navigateToSelectOrganization } = useNavigateToSelectOrganization();
+  const brand = getBrand();
 
   const queryParams = new URLSearchParams(window.location.search);
 
   useEffect(() => {
-    // TODO(akhilmhdh): workspace will be controlled by a workspace context
     const handleRedirects = async () => {
       try {
         const callbackPort = queryParams?.get("callback_port");
-        // case: a callback port is set, meaning it's a cli login request: redirect to select org with callback port
         if (callbackPort) {
           navigateToSelectOrganization(callbackPort);
         } else {
-          // case: no callback port, meaning it's a regular login request: redirect to select org
           navigateToSelectOrganization();
         }
       } catch {
@@ -37,34 +30,31 @@ export const LoginPage = ({ isAdmin }: { isAdmin?: boolean }) => {
 
     if (isLoggedIn()) {
       handleRedirects();
-    } else {
-      setStep(0);
     }
   }, []);
 
   const renderView = () => {
-    // Always use Casdoor for authentication
     return <CasdoorLoginStep />;
   };
 
   return (
     <div className="flex max-h-screen min-h-screen flex-col justify-center overflow-y-auto bg-gradient-to-tr from-mineshaft-600 via-mineshaft-800 to-bunker-700 px-6">
       <Helmet>
-        <title>{t("common.head-title", { title: t("login.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <title>{brand.name}</title>
+        <link rel="icon" href={brand.favicon} />
         <meta property="og:image" content="/images/message.png" />
-        <meta property="og:title" content={t("login.og-title") ?? ""} />
-        <meta name="og:description" content={t("login.og-description") ?? ""} />
+        <meta property="og:title" content={`Log In to ${brand.name}`} />
+        <meta name="og:description" content={`${brand.name} — secure secret management`} />
       </Helmet>
       <Link to="/">
         <div className="mb-4 mt-20 flex justify-center">
           <img
-            src="/images/lux-triangle.svg"
+            src={brand.logo}
             style={{
               height: "90px",
               width: "90px"
             }}
-            alt="Lux KMS logo"
+            alt={`${brand.name} logo`}
           />
         </div>
       </Link>

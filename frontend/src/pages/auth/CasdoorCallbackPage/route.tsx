@@ -1,7 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
-
-import { CasdoorCallbackPage } from "./CasdoorCallbackPage";
-
-export const Route = createFileRoute("/_restrict-login-signup/auth/casdoor-callback")({
-  component: CasdoorCallbackPage
-});
+// Casdoor OAuth callback is handled server-side at /api/v1/auth/casdoor/callback
+// No frontend route needed
+export {};

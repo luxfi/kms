@@ -1,24 +1,20 @@
 import { useEffect } from "react";
-import { useTranslation } from "react-i18next";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import { Button } from "@app/components/v2";
+import { getBrand } from "@app/lib/branding";
 
 export const CasdoorLoginStep = () => {
-  const { t } = useTranslation();
-  
+  const brand = getBrand();
+
   const handleCasdoorLogin = () => {
-    // Redirect to backend which will redirect to Casdoor
     const callbackPort = new URLSearchParams(window.location.search).get("callback_port");
     const redirectUri = callbackPort ? `/dashboard?callback_port=${callbackPort}` : "/dashboard";
-    
-    // Redirect to backend OAuth endpoint
     window.location.href = `/api/v1/auth/casdoor/login?redirect_uri=${encodeURIComponent(redirectUri)}`;
   };
 
   useEffect(() => {
-    // Check if we have an error from OAuth callback
     const urlParams = new URLSearchParams(window.location.search);
     const error = urlParams.get("error");
     if (error) {
@@ -30,10 +26,10 @@ export const CasdoorLoginStep = () => {
     <div className="flex flex-col items-center space-y-8 mx-auto w-full">
       <div className="flex flex-col items-center space-y-2">
         <h1 className="text-3xl font-semibold text-gray-900 dark:text-gray-100">
-          Welcome to Lux KMS
+          Welcome to {brand.name}
         </h1>
         <p className="text-gray-600 dark:text-gray-400 text-center">
-          Sign in with your Lux ID to continue
+          Sign in with your {brand.idName} to continue
         </p>
       </div>
 
@@ -46,12 +42,8 @@ export const CasdoorLoginStep = () => {
           size="lg"
           rightIcon={<FontAwesomeIcon icon={faArrowRight} />}
         >
-          Continue with Lux ID
+          Continue with {brand.idName}
         </Button>
-        
-        <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-          {t("auth.login.sso-description")}
-        </p>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { faGithub, faSlack } from "@fortawesome/free-brands-svg-icons";
+import { getBrand } from "@app/lib/branding";
 import { faCircleQuestion, faUserCircle } from "@fortawesome/free-regular-svg-icons";
 import {
   faArrowUpRightFromSquare,
@@ -55,9 +56,10 @@ const getPlan = (subscription: SubscriptionPlan) => {
 };
 
 const getFormattedSupportEmailLink = (variables: { org_id: string; domain: string }) => {
-  const email = "support@lux.network";
+  const brand = getBrand();
+  const email = brand.supportEmail;
 
-  const body = `Hello KMS Support Team,
+  const body = `Hello ${brand.name} Support Team,
 
 Issue Details:
 [What you did]
@@ -183,7 +185,7 @@ export const Navbar = () => {
     <div className="z-10 flex min-h-12 items-center border-b border-mineshaft-600 bg-mineshaft-800 px-4">
       <div>
         <Link to="/organization/projects">
-          <img alt="kms logo" src="/images/logotransparent.png" className="h-4" />
+          <img alt="kms logo" src={getBrand().navLogo} className="h-4" />
         </Link>
       </div>
       <p className="pl-1 pr-3 text-lg text-mineshaft-400/70">/</p>
