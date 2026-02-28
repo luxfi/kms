@@ -152,7 +152,7 @@
     "@fastify/swagger-ui": "^2.1.0",
     "@gitbeaker/rest": "^42.5.0",
     "@google-cloud/kms": "^4.5.0",
-    "@hanzo/quic": "^1.0.8",
+    "@hanzo/quic": "npm:@infisical/quic@^1.0.8",
     "@node-saml/passport-saml": "^5.1.0",
     "@octokit/auth-app": "^7.1.1",
     "@octokit/core": "^5.2.1",
