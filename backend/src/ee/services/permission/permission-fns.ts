@@ -24,6 +24,18 @@ export const ForbiddenError = class extends Error {
   }
 };
 
+export const isAuthMethodSaml = (_authMethod: unknown): boolean => {
+  return false;
+};
+
+export const throwIfMissingSecretReadValueOrDescribePermission = (
+  _permission: unknown,
+  _action: unknown,
+  _context?: { environment?: string; secretPath?: string }
+): void => {
+  // Stub - no-op since EE permission checks are removed (full access)
+};
+
 // Stub - always returns true (full access) since EE permission checks are removed
 export const hasSecretReadValueOrDescribePermission = (
   _permission: unknown,

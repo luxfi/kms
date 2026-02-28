@@ -25,6 +25,39 @@ export enum ProjectPermissionSecretActions {
   ReadValue = "read-value"
 }
 
+export enum ProjectPermissionCmekActions {
+  Read = "read",
+  Create = "create",
+  Edit = "edit",
+  Delete = "delete",
+  Encrypt = "encrypt",
+  Decrypt = "decrypt"
+}
+
+export enum ProjectPermissionGroupActions {
+  Read = "read",
+  Create = "create",
+  Edit = "edit",
+  Delete = "delete",
+  GrantPrivilege = "grant-privilege"
+}
+
+export enum ProjectPermissionIdentityActions {
+  Read = "read",
+  Create = "create",
+  Edit = "edit",
+  Delete = "delete",
+  GrantPrivilege = "grant-privilege"
+}
+
+export enum ProjectPermissionMemberActions {
+  Read = "read",
+  Create = "create",
+  Edit = "edit",
+  Delete = "delete",
+  GrantPrivilege = "grant-privilege"
+}
+
 export enum ProjectPermissionSub {
   Role = "role",
   Member = "member",

@@ -47,6 +47,20 @@ export const projectViewerPermissions = [
   }
 ];
 
+// Alias for compatibility
+export const projectViewerPermission = projectViewerPermissions;
+
+export const projectNoAccessPermissions: typeof projectAdminPermissions = [];
+
+export const cryptographicOperatorPermissions = [
+  {
+    action: [ProjectPermissionActions.Read, ProjectPermissionActions.Create, ProjectPermissionActions.Edit, ProjectPermissionActions.Delete],
+    subject: ProjectPermissionSub.Secrets
+  }
+];
+
+export const sshHostBootstrapPermissions: typeof projectAdminPermissions = [];
+
 export const getDefaultProjectRolePermissions = (role: ProjectMembershipRole) => {
   switch (role) {
     case ProjectMembershipRole.Admin:

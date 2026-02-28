@@ -8,6 +8,25 @@ export enum OrgPermissionActions {
   Delete = "delete"
 }
 
+export enum OrgPermissionAdminConsoleAction {
+  AccessAdminConsole = "access-admin-console"
+}
+
+export enum OrgPermissionIdentityActions {
+  Read = "read",
+  Create = "create",
+  Edit = "edit",
+  Delete = "delete",
+  GrantPrivilege = "grant-privilege"
+}
+
+export enum OrgPermissionGroupActions {
+  Read = "read",
+  Create = "create",
+  Edit = "edit",
+  Delete = "delete"
+}
+
 export enum OrgPermissionSubjects {
   Org = "organization",
   Member = "member",
