@@ -1,15 +1,12 @@
 // HSM Provider exports
 // Central export point for all HSM provider implementations
 
-export { ZymbitHSM, ZymbitConfig, ZymbitDeviceInfo, createZymbitHSM } from './zymbit';
-export { GoogleCloudKMS, GoogleCloudKMSConfig, createGoogleCloudKMS } from './google-cloud-kms';
-export {
-  AWSCloudHSM,
-  AWSCloudHSMConfig,
-  AWSCloudHSMClusterInfo,
-  AWSCloudHSMHealthStatus,
-  createAWSCloudHSM
-} from './aws-cloudhsm';
+export { ZymbitHSM, createZymbitHSM } from './zymbit';
+export type { ZymbitConfig, ZymbitDeviceInfo } from './zymbit';
+export { GoogleCloudKMS, createGoogleCloudKMS } from './google-cloud-kms';
+export type { GoogleCloudKMSConfig } from './google-cloud-kms';
+export { AWSCloudHSM, createAWSCloudHSM } from './aws-cloudhsm';
+export type { AWSCloudHSMConfig, AWSCloudHSMClusterInfo, AWSCloudHSMHealthStatus } from './aws-cloudhsm';
 
 // Type for provider detection
 export type HsmProviderType = 'zymbit' | 'thales' | 'aws' | 'fortanix' | 'google-cloud' | 'auto';
