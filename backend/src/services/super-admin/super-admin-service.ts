@@ -78,11 +78,12 @@ export let getServerCfg: () => Promise<
   }
 > = async () => {
   // Default stub implementation for community edition
+  // Use nil UUIDs so Zod z.string().uuid() validation passes on /api/v1/admin/config
   return {
-    id: "stub-id",
+    id: "00000000-0000-0000-0000-000000000000",
     initialized: true,
     version: "community",
-    instanceId: "community-instance", 
+    instanceId: "00000000-0000-0000-0000-000000000001",
     signUpMode: "open",
     allowedSignUpDomain: null,
     telemetryEnabled: false,
