@@ -34,3 +34,19 @@ export const validateOCIVaultConnection = async (params: any) => {
   // Stub implementation - always return valid
   return { isValid: true };
 };
+export const OCI_VAULT_SYNC_LIST_OPTION = {
+  name: "OCI Vault" as const,
+  destination: "oci-vault" as const
+};
+
+export const OCIVaultSyncFns = {
+  syncSecrets: async (_secretSync: unknown, _schemaSecretMap: unknown): Promise<void> => {
+    // Stub - no-op since EE OCI Vault sync is removed
+  },
+  getSecrets: async (_secretSync: unknown): Promise<Record<string, unknown>> => {
+    return {};
+  },
+  removeSecrets: async (_secretSync: unknown, _schemaSecretMap: unknown): Promise<void> => {
+    // Stub - no-op
+  }
+};

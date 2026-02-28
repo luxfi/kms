@@ -28,3 +28,8 @@ export const validateOracleDBConnection = async (params: any) => {
   // Stub implementation - always return valid
   return { isValid: true };
 };
+export const getOracleDBConnectionListItem = () => ({
+  name: "OracleDB" as const,
+  app: "oracledb" as const,
+  methods: ["basic-auth"]
+});

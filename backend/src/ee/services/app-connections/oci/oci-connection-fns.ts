@@ -28,3 +28,12 @@ export const validateOCIConnection = async (params: any) => {
   // Stub implementation - always return valid
   return { isValid: true };
 };
+export const getOCIConnectionListItem = () => ({
+  name: "OCI" as const,
+  app: "oci" as const,
+  methods: ["user-api-key"]
+});
+
+export const validateOCIConnectionCredentials = async (_params: unknown): Promise<void> => {
+  // Stub - no-op since EE OCI connection validation is removed
+};
