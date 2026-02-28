@@ -10,11 +10,11 @@ import { createNotification } from "@app/components/notifications";
 import { Button, DeleteActionModal, Tooltip } from "@app/components/v2";
 import { usePopUp } from "@app/hooks";
 import {
-import { getBrand } from "@app/lib/branding";
   useGetMyDuplicateAccount,
   useLogoutUser,
   useRemoveMyDuplicateAccounts
 } from "@app/hooks/api";
+import { getBrand } from "@app/lib/branding";
 
 type Props = {
   onRemoveDuplicateLater: () => void;

@@ -9,13 +9,13 @@ import { ProjectType } from "@app/hooks/api/workspace/types";
 import { ProjectAccessControlTabs } from "@app/types/project";
 
 import {
-import { getBrand } from "@app/lib/branding";
   GroupsTab,
   IdentityTab,
   MembersTab,
   ProjectRoleListTab,
   ServiceTokenTab
 } from "./components";
+import { getBrand } from "@app/lib/branding";
 
 const Page = () => {
   const navigate = useNavigate();

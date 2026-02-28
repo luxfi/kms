@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { faGithub, faSlack } from "@fortawesome/free-brands-svg-icons";
-import { getBrand } from "@app/lib/branding";
 import { faCircleQuestion, faUserCircle } from "@fortawesome/free-regular-svg-icons";
 import {
   faArrowUpRightFromSquare,
@@ -48,6 +47,7 @@ import { AuthMethod } from "@app/hooks/api/users/types";
 import { navigateUserToOrg } from "@app/pages/auth/LoginPage/Login.utils";
 
 import { ServerAdminsPanel } from "../ServerAdminsPanel/ServerAdminsPanel";
+import { getBrand } from "@app/lib/branding";
 
 const getPlan = (subscription: SubscriptionPlan) => {
   if (subscription.groups) return "Enterprise";

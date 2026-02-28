@@ -16,11 +16,11 @@ import { OrgAccessControlTabSections } from "@app/types/org";
 import { IdentityAuthMethodModal } from "../AccessManagementPage/components/OrgIdentityTab/components/IdentitySection/IdentityAuthMethodModal";
 import { IdentityModal } from "../AccessManagementPage/components/OrgIdentityTab/components/IdentitySection/IdentityModal";
 import {
-import { getBrand } from "@app/lib/branding";
   IdentityAuthenticationSection,
   IdentityDetailsSection,
   IdentityProjectsSection
 } from "./components";
+import { getBrand } from "@app/lib/branding";
 
 const Page = () => {
   const navigate = useNavigate();

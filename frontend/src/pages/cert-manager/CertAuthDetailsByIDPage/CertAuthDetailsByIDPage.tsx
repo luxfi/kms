@@ -23,12 +23,12 @@ import { usePopUp } from "@app/hooks/usePopUp";
 import { CaInstallCertModal } from "../CertificateAuthoritiesPage/components/CaInstallCertModal";
 import { CaModal } from "../CertificateAuthoritiesPage/components/CaModal";
 import {
-import { getBrand } from "@app/lib/branding";
   CaCertificatesSection,
   CaCrlsSection,
   CaDetailsSection,
   CaRenewalModal
 } from "./components";
+import { getBrand } from "@app/lib/branding";
 
 const Page = () => {
   const { currentWorkspace } = useWorkspace();

@@ -16,7 +16,6 @@ import { SecretSync, useGetSecretSync } from "@app/hooks/api/secretSyncs";
 import { IntegrationsListPageTabs } from "@app/types/integrations";
 
 import {
-import { getBrand } from "@app/lib/branding";
   SecretSyncActionTriggers,
   SecretSyncAuditLogsSection,
   SecretSyncDestinationSection,
@@ -24,6 +23,7 @@ import { getBrand } from "@app/lib/branding";
   SecretSyncOptionsSection,
   SecretSyncSourceSection
 } from "./components";
+import { getBrand } from "@app/lib/branding";
 
 const PageContent = () => {
   const navigate = useNavigate();

@@ -3,10 +3,10 @@ import { Helmet } from "react-helmet";
 import { Link } from "@tanstack/react-router";
 
 import { isLoggedIn } from "@app/hooks/api/reactQuery";
-import { getBrand } from "@app/lib/branding";
 
 import { CasdoorLoginStep } from "./components/CasdoorLoginStep";
 import { useNavigateToSelectOrganization } from "./Login.utils";
+import { getBrand } from "@app/lib/branding";
 
 export const LoginPage = (_props: { isAdmin?: boolean }) => {
   const { navigateToSelectOrganization } = useNavigateToSelectOrganization();

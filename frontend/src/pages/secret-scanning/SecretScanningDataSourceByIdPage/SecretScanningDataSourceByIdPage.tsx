@@ -15,11 +15,11 @@ import {
 } from "@app/hooks/api/secretScanningV2";
 
 import {
-import { getBrand } from "@app/lib/branding";
   SecretScanningDataSourceSection,
   SecretScanningResourceSection,
   SecretScanningScanSection
 } from "./components";
+import { getBrand } from "@app/lib/branding";
 
 const PageContent = () => {
   const navigate = useNavigate();

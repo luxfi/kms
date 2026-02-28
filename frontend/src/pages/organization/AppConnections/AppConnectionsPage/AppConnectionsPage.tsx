@@ -11,10 +11,10 @@ import {
 import { withPermission } from "@app/hoc";
 import { usePopUp } from "@app/hooks";
 import {
-import { getBrand } from "@app/lib/branding";
   AddAppConnectionModal,
   AppConnectionsTable
 } from "@app/pages/organization/AppConnections/AppConnectionsPage/components";
+import { getBrand } from "@app/lib/branding";
 
 export const AppConnectionsPage = withPermission(
   () => {
