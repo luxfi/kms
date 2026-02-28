@@ -57,3 +57,20 @@ export const getLDAPGroupsForUser = async (params: {
     groups: []
   };
 };
+export const isValidLdapFilter = (_filter: string): boolean => {
+  // Stub - always valid since EE LDAP validation is removed
+  return true;
+};
+
+export const testLDAPConfig = async (_params: {
+  ldapConfigId?: string;
+  url?: string;
+  bindDN?: string;
+  bindPass?: string;
+  groupSearchBase?: string;
+  uniqueUserAttribute?: string;
+  searchFilter?: string;
+}): Promise<{ isConnected: boolean; isGroupSearchConnected: boolean }> => {
+  // Stub - return success since EE LDAP testing is removed
+  return { isConnected: true, isGroupSearchConnected: true };
+};

@@ -28,3 +28,7 @@ export type TSecretApprovalRequest = {
   createdAt: Date;
   updatedAt: Date;
 };
+export enum RequestState {
+  Open = "open",
+  Closed = "closed"
+}

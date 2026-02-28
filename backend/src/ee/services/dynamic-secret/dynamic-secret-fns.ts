@@ -12,6 +12,11 @@ export const buildSqlClientSchema = (dbType: keyof typeof DatabaseProviderClient
   };
 };
 
+export const verifyHostInputValidity = (_host: string, _isGateway?: boolean): string => {
+  // Stub - return host as-is since EE host validation is removed
+  return _host;
+};
+
 export const getDynamicSecretProviders = () => {
   // Stub implementation - return list of providers
   return [

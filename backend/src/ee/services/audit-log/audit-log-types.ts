@@ -24,6 +24,29 @@ export enum EventType {
   USER_DELETED = "user-deleted"
 }
 
+export enum UserAgentType {
+  OTHER = "other",
+  CLI = "cli",
+  K8_OPERATOR = "k8-operator",
+  TERRAFORM = "terraform",
+  WEB = "web",
+  NODE_SDK = "@infisical/sdk",
+  PYTHON_SDK = "infisical-python"
+}
+
+// Actor types - used as type-only in most places
+export type UserActor = { type: "user"; metadata: { userId: string; email: string; username: string } };
+export type IdentityActor = { type: "identity"; metadata: { identityId: string; name: string } };
+export type ServiceActor = { type: "service"; metadata: { serviceId: string; name: string } };
+export type ScimClientActor = { type: "scim-client"; metadata: Record<string, unknown> };
+export type UnknownUserActor = { type: "unknown"; metadata: Record<string, unknown> };
+export type KmipClientActor = { type: "kmip-client"; metadata: Record<string, unknown> };
+export type PlatformActor = { type: "platform"; metadata: Record<string, unknown> };
+export type Actor = UserActor | IdentityActor | ServiceActor | ScimClientActor | UnknownUserActor | KmipClientActor | PlatformActor;
+export type AuditLogInfo = { ipAddress?: string; userAgent?: string; userAgentType?: UserAgentType; actor: Actor };
+export type SecretApprovalEvent = { type: string; metadata?: Record<string, unknown> };
+export type WebhookTriggeredEvent = { type: string; metadata?: Record<string, unknown> };
+
 export type TCreateAuditLogDTO = {
   actor: {
     type: "user" | "identity" | "service";

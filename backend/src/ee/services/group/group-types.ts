@@ -61,3 +61,16 @@ export interface TGetGroupBySlugDTO {
   orgId: string;
   slug: string;
 }
+export enum EFilterReturnedUsers {
+  EXISTING_MEMBERS = "existingMembers",
+  NON_MEMBERS = "nonMembers"
+}
+
+export type TListProjectGroupUsersDTO = {
+  id: string;
+  projectId: string;
+  offset?: number;
+  limit?: number;
+  username?: string;
+  filter?: EFilterReturnedUsers;
+};

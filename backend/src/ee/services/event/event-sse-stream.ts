@@ -34,3 +34,10 @@ export class EventSseStream {
 export const createEventSseStream = (reply: FastifyReply) => {
   return new EventSseStream(reply);
 };
+
+export const getServerSentEventsHeaders = () => ({
+  "Content-Type": "text/event-stream",
+  "Cache-Control": "no-cache",
+  "Connection": "keep-alive",
+  "X-Accel-Buffering": "no"
+});

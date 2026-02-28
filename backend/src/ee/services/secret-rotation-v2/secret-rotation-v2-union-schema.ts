@@ -101,3 +101,5 @@ export const SecretRotationV2ProvidersSchema = z.enum([
   "okta-client-secret",
   "sendgrid-api-key"
 ]);
+// Alias for compatibility
+export const SecretRotationV2Schema = SecretRotationV2UnionSchema;

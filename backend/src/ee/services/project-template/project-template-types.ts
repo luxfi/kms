@@ -23,6 +23,9 @@ export enum KmsProjectTemplate {
   Default = "default"
 }
 
+// Alias for code that imports with KMS all-caps
+export const KMSProjectTemplate = KmsProjectTemplate;
+
 // Stub for the template service factory
 export type TProjectTemplateServiceFactory = {
   // Minimal implementation - returns empty templates

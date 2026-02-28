@@ -39,3 +39,8 @@ export interface TEventFilter {
   startDate?: Date;
   endDate?: Date;
 }
+import { z } from "zod";
+export const EventRegisterSchema = z.object({
+  types: z.array(z.string()).optional(),
+  resourceTypes: z.array(z.string()).optional()
+});
