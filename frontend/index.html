@@ -20,6 +20,15 @@
   "
     />
     <title>KMS</title>
+    <script>
+      (function() {
+        var h = window.location.hostname;
+        var brand = h.includes('lux') ? 'Lux' : h.includes('zoo') ? 'Zoo' : h.includes('pars') ? 'Pars' : 'Hanzo';
+        document.title = brand + ' KMS';
+        var icon = document.querySelector('link[rel="icon"]');
+        if (icon) icon.href = h.includes('lux') ? '/lux.ico' : '/kms.ico';
+      })();
+    </script>
     <script src="/runtime-ui-env.js"></script>
   </head>
   <body>
