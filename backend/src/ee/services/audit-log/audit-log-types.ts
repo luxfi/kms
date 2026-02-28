@@ -34,7 +34,7 @@ export enum UserAgentType {
   PYTHON_SDK = "infisical-python"
 }
 
-// Actor types - used as type-only in most places
+// Actor types
 export type UserActor = { type: "user"; metadata: { userId: string; email: string; username: string } };
 export type IdentityActor = { type: "identity"; metadata: { identityId: string; name: string } };
 export type ServiceActor = { type: "service"; metadata: { serviceId: string; name: string } };
@@ -44,8 +44,20 @@ export type KmipClientActor = { type: "kmip-client"; metadata: Record<string, un
 export type PlatformActor = { type: "platform"; metadata: Record<string, unknown> };
 export type Actor = UserActor | IdentityActor | ServiceActor | ScimClientActor | UnknownUserActor | KmipClientActor | PlatformActor;
 export type AuditLogInfo = { ipAddress?: string; userAgent?: string; userAgentType?: UserAgentType; actor: Actor };
-export type SecretApprovalEvent = { type: string; metadata?: Record<string, unknown> };
-export type WebhookTriggeredEvent = { type: string; metadata?: Record<string, unknown> };
+
+// SecretApprovalEvent — used as enum-like value in routes
+export enum SecretApprovalEvent {
+  Create = "secret-approval-request.create",
+  Update = "secret-approval-request.update",
+  Delete = "secret-approval-request.delete",
+  CreateMany = "secret-approval-request.create-many",
+  UpdateMany = "secret-approval-request.update-many",
+  DeleteMany = "secret-approval-request.delete-many"
+}
+
+export enum WebhookTriggeredEvent {
+  SecretModified = "secret.modified"
+}
 
 export type TCreateAuditLogDTO = {
   actor: {
