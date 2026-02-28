@@ -21,3 +21,9 @@ export enum SecretScanningV2Provider {
   GITLAB = "gitlab",
   BITBUCKET = "bitbucket"
 }
+export enum SecretScanningDataSource {
+  GitHub = "github",
+  GitLab = "gitlab",
+  Bitbucket = "bitbucket",
+  AzureDevOps = "azure-devops"
+}
