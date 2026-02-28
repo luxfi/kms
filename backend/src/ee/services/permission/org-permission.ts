@@ -27,6 +27,25 @@ export enum OrgPermissionGroupActions {
   Delete = "delete"
 }
 
+export enum OrgPermissionSecretShareAction {
+  ManageSettings = "manage-settings"
+}
+
+export enum OrgPermissionAppConnectionActions {
+  Read = "read",
+  Create = "create",
+  Edit = "edit",
+  Delete = "delete"
+}
+
+export enum OrgPermissionGatewayActions {
+  ListGateways = "list-gateways",
+  CreateGateways = "create-gateways",
+  EditGateways = "edit-gateways",
+  DeleteGateways = "delete-gateways",
+  AttachGateways = "attach-gateways"
+}
+
 export enum OrgPermissionSubjects {
   Org = "organization",
   Member = "member",
@@ -38,5 +57,24 @@ export enum OrgPermissionSubjects {
   Groups = "groups",
   Billing = "billing",
   SecretScanning = "secret-scanning",
-  Identity = "identity"
+  Identity = "identity",
+  AppConnections = "app-connections",
+  Gateway = "gateway",
+  SecretShare = "secret-share",
+  AdminConsole = "admin-console"
 }
+
+// Stub permission sets
+export const orgAdminPermissions = [
+  { action: ["read", "create", "edit", "delete"], subject: OrgPermissionSubjects.Member },
+  { action: ["read", "create", "edit", "delete"], subject: OrgPermissionSubjects.Groups },
+  { action: ["read", "create", "edit", "delete"], subject: OrgPermissionSubjects.Identity },
+  { action: ["read", "create", "edit", "delete"], subject: OrgPermissionSubjects.Role }
+];
+
+export const orgMemberPermissions = [
+  { action: ["read"], subject: OrgPermissionSubjects.Member },
+  { action: ["read"], subject: OrgPermissionSubjects.Groups }
+];
+
+export const orgNoAccessPermissions: typeof orgAdminPermissions = [];

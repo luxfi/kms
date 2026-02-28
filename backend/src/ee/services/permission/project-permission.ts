@@ -58,6 +58,53 @@ export enum ProjectPermissionMemberActions {
   GrantPrivilege = "grant-privilege"
 }
 
+export enum ProjectPermissionCertificateActions {
+  Read = "read",
+  Create = "create",
+  Edit = "edit",
+  Delete = "delete"
+}
+
+export enum ProjectPermissionPkiSubscriberActions {
+  Read = "read",
+  Create = "create",
+  Edit = "edit",
+  Delete = "delete",
+  IssueCert = "issue-cert"
+}
+
+export enum ProjectPermissionPkiTemplateActions {
+  Read = "read",
+  Create = "create",
+  Edit = "edit",
+  Delete = "delete"
+}
+
+export enum ProjectPermissionSecretSyncActions {
+  Read = "read",
+  Create = "create",
+  Edit = "edit",
+  Delete = "delete",
+  SyncSecrets = "sync-secrets",
+  RemoveSecrets = "remove-secrets"
+}
+
+export enum ProjectPermissionSshHostActions {
+  Read = "read",
+  Create = "create",
+  Edit = "edit",
+  Delete = "delete",
+  IssueHostCert = "issue-host-cert"
+}
+
+// Stub type for permission set
+export type ProjectPermissionSet = [string, string];
+
+// Stub function - no-op migration since EE schemas are removed
+export const backfillPermissionV1SchemaToV2Schema = (permissions: unknown[]): unknown[] => {
+  return permissions;
+};
+
 export enum ProjectPermissionSub {
   Role = "role",
   Member = "member",

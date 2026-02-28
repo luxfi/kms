@@ -44,3 +44,18 @@ export const hasSecretReadValueOrDescribePermission = (
 ): boolean => {
   return true;
 };
+
+export const constructPermissionErrorMessage = (
+  _action: unknown,
+  _subject: unknown,
+  _context?: unknown
+): string => {
+  return "Permission denied";
+};
+
+export const validatePrivilegeChangeOperation = (
+  _currentPrivileges: unknown,
+  _newPrivileges: unknown
+): void => {
+  // Stub - no-op since EE permission checks are removed
+};
