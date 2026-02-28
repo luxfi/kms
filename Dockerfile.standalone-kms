@@ -75,11 +75,10 @@ RUN groupadd --system --gid 1001 nodejs
 RUN useradd --system --uid 1001 --gid nodejs non-root-user
 
 COPY backend/package*.json ./
-RUN npm ci --only-production
+RUN npm ci
 
 COPY /backend .
 COPY --chown=non-root-user:nodejs standalone-entrypoint.sh standalone-entrypoint.sh
-RUN npm i -D tsconfig-paths
 ENV NODE_OPTIONS="--max-old-space-size=8192"
 RUN npm run build
 
