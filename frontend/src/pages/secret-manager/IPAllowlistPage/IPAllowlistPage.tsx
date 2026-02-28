@@ -5,6 +5,7 @@ import { ProjectPermissionCan } from "@app/components/permissions";
 import { ProjectPermissionActions, ProjectPermissionSub } from "@app/context";
 
 import { IPAllowlistSection } from "./components";
+import { getBrand } from "@app/lib/branding";
 
 export const IPAllowListPage = () => {
   const { t } = useTranslation();
@@ -12,7 +13,7 @@ export const IPAllowListPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.project.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <div className="flex h-full w-full justify-center bg-bunker-800 text-white">
         <div className="w-full max-w-7xl px-6">

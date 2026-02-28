@@ -12,6 +12,7 @@ import { ROUTE_PATHS } from "@app/const/routes";
 import { useGetActiveSharedSecretById } from "@app/hooks/api/secretSharing";
 
 import { PasswordContainer, SecretContainer, SecretErrorContainer } from "./components";
+import { getBrand } from "@app/lib/branding";
 
 const extractDetailsFromUrl = (urlEncodedKey: string) => {
   if (urlEncodedKey) {
@@ -104,7 +105,7 @@ export const ViewSharedSecretByIDPage = () => {
     <>
       <Helmet>
         <title>Securely Share Secrets | KMS</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
         <meta property="og:image" content="/images/message.png" />
         <meta property="og:title" content="" />
         <meta name="og:description" content="" />
@@ -116,10 +117,10 @@ export const ViewSharedSecretByIDPage = () => {
             <div className="mb-4 flex justify-center pt-8">
               <a target="_blank" rel="noopener noreferrer" href="https://lux.network">
                 <img
-                  src="/images/gradientLogo.svg"
+                  src={getBrand().logo}
                   height={90}
                   width={120}
-                  alt="KMS logo"
+                  alt={`${getBrand().name} logo`}
                   className="cursor-pointer"
                 />
               </a>

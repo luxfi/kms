@@ -15,6 +15,7 @@ import { SecretRequestErrorContainer } from "./components/SecretErrorContainer";
 import { SecretRequestContainer } from "./components/SecretRequestContainer";
 import { SecretRequestSuccessContainer } from "./components/SecretRequestSuccessContainer";
 import { SecretValueAlreadySharedContainer } from "./components/SecretValueAlreadySharedContainer";
+import { getBrand } from "@app/lib/branding";
 
 export const ViewSecretRequestByIDPage = () => {
   const id = useParams({
@@ -74,7 +75,7 @@ export const ViewSecretRequestByIDPage = () => {
     <>
       <Helmet>
         <title>Securely Share Secrets | KMS</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
         <meta property="og:image" content="/images/message.png" />
         <meta property="og:title" content="" />
         <meta name="og:description" content="" />
@@ -86,10 +87,10 @@ export const ViewSecretRequestByIDPage = () => {
             <div className="mb-4 flex justify-center pt-8">
               <a target="_blank" rel="noopener noreferrer" href="https://lux.network">
                 <img
-                  src="/images/gradientLogo.svg"
+                  src={getBrand().logo}
                   height={90}
                   width={120}
-                  alt="KMS logo"
+                  alt={`${getBrand().name} logo`}
                   className="cursor-pointer"
                 />
               </a>

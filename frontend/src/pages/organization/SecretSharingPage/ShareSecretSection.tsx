@@ -6,6 +6,7 @@ import { ROUTE_PATHS } from "@app/const/routes";
 
 import { RequestSecretTab } from "./components/RequestSecret/RequestSecretTab";
 import { ShareSecretTab } from "./components/ShareSecret/ShareSecretTab";
+import { getBrand } from "@app/lib/branding";
 
 enum SecretSharingPageTabs {
   ShareSecret = "share-secret",
@@ -30,7 +31,7 @@ export const ShareSecretSection = () => {
     <div>
       <Helmet>
         <title>Secret Sharing</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
         <meta property="og:image" content="/images/message.png" />
       </Helmet>
 

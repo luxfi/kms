@@ -1,16 +1,17 @@
 import { Helmet } from "react-helmet";
 import { Link } from "@tanstack/react-router";
+import { getBrand } from "@app/lib/branding";
 
 export const EmailNotVerifiedPage = () => {
   return (
     <div className="flex min-h-screen flex-col justify-center bg-gradient-to-tr from-mineshaft-600 via-mineshaft-800 to-bunker-700 px-6 pb-28">
       <Helmet>
         <title>Request a New Invite</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <Link to="/">
         <div className="mb-4 mt-20 flex justify-center">
-          <img src="/images/gradientLogo.svg" className="h-[90px] w-[120px]" alt="KMS Logo" />
+          <img src={getBrand().logo} className="h-[90px] w-[120px]" alt={`${getBrand().name} logo`} />
         </div>
       </Link>
       <div className="mx-auto flex w-full flex-col items-center justify-center">

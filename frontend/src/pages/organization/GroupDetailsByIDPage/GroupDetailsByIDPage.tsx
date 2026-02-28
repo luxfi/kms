@@ -26,6 +26,7 @@ import { usePopUp } from "@app/hooks/usePopUp";
 import { GroupCreateUpdateModal } from "./components/GroupCreateUpdateModal";
 import { GroupDetailsSection } from "./components/GroupDetailsSection";
 import { GroupMembersSection } from "./components/GroupMembersSection";
+import { getBrand } from "@app/lib/branding";
 
 export enum TabSections {
   Member = "members",
@@ -181,7 +182,7 @@ export const GroupDetailsByIDPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.org.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <OrgPermissionCan
         passThrough={false}

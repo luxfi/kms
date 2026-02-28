@@ -6,6 +6,7 @@ import { Button, EmailServiceSetupModal, Input } from "@app/components/v2";
 import { usePopUp } from "@app/hooks";
 import { useSendPasswordResetEmail } from "@app/hooks/api";
 import { useFetchServerStatus } from "@app/hooks/api/serverDetails";
+import { getBrand } from "@app/lib/branding";
 
 export const VerifyEmailPage = () => {
   const [loading, setLoading] = useState(false);
@@ -46,7 +47,7 @@ export const VerifyEmailPage = () => {
     <div className="flex min-h-screen flex-col justify-center bg-gradient-to-tr from-mineshaft-600 via-mineshaft-800 to-bunker-700 px-6 pb-28">
       <Helmet>
         <title>Reset Password</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
         <meta property="og:image" content="/images/message.png" />
         <meta property="og:title" content="Verify your email in KMS" />
         <meta
@@ -57,12 +58,12 @@ export const VerifyEmailPage = () => {
       <Link to="/">
         <div className="mb-4 mt-20 flex justify-center">
           <img
-            src="/images/gradientLogo.svg"
+            src={getBrand().logo}
             style={{
               height: "90px",
               width: "120px"
             }}
-            alt="KMS Logo"
+            alt={`${getBrand().name} logo`}
           />
         </div>
       </Link>

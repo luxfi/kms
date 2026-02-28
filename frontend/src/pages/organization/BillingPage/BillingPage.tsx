@@ -6,6 +6,7 @@ import { PageHeader } from "@app/components/v2";
 import { OrgPermissionBillingActions, OrgPermissionSubjects } from "@app/context";
 
 import { BillingTabGroup } from "./components";
+import { getBrand } from "@app/lib/branding";
 
 export const BillingPage = () => {
   const { t } = useTranslation();
@@ -14,7 +15,7 @@ export const BillingPage = () => {
     <div className="h-full bg-bunker-800">
       <Helmet>
         <title>{t("common.head-title", { title: t("billing.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
         <meta property="og:image" content="/images/message.png" />
       </Helmet>
       <div className="flex h-full w-full justify-center bg-bunker-800 text-white">

@@ -28,6 +28,7 @@ import { Organization } from "@app/hooks/api/types";
 import { AuthMethod } from "@app/hooks/api/users/types";
 
 import { navigateUserToOrg } from "../LoginPage/Login.utils";
+import { getBrand } from "@app/lib/branding";
 
 export const SelectOrganizationSection = () => {
   const navigate = useNavigate();
@@ -230,7 +231,7 @@ export const SelectOrganizationSection = () => {
     <div className="flex max-h-screen min-h-screen flex-col justify-center overflow-y-auto bg-gradient-to-tr from-mineshaft-600 via-mineshaft-800 to-bunker-700">
       <Helmet>
         <title>{t("common.head-title", { title: t("login.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
         <meta property="og:image" content="/images/message.png" />
         <meta property="og:title" content={t("login.og-title") ?? ""} />
         <meta name="og:description" content={t("login.og-description") ?? ""} />
@@ -246,12 +247,12 @@ export const SelectOrganizationSection = () => {
           <Link to="/">
             <div className="mb-4 flex justify-center">
               <img
-                src="/images/gradientLogo.svg"
+                src={getBrand().logo}
                 style={{
                   height: "90px",
                   width: "120px"
                 }}
-                alt="KMS logo"
+                alt={`${getBrand().name} logo`}
               />
             </div>
           </Link>

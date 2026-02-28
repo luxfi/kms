@@ -31,6 +31,7 @@ import { ActorType } from "@app/hooks/api/auditLogs/enums";
 
 import { IdentityProjectAdditionalPrivilegeSection } from "./components/IdentityProjectAdditionalPrivilegeSection";
 import { IdentityRoleDetailsSection } from "./components/IdentityRoleDetailsSection";
+import { getBrand } from "@app/lib/branding";
 
 const Page = () => {
   const navigate = useNavigate();
@@ -215,7 +216,7 @@ export const IdentityDetailsByIDPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.members.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <ProjectPermissionCan
         I={ProjectPermissionActions.Read}

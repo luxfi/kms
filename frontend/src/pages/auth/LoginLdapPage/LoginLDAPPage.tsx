@@ -7,6 +7,7 @@ import { createNotification } from "@app/components/notifications";
 import { Button, Input } from "@app/components/v2";
 import { useServerConfig } from "@app/context";
 import { loginLDAPRedirect } from "@app/hooks/api/auth/queries";
+import { getBrand } from "@app/lib/branding";
 
 export const LoginLdapPage = () => {
   const { t } = useTranslation();
@@ -65,7 +66,7 @@ export const LoginLdapPage = () => {
     <div className="flex h-screen flex-col justify-center bg-gradient-to-tr from-mineshaft-600 via-mineshaft-800 to-bunker-700 px-6 pb-28">
       <Helmet>
         <title>{t("common.head-title", { title: t("login.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
         <meta property="og:image" content="/images/message.png" />
         <meta property="og:title" content={t("login.og-title") ?? ""} />
         <meta name="og:description" content={t("login.og-description") ?? ""} />
@@ -73,12 +74,12 @@ export const LoginLdapPage = () => {
       <Link to="/">
         <div className="mb-4 mt-20 flex justify-center">
           <img
-            src="/images/gradientLogo.svg"
+            src={getBrand().logo}
             style={{
               height: "90px",
               width: "120px"
             }}
-            alt="KMS logo"
+            alt={`${getBrand().name} logo`}
           />
         </div>
       </Link>

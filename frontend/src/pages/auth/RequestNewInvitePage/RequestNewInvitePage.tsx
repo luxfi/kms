@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet";
+import { getBrand } from "@app/lib/branding";
 
 /**
  * This is the page that shows up when a user's invitation
@@ -9,7 +10,7 @@ export const RequestNewInvitePage = () => {
     <div className="flex flex-col justify-between bg-bunker-700 md:h-screen">
       <Helmet>
         <title>Request a New Invite</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <div className="mt-8 flex h-screen w-screen flex-col items-center justify-center text-bunker-200">
         <p className="text-4xl text-primary-100">Oops, your invite has expired.</p>

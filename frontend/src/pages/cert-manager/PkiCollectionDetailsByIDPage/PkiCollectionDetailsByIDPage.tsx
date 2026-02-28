@@ -23,6 +23,7 @@ import { usePopUp } from "@app/hooks/usePopUp";
 
 import { PkiCollectionModal } from "../AlertingPage/components/PkiCollectionModal";
 import { PkiCollectionDetailsSection, PkiCollectionItemsSection } from "./components";
+import { getBrand } from "@app/lib/branding";
 
 export const PkiCollectionPage = () => {
   const navigate = useNavigate();
@@ -170,7 +171,7 @@ export const PkiCollectionDetailsByIDPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: "PKI Collection" })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <ProjectPermissionCan
         renderGuardBanner

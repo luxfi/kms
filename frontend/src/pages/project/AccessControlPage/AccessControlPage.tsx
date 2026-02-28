@@ -9,6 +9,7 @@ import { ProjectType } from "@app/hooks/api/workspace/types";
 import { ProjectAccessControlTabs } from "@app/types/project";
 
 import {
+import { getBrand } from "@app/lib/branding";
   GroupsTab,
   IdentityTab,
   MembersTab,
@@ -87,7 +88,7 @@ export const AccessControlPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.members.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <Page />
     </>

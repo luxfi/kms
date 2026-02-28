@@ -15,6 +15,7 @@ import {
 } from "@app/hooks/api/secretScanningV2";
 
 import {
+import { getBrand } from "@app/lib/branding";
   SecretScanningDataSourceSection,
   SecretScanningResourceSection,
   SecretScanningScanSection
@@ -102,7 +103,7 @@ export const SecretScanningDataSourceByIdPage = () => {
     <>
       <Helmet>
         <title>Secret Scanning Data Source | KMS</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <ProjectPermissionCan
         renderGuardBanner

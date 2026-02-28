@@ -16,6 +16,7 @@ import { OrgAccessControlTabSections } from "@app/types/org";
 import { IdentityAuthMethodModal } from "../AccessManagementPage/components/OrgIdentityTab/components/IdentitySection/IdentityAuthMethodModal";
 import { IdentityModal } from "../AccessManagementPage/components/OrgIdentityTab/components/IdentitySection/IdentityModal";
 import {
+import { getBrand } from "@app/lib/branding";
   IdentityAuthenticationSection,
   IdentityDetailsSection,
   IdentityProjectsSection
@@ -128,7 +129,7 @@ export const IdentityDetailsByIDPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.org.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <OrgPermissionCan
         passThrough={false}

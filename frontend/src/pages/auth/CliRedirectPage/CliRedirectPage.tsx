@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { IconButton, SecretInput } from "@app/components/v2";
 import { SessionStorageKeys } from "@app/const";
 import { useTimedReset } from "@app/hooks";
+import { getBrand } from "@app/lib/branding";
 
 const getTerminalCliToken = () => {
   const cliTerminalTokenInfo = sessionStorage.getItem(SessionStorageKeys.CLI_TERMINAL_TOKEN);
@@ -38,17 +39,17 @@ export const CliRedirectPage = () => {
     <div className="flex flex-col justify-between bg-bunker-800 md:h-screen">
       <Helmet>
         <title>KMS CLI | Login Successful!</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <div className="flex h-screen w-screen flex-col items-center justify-center space-y-4 text-gray-200">
         <div className="mb-4 flex justify-center">
           <img
-            src="/images/gradientLogo.svg"
+            src={getBrand().logo}
             style={{
               height: "90px",
               width: "120px"
             }}
-            alt="KMS Logo"
+            alt={`${getBrand().name} logo`}
           />
         </div>
         {cliToken ? (

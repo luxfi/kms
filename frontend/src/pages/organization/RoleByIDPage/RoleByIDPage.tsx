@@ -23,6 +23,7 @@ import { DuplicateOrgRoleModal } from "@app/pages/organization/RoleByIDPage/comp
 import { OrgAccessControlTabSections } from "@app/types/org";
 
 import { RoleModal, RolePermissionsSection } from "./components";
+import { getBrand } from "@app/lib/branding";
 
 export const Page = () => {
   const navigate = useNavigate();
@@ -197,7 +198,7 @@ export const RoleByIDPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.org.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <OrgPermissionCan
         passThrough={false}

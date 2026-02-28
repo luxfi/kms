@@ -35,6 +35,7 @@ import { OrgAccessControlTabSections } from "@app/types/org";
 import { UserAuditLogsSection } from "./components/UserProjectsSection/UserAuditLogsSection";
 import { UserGroupsSection } from "./components/UserProjectsSection/UserGroupsSection";
 import { UserDetailsSection, UserOrgMembershipModal, UserProjectsSection } from "./components";
+import { getBrand } from "@app/lib/branding";
 
 const Page = withPermission(
   () => {
@@ -310,7 +311,7 @@ export const UserDetailsByIDPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.org.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <Page />
     </>

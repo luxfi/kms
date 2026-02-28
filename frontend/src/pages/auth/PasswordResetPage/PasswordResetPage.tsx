@@ -9,6 +9,7 @@ import { UserEncryptionVersion } from "@app/hooks/api/auth/types";
 import { ConfirmEmailStep } from "./components/ConfirmEmailStep";
 import { EnterPasswordStep } from "./components/EnterPasswordStep";
 import { InputBackupKeyStep } from "./components/InputBackupKeyStep";
+import { getBrand } from "@app/lib/branding";
 
 enum Steps {
   ConfirmEmail = 1,
@@ -39,7 +40,7 @@ export const PasswordResetPage = () => {
     <div className="flex min-h-screen flex-col justify-center bg-gradient-to-tr from-mineshaft-600 via-mineshaft-800 to-bunker-700 px-6 pb-28">
       <Link to="/">
         <div className="mb-4 mt-20 flex justify-center">
-          <img src="/images/gradientLogo.svg" className="h-[90px] w-[120px]" alt="KMS Logo" />
+          <img src={getBrand().logo} className="h-[90px] w-[120px]" alt={`${getBrand().name} logo`} />
         </div>
       </Link>
       {step === Steps.ConfirmEmail && (

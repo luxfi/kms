@@ -11,6 +11,7 @@ import {
 import { withPermission } from "@app/hoc";
 import { usePopUp } from "@app/hooks";
 import {
+import { getBrand } from "@app/lib/branding";
   AddAppConnectionModal,
   AppConnectionsTable
 } from "@app/pages/organization/AppConnections/AppConnectionsPage/components";
@@ -22,8 +23,8 @@ export const AppConnectionsPage = withPermission(
     return (
       <div className="bg-bunker-800">
         <Helmet>
-          <title>KMS | App Connections</title>
-          <link rel="icon" href="/kms.ico" />
+          <title>{getBrand().name} | App Connections</title>
+          <link rel="icon" href={getBrand().favicon} />
           <meta property="og:image" content="/images/message.png" />
         </Helmet>
         <div className="flex w-full justify-center bg-bunker-800 text-white">

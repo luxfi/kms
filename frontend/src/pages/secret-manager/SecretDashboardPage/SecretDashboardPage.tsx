@@ -82,6 +82,7 @@ import {
   useSelectedSecrets
 } from "./SecretMainPage.store";
 import { Filter, RowType } from "./SecretMainPage.types";
+import { getBrand } from "@app/lib/branding";
 
 const LOADER_TEXT = [
   "Retrieving your encrypted secrets...",
@@ -1082,7 +1083,7 @@ export const SecretDashboardPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("dashboard.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
         <meta property="og:image" content="/images/message.png" />
         <meta property="og:title" content={String(t("dashboard.og-title"))} />
         <meta name="og:description" content={String(t("dashboard.og-description"))} />

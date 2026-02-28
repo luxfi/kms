@@ -9,6 +9,7 @@ import { useGetWorkspaceGroupMembershipDetails } from "@app/hooks/api/workspace/
 
 import { GroupDetailsSection } from "./components/GroupDetailsSection";
 import { GroupMembersSection } from "./components/GroupMembersSection";
+import { getBrand } from "@app/lib/branding";
 
 const Page = () => {
   const groupId = useParams({
@@ -55,7 +56,7 @@ export const GroupDetailsByIDPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: "Project Group" })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <ProjectPermissionCan
         I={ProjectPermissionActions.Read}

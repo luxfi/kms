@@ -8,6 +8,7 @@ import z from "zod";
 
 import { Button, Card, CardTitle, FormControl, Input } from "@app/components/v2";
 import { ROUTE_PATHS } from "@app/const/routes";
+import { getBrand } from "@app/lib/branding";
 
 const schema = z.object({
   tenantId: z.string().trim().optional()
@@ -38,7 +39,7 @@ export function AzureKeyVaultAuthorizePage() {
     <div className="flex h-full w-full items-center justify-center">
       <Helmet>
         <title>Authorize Azure Key Vault Integration</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <Card className="mb-12 max-w-lg rounded-md border border-mineshaft-600">
         <CardTitle

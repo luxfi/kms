@@ -12,6 +12,7 @@ import { usePopUp } from "@app/hooks/usePopUp";
 import { AllProjectView } from "./components/AllProjectView";
 import { MyProjectView } from "./components/MyProjectView";
 import { ProjectListToggle, ProjectListView } from "./components/ProjectListToggle";
+import { getBrand } from "@app/lib/branding";
 
 // const formatDescription = (type: ProjectType) => {
 //   if (type === ProjectType.SecretManager)
@@ -45,7 +46,7 @@ export const ProjectsPage = () => {
     <div className="mx-auto flex max-w-7xl flex-col justify-start bg-bunker-800">
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.members.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <div className="mb-4 flex flex-col items-start justify-start">
         <PageHeader

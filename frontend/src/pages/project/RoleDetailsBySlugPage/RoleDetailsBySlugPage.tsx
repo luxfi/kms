@@ -26,6 +26,7 @@ import { RolePermissionsSection } from "@app/pages/project/RoleDetailsBySlugPage
 import { ProjectAccessControlTabs } from "@app/types/project";
 
 import { RoleModal } from "./components/RoleModal";
+import { getBrand } from "@app/lib/branding";
 
 const Page = () => {
   const navigate = useNavigate();
@@ -222,7 +223,7 @@ export const RoleDetailsBySlugPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: "Project Settings" })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <ProjectPermissionCan
         I={ProjectPermissionActions.Read}

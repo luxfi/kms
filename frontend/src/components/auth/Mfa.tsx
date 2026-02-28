@@ -10,6 +10,7 @@ import { Button, Input } from "@app/components/v2";
 import { useSendMfaToken } from "@app/hooks/api";
 import { checkUserTotpMfa, verifyMfaToken } from "@app/hooks/api/auth/queries";
 import { MfaMethod } from "@app/hooks/api/auth/types";
+import { getBrand } from "@app/lib/branding";
 
 // The style for the verification code input
 const codeInputProps = {
@@ -151,7 +152,7 @@ export const Mfa = ({ successCallback, closeMfa, hideLogo, email, method }: Prop
       {!hideLogo && (
         <Link to="/">
           <div className="mb-4 flex justify-center">
-            <img src="/images/gradientLogo.svg" height={90} width={120} alt="KMS logo" />
+            <img src={getBrand().logo} height={90} width={120} alt={`${getBrand().name} logo`} />
           </div>
         </Link>
       )}

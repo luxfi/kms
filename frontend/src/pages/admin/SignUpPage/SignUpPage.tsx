@@ -14,6 +14,7 @@ import { Button, ContentLoader, FormControl, Input } from "@app/components/v2";
 import { useServerConfig } from "@app/context";
 import { useCreateAdminUser, useSelectOrganization } from "@app/hooks/api";
 import { generateUserPassKey } from "@app/lib/crypto";
+import { getBrand } from "@app/lib/branding";
 
 const formSchema = z
   .object({
@@ -92,7 +93,7 @@ export const SignUpPage = () => {
     <div className="flex max-h-screen min-h-screen flex-col justify-center overflow-y-auto bg-gradient-to-tr from-mineshaft-600 via-mineshaft-800 to-bunker-700 px-6">
       <Helmet>
         <title>{t("common.head-title", { title: t("signup.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
         <meta property="og:image" content="/images/message.png" />
         <meta property="og:title" content={t("signup.og-title") ?? ""} />
         <meta name="og:description" content={t("signup.og-description") ?? ""} />
@@ -108,8 +109,8 @@ export const SignUpPage = () => {
             exit={{ opacity: 0, translateX: 30 }}
           >
             <div className="flex flex-col items-center space-y-2 text-center">
-              <img src="/images/gradientLogo.svg" height={90} width={120} alt="KMS logo" />
-              <div className="pt-4 text-4xl">Welcome to KMS</div>
+              <img src={getBrand().logo} height={90} width={120} alt={`${getBrand().name} logo`} />
+              <div className="pt-4 text-4xl">Welcome to {getBrand().name}</div>
               <div className="pb-4 text-bunker-300">Create your first Super Admin Account</div>
             </div>
             <form onSubmit={handleSubmit(handleFormSubmit)}>

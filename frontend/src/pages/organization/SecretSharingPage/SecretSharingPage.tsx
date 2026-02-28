@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { PageHeader } from "@app/components/v2";
 
 import { ShareSecretSection } from "./ShareSecretSection";
+import { getBrand } from "@app/lib/branding";
 
 export const SecretSharingPage = () => {
   const { t } = useTranslation();
@@ -14,7 +15,7 @@ export const SecretSharingPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("approval.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
         <meta property="og:image" content="/images/message.png" />
         <meta property="og:title" content={String(t("approval.og-title"))} />
         <meta name="og:description" content={String(t("approval.og-description"))} />

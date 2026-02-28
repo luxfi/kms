@@ -3,13 +3,14 @@ import { Helmet } from "react-helmet";
 import { PageHeader } from "@app/components/v2";
 
 import { LogsSection } from "./components";
+import { getBrand } from "@app/lib/branding";
 
 export const AuditLogsPage = () => {
   return (
     <div className="h-full bg-bunker-800">
       <Helmet>
-        <title>KMS | Audit Logs</title>
-        <link rel="icon" href="/kms.ico" />
+        <title>{getBrand().name} | Audit Logs</title>
+        <link rel="icon" href={getBrand().favicon} />
         <meta property="og:image" content="/images/message.png" />
       </Helmet>
 

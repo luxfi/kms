@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { CreateOrgModal } from "@app/components/organization/CreateOrgModal";
 import { usePopUp } from "@app/hooks";
+import { getBrand } from "@app/lib/branding";
 
 export const NoOrgPage = () => {
   const { t } = useTranslation();
@@ -18,7 +19,7 @@ export const NoOrgPage = () => {
     <>
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.org.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <div className="min-h-screen bg-bunker-800">
         <CreateOrgModal

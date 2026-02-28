@@ -16,6 +16,7 @@ import { SecretSync, useGetSecretSync } from "@app/hooks/api/secretSyncs";
 import { IntegrationsListPageTabs } from "@app/types/integrations";
 
 import {
+import { getBrand } from "@app/lib/branding";
   SecretSyncActionTriggers,
   SecretSyncAuditLogsSection,
   SecretSyncDestinationSection,
@@ -135,7 +136,7 @@ export const SecretSyncDetailsByIDPage = () => {
     <>
       <Helmet>
         <title>Secret Sync | KMS</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
       </Helmet>
       <ProjectPermissionCan
         renderGuardBanner

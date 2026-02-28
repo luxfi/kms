@@ -54,6 +54,7 @@ import {
 } from "@app/hooks/api";
 import { TSecretRotationProviderTemplate } from "@app/hooks/api/secretRotation/types";
 import { CreateRotationForm } from "@app/pages/secret-manager/SecretRotationPage/components/CreateRotationForm";
+import { getBrand } from "@app/lib/branding";
 
 const Page = () => {
   const { currentWorkspace } = useWorkspace();
@@ -446,7 +447,7 @@ export const SecretRotationPage = () => {
     <div className="bg-bunker-800">
       <Helmet>
         <title>{t("common.head-title", { title: t("settings.project.title") })}</title>
-        <link rel="icon" href="/kms.ico" />
+        <link rel="icon" href={getBrand().favicon} />
         <meta property="og:image" content="/images/message.png" />
       </Helmet>
       <ProjectPermissionCan
