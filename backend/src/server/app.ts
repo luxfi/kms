@@ -33,7 +33,7 @@ import { fastifyIp } from "./plugins/ip";
 import { maintenanceMode } from "./plugins/maintenanceMode";
 import { registerServeUI } from "./plugins/serve-ui";
 import { fastifySwagger } from "./plugins/swagger";
-import { registerRoutes } from "./routes";
+import { registerRoutes } from "./routes/index-full";
 
 type TMain = {
   auditLogDb?: Knex;
