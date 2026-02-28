@@ -177,7 +177,14 @@ export enum TableName {
   SecretScanningConfig = "secret_scanning_configs",
   // reminders
   Reminder = "reminders",
-  ReminderRecipient = "reminders_recipients"
+  ReminderRecipient = "reminders_recipients",
+  // MPC (Multi-Party Computation)
+  MpcNodes = "mpc_nodes",
+  MpcWallets = "mpc_wallets",
+  MpcSigningRequests = "mpc_signing_requests",
+  MpcSigningApprovals = "mpc_signing_approvals",
+  MpcWalletTokens = "mpc_wallet_tokens",
+  MpcTransactionHistory = "mpc_transaction_history"
 }
 
 export type TImmutableDBKeys = "id" | "createdAt" | "updatedAt" | "commitId";
