@@ -30,8 +30,8 @@ export enum UserAgentType {
   K8_OPERATOR = "k8-operator",
   TERRAFORM = "terraform",
   WEB = "web",
-  NODE_SDK = "@infisical/sdk",
-  PYTHON_SDK = "infisical-python"
+  NODE_SDK = "@hanzo/kms-sdk",
+  PYTHON_SDK = "hanzo-kms"
 }
 
 // Actor types
