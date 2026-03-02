@@ -69,7 +69,7 @@ services:
 
   db-test:
     profiles: ["test"]
-    image: ghcr.io/hanzoai/sql:17-alpine
+    image: ghcr.io/hanzoai/sql:latest
     ports:
       - "5430:5432"
     environment:

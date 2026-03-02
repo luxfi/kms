@@ -35,7 +35,7 @@ services:
 
   db:
     container_name: kms-db
-    image: ghcr.io/hanzoai/sql:17-alpine
+    image: ghcr.io/hanzoai/sql:latest
     restart: always
     env_file: .env
     volumes:

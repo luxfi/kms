@@ -78,7 +78,7 @@ services:
 
   # PostgreSQL database
   postgres:
-    image: ghcr.io/hanzoai/sql:17-alpine
+    image: ghcr.io/hanzoai/sql:latest
     container_name: lux-kms-postgres
     restart: unless-stopped
     environment:
