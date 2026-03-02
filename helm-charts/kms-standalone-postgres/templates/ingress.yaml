@@ -15,7 +15,7 @@ metadata:
   {{- end }}
 spec:
   {{- if and $ingress.ingressClassName (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
-  ingressClassName: {{ $ingress.ingressClassName | default "nginx" }}
+  ingressClassName: {{ $ingress.ingressClassName | default "ingress" }}
   {{- end }}
 {{- if $ingress.tls }}
   tls:

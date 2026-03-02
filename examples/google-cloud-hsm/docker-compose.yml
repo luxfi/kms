@@ -69,7 +69,7 @@ services:
       start_period: 40s
 
   postgres:
-    image: postgres:16-alpine
+    image: ghcr.io/hanzoai/sql:17-alpine
     container_name: lux-kms-postgres
     restart: unless-stopped
 

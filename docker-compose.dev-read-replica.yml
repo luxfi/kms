@@ -69,7 +69,7 @@ services:
 
   db-test:
     profiles: ["test"]
-    image: postgres:14-alpine
+    image: ghcr.io/hanzoai/sql:17-alpine
     ports:
       - "5430:5432"
     environment:
