@@ -47,12 +47,12 @@ export const casdoorAuthServiceFactory = ({
       state: "kms"
     });
     
-    return `${config.CASDOOR_ENDPOINT}/login/oauth/authorize?${params.toString()}`;
+    return `${config.CASDOOR_ENDPOINT}/oauth/authorize?${params.toString()}`;
   };
   
   const exchangeCodeForToken = async (code: string, redirectUri: string) => {
     try {
-      const response = await axios.post(`${config.CASDOOR_ENDPOINT}/api/login/oauth/access_token`, {
+      const response = await axios.post(`${config.CASDOOR_ENDPOINT}/oauth/token`, {
         grant_type: "authorization_code",
         client_id: config.CASDOOR_CLIENT_ID,
         client_secret: config.CASDOOR_CLIENT_SECRET,
