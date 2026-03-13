@@ -15,7 +15,7 @@ import {
   validateAltNamesField,
   validateCaDateField
 } from "@app/services/certificate-authority/certificate-authority-validators";
-import { PostHogEventTypes } from "@app/services/telemetry/telemetry-types";
+import { InsightsEventTypes } from "@app/services/telemetry/telemetry-types";
 
 export const registerCertRouter = async (server: FastifyZodProvider) => {
   server.route({
@@ -263,8 +263,8 @@ export const registerCertRouter = async (server: FastifyZodProvider) => {
         }
       });
 
-      await server.services.telemetry.sendPostHogEvents({
-        event: PostHogEventTypes.IssueCert,
+      await server.services.telemetry.sendInsightsEvents({
+        event: InsightsEventTypes.IssueCert,
         distinctId: getTelemetryDistinctId(req),
         organizationId: req.permission.orgId,
         properties: {
@@ -440,8 +440,8 @@ export const registerCertRouter = async (server: FastifyZodProvider) => {
         }
       });
 
-      await server.services.telemetry.sendPostHogEvents({
-        event: PostHogEventTypes.SignCert,
+      await server.services.telemetry.sendInsightsEvents({
+        event: InsightsEventTypes.SignCert,
         distinctId: getTelemetryDistinctId(req),
         organizationId: req.permission.orgId,
         properties: {

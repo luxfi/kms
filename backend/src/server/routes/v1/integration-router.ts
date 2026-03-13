@@ -10,7 +10,7 @@ import { verifyAuth } from "@app/server/plugins/auth/verify-auth";
 import { AuthMode } from "@app/services/auth/auth-type";
 import { IntegrationMetadataSchema } from "@app/services/integration/integration-schema";
 import { Integrations } from "@app/services/integration-auth/integration-list";
-import { PostHogEventTypes, TIntegrationCreatedEvent } from "@app/services/telemetry/telemetry-types";
+import { InsightsEventTypes, TIntegrationCreatedEvent } from "@app/services/telemetry/telemetry-types";
 
 import {} from "../sanitizedSchemas";
 
@@ -101,8 +101,8 @@ export const registerIntegrationRouter = async (server: FastifyZodProvider) => {
         }
       });
 
-      await server.services.telemetry.sendPostHogEvents({
-        event: PostHogEventTypes.IntegrationCreated,
+      await server.services.telemetry.sendInsightsEvents({
+        event: InsightsEventTypes.IntegrationCreated,
         organizationId: req.permission.orgId,
         distinctId: getTelemetryDistinctId(req),
         properties: {

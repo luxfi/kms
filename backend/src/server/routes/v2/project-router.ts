@@ -25,7 +25,7 @@ import { CaStatus } from "@app/services/certificate-authority/certificate-author
 import { sanitizedCertificateTemplate } from "@app/services/certificate-template/certificate-template-schema";
 import { sanitizedPkiSubscriber } from "@app/services/pki-subscriber/pki-subscriber-schema";
 import { ProjectFilterType } from "@app/services/project/project-types";
-import { PostHogEventTypes } from "@app/services/telemetry/telemetry-types";
+import { InsightsEventTypes } from "@app/services/telemetry/telemetry-types";
 
 import { InternalCertificateAuthorityResponseSchema, SanitizedProjectSchema } from "../sanitizedSchemas";
 
@@ -195,8 +195,8 @@ export const registerProjectRouter = async (server: FastifyZodProvider) => {
         createDefaultEnvs: req.body.shouldCreateDefaultEnvs
       });
 
-      await server.services.telemetry.sendPostHogEvents({
-        event: PostHogEventTypes.ProjectCreated,
+      await server.services.telemetry.sendInsightsEvents({
+        event: InsightsEventTypes.ProjectCreated,
         distinctId: getTelemetryDistinctId(req),
         organizationId: req.permission.orgId,
         properties: {

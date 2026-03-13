@@ -16,7 +16,7 @@ export const registerServeUI = async (
   }
 ) => {
   // use this only for frontend runtime static non-sensitive configuration in standalone mode
-  // that app needs before loading like posthog dsn key
+  // that app needs before loading like insights dsn key
   // for most of the other usecase use server config
   server.route({
     method: "GET",
@@ -29,7 +29,7 @@ export const registerServeUI = async (
       void res.type("application/javascript");
       const config = {
         CAPTCHA_SITE_KEY: appCfg.CAPTCHA_SITE_KEY,
-        POSTHOG_API_KEY: appCfg.POSTHOG_PROJECT_API_KEY,
+        INSIGHTS_API_KEY: appCfg.INSIGHTS_PROJECT_API_KEY,
         INTERCOM_ID: appCfg.INTERCOM_ID,
         TELEMETRY_CAPTURING_ENABLED: appCfg.TELEMETRY_ENABLED
       };

@@ -20,7 +20,7 @@ import { AuthMode } from "@app/services/auth/auth-type";
 import { RootKeyEncryptionStrategy } from "@app/services/kms/kms-types";
 import { getServerCfg } from "@app/services/super-admin/super-admin-service";
 import { CacheType, LoginMethod } from "@app/services/super-admin/super-admin-types";
-import { PostHogEventTypes } from "@app/services/telemetry/telemetry-types";
+import { InsightsEventTypes } from "@app/services/telemetry/telemetry-types";
 
 export const registerAdminRouter = async (server: FastifyZodProvider) => {
   server.route({
@@ -614,8 +614,8 @@ export const registerAdminRouter = async (server: FastifyZodProvider) => {
         userAgent: req.headers["user-agent"] || ""
       });
 
-      await server.services.telemetry.sendPostHogEvents({
-        event: PostHogEventTypes.AdminInit,
+      await server.services.telemetry.sendInsightsEvents({
+        event: InsightsEventTypes.AdminInit,
         distinctId: user.user.username ?? "",
         properties: {
           username: user.user.username,
@@ -762,8 +762,8 @@ export const registerAdminRouter = async (server: FastifyZodProvider) => {
         organizationName: req.body.organization
       });
 
-      await server.services.telemetry.sendPostHogEvents({
-        event: PostHogEventTypes.AdminInit,
+      await server.services.telemetry.sendInsightsEvents({
+        event: InsightsEventTypes.AdminInit,
         distinctId: user.user.username ?? "",
         properties: {
           username: user.user.username,
@@ -806,8 +806,8 @@ export const registerAdminRouter = async (server: FastifyZodProvider) => {
     handler: async (req) => {
       await server.services.superAdmin.invalidateCache(req.body.type);
 
-      await server.services.telemetry.sendPostHogEvents({
-        event: PostHogEventTypes.InvalidateCache,
+      await server.services.telemetry.sendInsightsEvents({
+        event: InsightsEventTypes.InvalidateCache,
         organizationId: req.permission.orgId,
         distinctId: getTelemetryDistinctId(req),
         properties: {

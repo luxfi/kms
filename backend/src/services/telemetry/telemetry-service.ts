@@ -1,4 +1,4 @@
-import { PostHog } from "posthog-node";
+import { PostHog } from "@hanzo/insights-node";
 
 import { TLicenseServiceFactory } from "@app/ee/services/license/license-service";
 import { InstanceType } from "@app/ee/services/license/license-types";
@@ -8,12 +8,12 @@ import { request } from "@app/lib/config/request";
 import { crypto } from "@app/lib/crypto/cryptography";
 import { logger } from "@app/lib/logger";
 
-import { PostHogEventTypes, TPostHogEvent, TSecretModifiedEvent } from "./telemetry-types";
+import { InsightsEventTypes, TInsightsEvent, TSecretModifiedEvent } from "./telemetry-types";
 
 export const TELEMETRY_SECRET_PROCESSED_KEY = "telemetry-secret-processed";
 export const TELEMETRY_SECRET_OPERATIONS_KEY = "telemetry-secret-operations";
 
-export const POSTHOG_AGGREGATED_EVENTS = [PostHogEventTypes.SecretPulled];
+export const INSIGHTS_AGGREGATED_EVENTS = [InsightsEventTypes.SecretPulled];
 const TELEMETRY_AGGREGATED_KEY_EXP = 600; // 10mins
 
 // Bucket configuration
@@ -68,8 +68,8 @@ To opt into telemetry, you can set "TELEMETRY_ENABLED=true" within the environme
 `);
   }
 
-  const postHog = appCfg.TELEMETRY_ENABLED
-    ? new PostHog(appCfg.POSTHOG_PROJECT_API_KEY, { host: appCfg.POSTHOG_HOST })
+  const insightsClient = appCfg.TELEMETRY_ENABLED
+    ? new PostHog(appCfg.INSIGHTS_PROJECT_API_KEY, { host: appCfg.INSIGHTS_HOST })
     : undefined;
 
   // used for email marketting email sending purpose
@@ -97,12 +97,12 @@ To opt into telemetry, you can set "TELEMETRY_ENABLED=true" within the environme
     }
   };
 
-  const sendPostHogEvents = async (event: TPostHogEvent) => {
-    if (postHog) {
+  const sendInsightsEvents = async (event: TInsightsEvent) => {
+    if (insightsClient) {
       const instanceType = licenseService.getInstanceType();
-      // capture posthog only when its cloud or signup event happens in self-hosted
-      if (instanceType === InstanceType.Cloud || event.event === PostHogEventTypes.UserSignedUp) {
-        if (POSTHOG_AGGREGATED_EVENTS.includes(event.event)) {
+      // capture insights events only when its cloud or signup event happens in self-hosted
+      if (instanceType === InstanceType.Cloud || event.event === InsightsEventTypes.UserSignedUp) {
+        if (INSIGHTS_AGGREGATED_EVENTS.includes(event.event)) {
           const eventKey = createTelemetryEventKey(event.event, event.distinctId);
           await keyStore.setItemWithExpiry(
             eventKey,
@@ -117,12 +117,12 @@ To opt into telemetry, you can set "TELEMETRY_ENABLED=true" within the environme
         } else {
           if (event.organizationId) {
             try {
-              postHog.groupIdentify({ groupType: "organization", groupKey: event.organizationId });
+              insightsClient.groupIdentify({ groupType: "organization", groupKey: event.organizationId });
             } catch (error) {
-              logger.error(error, "Failed to identify PostHog organization");
+              logger.error(error, "Failed to identify Insights organization");
             }
           }
-          postHog.capture({
+          insightsClient.capture({
             event: event.event,
             distinctId: event.distinctId,
             properties: event.properties,
@@ -134,10 +134,10 @@ To opt into telemetry, you can set "TELEMETRY_ENABLED=true" within the environme
 
       if (
         [
-          PostHogEventTypes.SecretPulled,
-          PostHogEventTypes.SecretCreated,
-          PostHogEventTypes.SecretDeleted,
-          PostHogEventTypes.SecretUpdated
+          InsightsEventTypes.SecretPulled,
+          InsightsEventTypes.SecretCreated,
+          InsightsEventTypes.SecretDeleted,
+          InsightsEventTypes.SecretUpdated
         ].includes(event.event)
       ) {
         await keyStore.incrementBy(
@@ -218,7 +218,7 @@ To opt into telemetry, you can set "TELEMETRY_ENABLED=true" within the environme
   };
 
   const processBucketEvents = async (eventType: string, bucketId: string) => {
-    if (!postHog) return 0;
+    if (!insightsClient) return 0;
 
     try {
       const bucketPattern = `telemetry-event-${eventType}-${bucketId}-*`;
@@ -254,14 +254,14 @@ To opt into telemetry, you can set "TELEMETRY_ENABLED=true" within the environme
         const key = JSON.parse(eventsKey) as { id: string; org?: string };
         if (key.org) {
           try {
-            postHog.groupIdentify({ groupType: "organization", groupKey: key.org });
+            insightsClient.groupIdentify({ groupType: "organization", groupKey: key.org });
           } catch (error) {
-            logger.error(error, "Failed to identify PostHog organization");
+            logger.error(error, "Failed to identify Insights organization");
           }
         }
         const properties = aggregateGroupProperties(events);
 
-        postHog.capture({
+        insightsClient.capture({
           event: `${eventType} aggregated`,
           distinctId: key.id,
           properties,
@@ -281,9 +281,9 @@ To opt into telemetry, you can set "TELEMETRY_ENABLED=true" within the environme
   };
 
   const processAggregatedEvents = async () => {
-    if (!postHog) return;
+    if (!insightsClient) return;
 
-    for (const eventType of POSTHOG_AGGREGATED_EVENTS) {
+    for (const eventType of INSIGHTS_AGGREGATED_EVENTS) {
       let totalProcessed = 0;
 
       logger.info(`Starting bucket processing for ${eventType}`);
@@ -304,14 +304,14 @@ To opt into telemetry, you can set "TELEMETRY_ENABLED=true" within the environme
   };
 
   const flushAll = async () => {
-    if (postHog) {
-      await postHog.shutdownAsync();
+    if (insightsClient) {
+      await insightsClient.shutdownAsync();
     }
   };
 
   return {
     sendLoopsEvent,
-    sendPostHogEvents,
+    sendInsightsEvents,
     processAggregatedEvents,
     flushAll,
     getBucketForDistinctId

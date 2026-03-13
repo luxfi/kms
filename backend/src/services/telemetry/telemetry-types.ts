@@ -8,7 +8,7 @@ import {
   UserActor
 } from "@app/ee/services/audit-log/audit-log-types";
 
-export enum PostHogEventTypes {
+export enum InsightsEventTypes {
   SecretPush = "secrets pushed",
   SecretPulled = "secrets pulled",
   SecretCreated = "secrets added",
@@ -37,12 +37,12 @@ export enum PostHogEventTypes {
 
 export type TSecretModifiedEvent = {
   event:
-    | PostHogEventTypes.SecretPush
-    | PostHogEventTypes.SecretRotated
-    | PostHogEventTypes.SecretPulled
-    | PostHogEventTypes.SecretCreated
-    | PostHogEventTypes.SecretUpdated
-    | PostHogEventTypes.SecretDeleted;
+    | InsightsEventTypes.SecretPush
+    | InsightsEventTypes.SecretRotated
+    | InsightsEventTypes.SecretPulled
+    | InsightsEventTypes.SecretCreated
+    | InsightsEventTypes.SecretUpdated
+    | InsightsEventTypes.SecretDeleted;
   properties: {
     numberOfSecrets: number;
     environment: string;
@@ -62,7 +62,7 @@ export type TSecretModifiedEvent = {
 };
 
 export type TAdminInitEvent = {
-  event: PostHogEventTypes.AdminInit;
+  event: InsightsEventTypes.AdminInit;
   properties: {
     username: string;
     email: string;
@@ -72,7 +72,7 @@ export type TAdminInitEvent = {
 };
 
 export type TUserSignedUpEvent = {
-  event: PostHogEventTypes.UserSignedUp;
+  event: InsightsEventTypes.UserSignedUp;
   properties: {
     username: string;
     email: string;
@@ -81,14 +81,14 @@ export type TUserSignedUpEvent = {
 };
 
 export type TSecretScannerEvent = {
-  event: PostHogEventTypes.SecretScannerFull | PostHogEventTypes.SecretScannerPush;
+  event: InsightsEventTypes.SecretScannerFull | InsightsEventTypes.SecretScannerPush;
   properties: {
     numberOfRisks: number;
   };
 };
 
 export type TProjectCreateEvent = {
-  event: PostHogEventTypes.ProjectCreated;
+  event: InsightsEventTypes.ProjectCreated;
   properties: {
     name: string;
     orgId: string;
@@ -96,7 +96,7 @@ export type TProjectCreateEvent = {
 };
 
 export type TMachineIdentityCreatedEvent = {
-  event: PostHogEventTypes.MachineIdentityCreated;
+  event: InsightsEventTypes.MachineIdentityCreated;
   properties: {
     name: string;
     hasDeleteProtection: boolean;
@@ -106,7 +106,7 @@ export type TMachineIdentityCreatedEvent = {
 };
 
 export type TIntegrationCreatedEvent = {
-  event: PostHogEventTypes.IntegrationCreated;
+  event: InsightsEventTypes.IntegrationCreated;
   properties: {
     projectId: string;
     integrationId: string;
@@ -126,7 +126,7 @@ export type TIntegrationCreatedEvent = {
 };
 
 export type TUserOrgInvitedEvent = {
-  event: PostHogEventTypes.UserOrgInvitation;
+  event: InsightsEventTypes.UserOrgInvitation;
   properties: {
     inviteeEmails: string[];
     projectIds?: string[];
@@ -135,7 +135,7 @@ export type TUserOrgInvitedEvent = {
 };
 
 export type TTelemetryInstanceStatsEvent = {
-  event: PostHogEventTypes.TelemetryInstanceStats;
+  event: InsightsEventTypes.TelemetryInstanceStats;
   properties: {
     users: number;
     identities: number;
@@ -149,7 +149,7 @@ export type TTelemetryInstanceStatsEvent = {
 };
 
 export type TSecretRequestCreatedEvent = {
-  event: PostHogEventTypes.SecretRequestCreated;
+  event: InsightsEventTypes.SecretRequestCreated;
   properties: {
     secretRequestId: string;
     organizationId: string;
@@ -158,7 +158,7 @@ export type TSecretRequestCreatedEvent = {
 };
 
 export type TSecretRequestDeletedEvent = {
-  event: PostHogEventTypes.SecretRequestDeleted;
+  event: InsightsEventTypes.SecretRequestDeleted;
   properties: {
     secretRequestId: string;
     organizationId: string;
@@ -166,7 +166,7 @@ export type TSecretRequestDeletedEvent = {
 };
 
 export type TSignSshKeyEvent = {
-  event: PostHogEventTypes.SignSshKey;
+  event: InsightsEventTypes.SignSshKey;
   properties: {
     certificateTemplateId: string;
     principals: string[];
@@ -175,7 +175,7 @@ export type TSignSshKeyEvent = {
 };
 
 export type TIssueSshCredsEvent = {
-  event: PostHogEventTypes.IssueSshCreds;
+  event: InsightsEventTypes.IssueSshCreds;
   properties: {
     certificateTemplateId: string;
     principals: string[];
@@ -184,7 +184,7 @@ export type TIssueSshCredsEvent = {
 };
 
 export type TIssueSshHostUserCertEvent = {
-  event: PostHogEventTypes.IssueSshHostUserCert;
+  event: InsightsEventTypes.IssueSshHostUserCert;
   properties: {
     sshHostId: string;
     hostname: string;
@@ -194,7 +194,7 @@ export type TIssueSshHostUserCertEvent = {
 };
 
 export type TIssueSshHostHostCertEvent = {
-  event: PostHogEventTypes.IssueSshHostHostCert;
+  event: InsightsEventTypes.IssueSshHostHostCert;
   properties: {
     sshHostId: string;
     hostname: string;
@@ -204,7 +204,7 @@ export type TIssueSshHostHostCertEvent = {
 };
 
 export type TSignCertificateEvent = {
-  event: PostHogEventTypes.SignCert;
+  event: InsightsEventTypes.SignCert;
   properties: {
     caId?: string;
     certificateTemplateId?: string;
@@ -215,7 +215,7 @@ export type TSignCertificateEvent = {
 };
 
 export type TIssueCertificateEvent = {
-  event: PostHogEventTypes.IssueCert;
+  event: InsightsEventTypes.IssueCert;
   properties: {
     caId?: string;
     certificateTemplateId?: string;
@@ -226,13 +226,13 @@ export type TIssueCertificateEvent = {
 };
 
 export type TInvalidateCacheEvent = {
-  event: PostHogEventTypes.InvalidateCache;
+  event: InsightsEventTypes.InvalidateCache;
   properties: {
     userAgent?: string;
   };
 };
 
-export type TPostHogEvent = { distinctId: string; organizationId?: string } & (
+export type TInsightsEvent = { distinctId: string; organizationId?: string } & (
   | TSecretModifiedEvent
   | TAdminInitEvent
   | TUserSignedUpEvent

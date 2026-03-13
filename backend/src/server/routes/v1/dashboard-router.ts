@@ -22,7 +22,7 @@ import {
 import { AuthMode } from "@app/services/auth/auth-type";
 import { ResourceMetadataSchema } from "@app/services/resource-metadata/resource-metadata-schema";
 import { SecretsOrderBy } from "@app/services/secret/secret-types";
-import { PostHogEventTypes } from "@app/services/telemetry/telemetry-types";
+import { InsightsEventTypes } from "@app/services/telemetry/telemetry-types";
 
 const MAX_DEEP_SEARCH_LIMIT = 500; // arbitrary limit to prevent excessive results
 
@@ -467,8 +467,8 @@ export const registerDashboardRouter = async (server: FastifyZodProvider) => {
             });
 
             if (getUserAgentType(req.headers["user-agent"]) !== UserAgentType.K8_OPERATOR) {
-              await server.services.telemetry.sendPostHogEvents({
-                event: PostHogEventTypes.SecretPulled,
+              await server.services.telemetry.sendInsightsEvents({
+                event: InsightsEventTypes.SecretPulled,
                 distinctId: getTelemetryDistinctId(req),
                 organizationId: req.permission.orgId,
                 properties: {
@@ -975,8 +975,8 @@ export const registerDashboardRouter = async (server: FastifyZodProvider) => {
         });
 
         if (getUserAgentType(req.headers["user-agent"]) !== UserAgentType.K8_OPERATOR) {
-          await server.services.telemetry.sendPostHogEvents({
-            event: PostHogEventTypes.SecretPulled,
+          await server.services.telemetry.sendInsightsEvents({
+            event: InsightsEventTypes.SecretPulled,
             distinctId: getTelemetryDistinctId(req),
             organizationId: req.permission.orgId,
             properties: {
@@ -1142,8 +1142,8 @@ export const registerDashboardRouter = async (server: FastifyZodProvider) => {
           });
 
           if (getUserAgentType(req.headers["user-agent"]) !== UserAgentType.K8_OPERATOR) {
-            await server.services.telemetry.sendPostHogEvents({
-              event: PostHogEventTypes.SecretPulled,
+            await server.services.telemetry.sendInsightsEvents({
+              event: InsightsEventTypes.SecretPulled,
               distinctId: getTelemetryDistinctId(req),
               organizationId: req.permission.orgId,
               properties: {
@@ -1335,8 +1335,8 @@ export const registerDashboardRouter = async (server: FastifyZodProvider) => {
       });
 
       if (getUserAgentType(req.headers["user-agent"]) !== UserAgentType.K8_OPERATOR) {
-        await server.services.telemetry.sendPostHogEvents({
-          event: PostHogEventTypes.SecretPulled,
+        await server.services.telemetry.sendInsightsEvents({
+          event: InsightsEventTypes.SecretPulled,
           distinctId: getTelemetryDistinctId(req),
           organizationId: req.permission.orgId,
           properties: {
