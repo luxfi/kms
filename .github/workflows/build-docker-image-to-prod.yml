@@ -95,7 +95,7 @@ jobs:
           tags: kms/frontend:test
           platforms: linux/amd64,linux/arm64
           build-args: |
-            POSTHOG_API_KEY=${{ secrets.PUBLIC_POSTHOG_API_KEY }}
+            INSIGHTS_API_KEY=${{ secrets.PUBLIC_INSIGHTS_API_KEY }}
             NEXT_KMS_PLATFORM_VERSION=${{ steps.extract_version.outputs.version }}
       - name: ⏻ Spawn frontend container
         run: |
@@ -119,5 +119,5 @@ jobs:
             kms/frontend:${{ steps.extract_version.outputs.version }}
           platforms: linux/amd64,linux/arm64
           build-args: |
-            POSTHOG_API_KEY=${{ secrets.PUBLIC_POSTHOG_API_KEY }}
+            INSIGHTS_API_KEY=${{ secrets.PUBLIC_INSIGHTS_API_KEY }}
             NEXT_KMS_PLATFORM_VERSION=${{ steps.extract_version.outputs.version }}
