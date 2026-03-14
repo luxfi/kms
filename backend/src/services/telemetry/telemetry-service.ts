@@ -1,4 +1,4 @@
-import { PostHog as Insights } from "@hanzo/insights-node";
+import { Insights } from "@hanzo/insights-node";
 
 import { TLicenseServiceFactory } from "@app/ee/services/license/license-service";
 import { InstanceType } from "@app/ee/services/license/license-types";

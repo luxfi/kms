@@ -1,4 +1,4 @@
-import { PostHog as Insights } from "@hanzo/insights-node";
+import { Insights } from "@hanzo/insights-node";
 
 import { TKeyStoreFactory } from "@app/keystore/keystore";
 import { getConfig } from "@app/lib/config/env";

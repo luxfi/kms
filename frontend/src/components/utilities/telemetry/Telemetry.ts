@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { PostHog as Insights } from "@hanzo/insights";
+import { Insights } from "@hanzo/insights";
 import { initInsights } from "@app/components/analytics/insights";
 import { envConfig } from "@app/config/env";
 
