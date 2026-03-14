@@ -1,10 +1,10 @@
 /* eslint-disable */
-import { PostHog } from "@hanzo/insights";
-import { initInsights } from "@app/components/analytics/posthog";
+import { PostHog as Insights } from "@hanzo/insights";
+import { initInsights } from "@app/components/analytics/insights";
 import { envConfig } from "@app/config/env";
 
 class Capturer {
-  api: PostHog;
+  api: Insights;
 
   constructor() {
     this.api = initInsights()!;

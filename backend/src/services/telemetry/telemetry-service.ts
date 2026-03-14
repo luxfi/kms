@@ -1,4 +1,4 @@
-import { PostHog } from "@hanzo/insights-node";
+import { PostHog as Insights } from "@hanzo/insights-node";
 
 import { TLicenseServiceFactory } from "@app/ee/services/license/license-service";
 import { InstanceType } from "@app/ee/services/license/license-types";
@@ -69,7 +69,7 @@ To opt into telemetry, you can set "TELEMETRY_ENABLED=true" within the environme
   }
 
   const insightsClient = appCfg.TELEMETRY_ENABLED
-    ? new PostHog(appCfg.INSIGHTS_PROJECT_API_KEY, { host: appCfg.INSIGHTS_HOST })
+    ? new Insights(appCfg.INSIGHTS_PROJECT_API_KEY, { host: appCfg.INSIGHTS_HOST })
     : undefined;
 
   // used for email marketting email sending purpose

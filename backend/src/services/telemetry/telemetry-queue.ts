@@ -1,4 +1,4 @@
-import { PostHog } from "@hanzo/insights-node";
+import { PostHog as Insights } from "@hanzo/insights-node";
 
 import { TKeyStoreFactory } from "@app/keystore/keystore";
 import { getConfig } from "@app/lib/config/env";
@@ -32,7 +32,7 @@ export const telemetryQueueServiceFactory = ({
   const appCfg = getConfig();
   const insightsClient =
     appCfg.isProductionMode && appCfg.TELEMETRY_ENABLED
-      ? new PostHog(appCfg.INSIGHTS_PROJECT_API_KEY, { host: appCfg.INSIGHTS_HOST, flushAt: 1, flushInterval: 0 })
+      ? new Insights(appCfg.INSIGHTS_PROJECT_API_KEY, { host: appCfg.INSIGHTS_HOST, flushAt: 1, flushInterval: 0 })
       : undefined;
 
   queueService.start(QueueName.TelemetryInstanceStats, async () => {

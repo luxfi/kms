@@ -352,7 +352,7 @@ An optional JSON argument is also available. It includes the properties `recursi
   ```
 
 ```bash example-template-usage
-{{ with getSecretByName "d821f21d-aa90-453b-8448-8c78c1160a0e" "dev" "/" "POSTHOG_HOST"}}
+{{ with getSecretByName "d821f21d-aa90-453b-8448-8c78c1160a0e" "dev" "/" "INSIGHTS_HOST"}}
 {{ if .Value }}
 password = "{{ .Value }}"
 {{ end }}
