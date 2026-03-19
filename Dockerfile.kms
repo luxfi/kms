@@ -1,0 +1,8 @@
+FROM alpine:3.21
+RUN apk add --no-cache ca-certificates
+COPY kms /usr/local/bin/kms
+RUN mkdir -p /data/kms
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
+  CMD wget -qO- http://localhost:8080/healthz || exit 1
+ENTRYPOINT ["kms"]

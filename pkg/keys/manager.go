@@ -1,0 +1,189 @@
+package keys
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/luxfi/kms/pkg/mpc"
+)
+
+// Store is the interface the manager uses to persist key metadata.
+type Store interface {
+	Put(ks *ValidatorKeySet) error
+	Update(ks *ValidatorKeySet) error
+	Get(validatorID string) (*ValidatorKeySet, error)
+	List() []*ValidatorKeySet
+	Delete(validatorID string) error
+}
+
+// Manager orchestrates validator key lifecycle via the MPC daemon.
+type Manager struct {
+	mpc     *mpc.Client
+	store   Store
+	vaultID string // MPC vault for all validator keys
+}
+
+// NewManager creates a key manager.
+// vaultID is the MPC vault that will hold all generated wallets.
+func NewManager(mpcClient *mpc.Client, store Store, vaultID string) *Manager {
+	return &Manager{
+		mpc:     mpcClient,
+		store:   store,
+		vaultID: vaultID,
+	}
+}
+
+// GenerateValidatorKeys creates a new validator key set via MPC DKG.
+// It generates two MPC wallets: one for BLS (secp256k1/CGGMP21) and one for
+// Ringtail (ed25519/FROST), then stores the mapping.
+func (m *Manager) GenerateValidatorKeys(ctx context.Context, req GenerateRequest) (*ValidatorKeySet, error) {
+	if req.ValidatorID == "" {
+		return nil, fmt.Errorf("keys: validator_id is required")
+	}
+	if req.Threshold < 2 {
+		return nil, fmt.Errorf("keys: threshold must be >= 2")
+	}
+	if req.Parties < req.Threshold {
+		return nil, fmt.Errorf("keys: parties must be >= threshold")
+	}
+
+	// Check for duplicate.
+	if _, err := m.store.Get(req.ValidatorID); err == nil {
+		return nil, fmt.Errorf("keys: validator %s already exists", req.ValidatorID)
+	}
+
+	// Generate BLS key (secp256k1 via CGGMP21 protocol).
+	blsResult, err := m.mpc.Keygen(ctx, m.vaultID, mpc.KeygenRequest{
+		Name:     fmt.Sprintf("validator-%s-bls", req.ValidatorID),
+		KeyType:  "secp256k1",
+		Protocol: "cggmp21",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("keys: bls keygen failed: %w", err)
+	}
+
+	// Generate Ringtail key (ed25519 via FROST protocol).
+	ringtailResult, err := m.mpc.Keygen(ctx, m.vaultID, mpc.KeygenRequest{
+		Name:     fmt.Sprintf("validator-%s-ringtail", req.ValidatorID),
+		KeyType:  "ed25519",
+		Protocol: "frost",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("keys: ringtail keygen failed: %w", err)
+	}
+
+	blsPub := ""
+	if blsResult.ECDSAPubkey != nil {
+		blsPub = *blsResult.ECDSAPubkey
+	}
+	ringtailPub := ""
+	if ringtailResult.EDDSAPubkey != nil {
+		ringtailPub = *ringtailResult.EDDSAPubkey
+	}
+
+	now := time.Now().UTC()
+	ks := &ValidatorKeySet{
+		ValidatorID:       req.ValidatorID,
+		BLSWalletID:       blsResult.WalletID,
+		RingtailWalletID:  ringtailResult.WalletID,
+		BLSPublicKey:      blsPub,
+		RingtailPublicKey: ringtailPub,
+		Threshold:         blsResult.Threshold,
+		Parties:           len(blsResult.Participants),
+		Status:            "active",
+		CreatedAt:         now,
+		UpdatedAt:         now,
+	}
+
+	if err := m.store.Put(ks); err != nil {
+		return nil, fmt.Errorf("keys: store put: %w", err)
+	}
+
+	return ks, nil
+}
+
+// SignWithBLS signs a message using the validator's BLS key via MPC threshold signing.
+func (m *Manager) SignWithBLS(ctx context.Context, validatorID string, message []byte) (*SignResponse, error) {
+	ks, err := m.store.Get(validatorID)
+	if err != nil {
+		return nil, fmt.Errorf("keys: validator %s: %w", validatorID, err)
+	}
+
+	result, err := m.mpc.Sign(ctx, ks.BLSWalletID, "secp256k1", message)
+	if err != nil {
+		return nil, fmt.Errorf("keys: bls sign: %w", err)
+	}
+
+	return &SignResponse{
+		Signature: result.Signature,
+		R:         result.R,
+		S:         result.S,
+	}, nil
+}
+
+// SignWithRingtail signs a message using the validator's Ringtail key via MPC threshold signing.
+func (m *Manager) SignWithRingtail(ctx context.Context, validatorID string, message []byte) (*SignResponse, error) {
+	ks, err := m.store.Get(validatorID)
+	if err != nil {
+		return nil, fmt.Errorf("keys: validator %s: %w", validatorID, err)
+	}
+
+	result, err := m.mpc.Sign(ctx, ks.RingtailWalletID, "ed25519", message)
+	if err != nil {
+		return nil, fmt.Errorf("keys: ringtail sign: %w", err)
+	}
+
+	return &SignResponse{
+		Signature: result.Signature,
+		R:         result.R,
+		S:         result.S,
+	}, nil
+}
+
+// Rotate reshares a validator's keys with new threshold or participants.
+func (m *Manager) Rotate(ctx context.Context, validatorID string, req RotateRequest) (*ValidatorKeySet, error) {
+	ks, err := m.store.Get(validatorID)
+	if err != nil {
+		return nil, fmt.Errorf("keys: validator %s: %w", validatorID, err)
+	}
+
+	reshareReq := mpc.ReshareRequest{
+		NewThreshold:    req.NewThreshold,
+		NewParticipants: req.NewParticipants,
+	}
+
+	// Reshare BLS key.
+	if err := m.mpc.Reshare(ctx, ks.BLSWalletID, reshareReq); err != nil {
+		return nil, fmt.Errorf("keys: bls reshare: %w", err)
+	}
+
+	// Reshare Ringtail key.
+	if err := m.mpc.Reshare(ctx, ks.RingtailWalletID, reshareReq); err != nil {
+		return nil, fmt.Errorf("keys: ringtail reshare: %w", err)
+	}
+
+	if req.NewThreshold > 0 {
+		ks.Threshold = req.NewThreshold
+	}
+	if len(req.NewParticipants) > 0 {
+		ks.Parties = len(req.NewParticipants)
+	}
+	ks.UpdatedAt = time.Now().UTC()
+
+	if err := m.store.Update(ks); err != nil {
+		return nil, fmt.Errorf("keys: store update: %w", err)
+	}
+
+	return ks, nil
+}
+
+// Get retrieves a validator key set.
+func (m *Manager) Get(validatorID string) (*ValidatorKeySet, error) {
+	return m.store.Get(validatorID)
+}
+
+// List returns all validator key sets.
+func (m *Manager) List() []*ValidatorKeySet {
+	return m.store.List()
+}
