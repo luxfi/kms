@@ -27,7 +27,6 @@ jobs:
 
       - name: Add Helm repositories
         run: |
-          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm repo update
 
@@ -64,5 +63,5 @@ jobs:
             --config ct.yaml \
             --charts helm-charts/kms-standalone-postgres \
             --helm-extra-args="--timeout=300s" \
-            --helm-extra-set-args="--set ingress.nginx.enabled=false --set kms.autoDatabaseSchemaMigration=false --set kms.replicaCount=1 --set kms.image.tag=v0.132.2-postgres --set kms.autoBootstrap.enabled=true" \
+            --helm-extra-set-args="--set kms.autoDatabaseSchemaMigration=false --set kms.replicaCount=1 --set kms.image.tag=v0.132.2-postgres --set kms.autoBootstrap.enabled=true" \
             --namespace kms-standalone-postgres

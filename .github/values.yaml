@@ -35,11 +35,7 @@ ingress:
   enabled: true
   ## @param ingress.ingressClassName Ingress class name
   ##
-  ingressClassName: ingress
-  ## @param ingress.nginx.enabled Ingress controller
-  ##
-  # nginx:
-  #   enabled: true
+  ingressClassName: hanzo
   ## @param ingress.annotations Ingress annotations
   ##
   annotations:

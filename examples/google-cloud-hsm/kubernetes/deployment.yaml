@@ -337,7 +337,7 @@ spec:
   - from:
     - namespaceSelector:
         matchLabels:
-          name: ingress-nginx
+          name: hanzo-ingress
     ports:
     - protocol: TCP
       port: 8080
