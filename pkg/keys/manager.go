@@ -17,16 +17,24 @@ type Store interface {
 	Delete(validatorID string) error
 }
 
+// MPCBackend is the interface for MPC operations (ZAP or HTTP).
+type MPCBackend interface {
+	Keygen(ctx context.Context, vaultID string, req mpc.KeygenRequest) (*mpc.KeygenResult, error)
+	Sign(ctx context.Context, req mpc.SignRequest) (*mpc.SignResult, error)
+	Reshare(ctx context.Context, walletID string, req mpc.ReshareRequest) error
+	GetWallet(ctx context.Context, walletID string) (*mpc.Wallet, error)
+	Status(ctx context.Context) (*mpc.ClusterStatus, error)
+}
+
 // Manager orchestrates validator key lifecycle via the MPC daemon.
 type Manager struct {
-	mpc     *mpc.Client
+	mpc     MPCBackend
 	store   Store
-	vaultID string // MPC vault for all validator keys
+	vaultID string
 }
 
 // NewManager creates a key manager.
-// vaultID is the MPC vault that will hold all generated wallets.
-func NewManager(mpcClient *mpc.Client, store Store, vaultID string) *Manager {
+func NewManager(mpcClient MPCBackend, store Store, vaultID string) *Manager {
 	return &Manager{
 		mpc:     mpcClient,
 		store:   store,
@@ -110,7 +118,11 @@ func (m *Manager) SignWithBLS(ctx context.Context, validatorID string, message [
 		return nil, fmt.Errorf("keys: validator %s: %w", validatorID, err)
 	}
 
-	result, err := m.mpc.Sign(ctx, ks.BLSWalletID, "secp256k1", message)
+	result, err := m.mpc.Sign(ctx, mpc.SignRequest{
+		WalletID: ks.BLSWalletID,
+		KeyType:  "secp256k1",
+		Message:  message,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("keys: bls sign: %w", err)
 	}
@@ -129,7 +141,11 @@ func (m *Manager) SignWithRingtail(ctx context.Context, validatorID string, mess
 		return nil, fmt.Errorf("keys: validator %s: %w", validatorID, err)
 	}
 
-	result, err := m.mpc.Sign(ctx, ks.RingtailWalletID, "ed25519", message)
+	result, err := m.mpc.Sign(ctx, mpc.SignRequest{
+		WalletID: ks.RingtailWalletID,
+		KeyType:  "ed25519",
+		Message:  message,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("keys: ringtail sign: %w", err)
 	}

@@ -144,12 +144,12 @@ func (c *Client) Keygen(ctx context.Context, vaultID string, req KeygenRequest) 
 
 // Sign triggers threshold signing via the MPC daemon.
 // This uses the transaction creation flow.
-func (c *Client) Sign(ctx context.Context, walletID, keyType string, message []byte) (*SignResult, error) {
+func (c *Client) Sign(ctx context.Context, req SignRequest) (*SignResult, error) {
 	url := fmt.Sprintf("%s/v1/transactions", c.BaseURL)
 	body, err := json.Marshal(map[string]interface{}{
-		"wallet_id": walletID,
-		"key_type":  keyType,
-		"payload":   message,
+		"wallet_id": req.WalletID,
+		"key_type":  req.KeyType,
+		"payload":   req.Message,
 		"type":      "sign",
 	})
 	if err != nil {

@@ -27,15 +27,19 @@ import (
 )
 
 func main() {
-	mpcURL := envOr("MPC_URL", "http://mpc-api.lux-mpc.svc.cluster.local:8081")
-	mpcToken := envOr("MPC_TOKEN", "")
+	mpcAddr := envOr("MPC_ADDR", "") // ZAP address (host:port). Empty = mDNS discovery.
 	vaultID := envOr("MPC_VAULT_ID", "")
+	nodeID := envOr("KMS_NODE_ID", "kms-0")
 
 	if vaultID == "" {
 		log.Fatal("kms: MPC_VAULT_ID is required")
 	}
 
-	mpcClient := mpc.NewClient(mpcURL, mpcToken)
+	zapClient, err := mpc.NewZapClient(nodeID, mpcAddr)
+	if err != nil {
+		log.Fatalf("kms: zap client: %v", err)
+	}
+	defer zapClient.Close()
 
 	app := base.New()
 
@@ -46,18 +50,18 @@ func main() {
 			return err
 		}
 
-		// Verify MPC reachability.
+		// Verify MPC reachability via ZAP.
 		checkCtx, checkCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		if status, err := mpcClient.Status(checkCtx); err != nil {
-			log.Printf("kms: WARNING: mpc unreachable: %v", err)
+		if status, err := zapClient.Status(checkCtx); err != nil {
+			log.Printf("kms: WARNING: mpc unreachable via ZAP: %v", err)
 		} else {
 			log.Printf("kms: mpc ready=%v peers=%d/%d mode=%s",
 				status.Ready, status.ConnectedPeers, status.ExpectedPeers, status.Mode)
 		}
 		checkCancel()
 
-		mgr := keys.NewManager(mpcClient, keyStore, vaultID)
-		registerKMSRoutes(e.Router, mgr, mpcClient)
+		mgr := keys.NewManager(zapClient, keyStore, vaultID)
+		registerKMSRoutes(e.Router, mgr, zapClient)
 		return e.Next()
 	})
 
@@ -66,7 +70,7 @@ func main() {
 	}
 }
 
-func registerKMSRoutes(r *router.Router[*core.RequestEvent], mgr *keys.Manager, mpcClient *mpc.Client) {
+func registerKMSRoutes(r *router.Router[*core.RequestEvent], mgr *keys.Manager, mpcBackend keys.MPCBackend) {
 	api := r.Group("/v1")
 
 	// All KMS routes require superuser authentication.
@@ -169,7 +173,7 @@ func registerKMSRoutes(r *router.Router[*core.RequestEvent], mgr *keys.Manager, 
 	})
 
 	api.GET("/status", func(e *core.RequestEvent) error {
-		status, err := mpcClient.Status(e.Request.Context())
+		status, err := mpcBackend.Status(e.Request.Context())
 		if err != nil {
 			return e.JSON(200, map[string]string{
 				"kms":     "ok",
