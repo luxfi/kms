@@ -4,20 +4,13 @@
 # Env vars take precedence over this file; flags take precedence over env vars.
 #
 # Env vars:
-#   KMS_LISTEN      - HTTP listen address
-#   MPC_URL         - MPC daemon base URL
-#   MPC_TOKEN       - MPC API auth token (keep in K8s secret, not here)
+#   MPC_ADDR        - ZAP address (host:port); empty = mDNS discovery (dev only)
 #   MPC_VAULT_ID    - MPC vault for validator keys (keep in K8s secret, not here)
-#   KMS_STORE_PATH  - Path to key metadata JSON file
+#   KMS_NODE_ID     - ZAP node ID (default "kms-0")
 
 server:
   addr: ":8080"
 
 mpc:
-  # Internal K8s DNS — MPC API in lux-mpc namespace.
-  url: "http://mpc-api.lux-mpc.svc.cluster.local:8081"
-  # External fallback (not used in-cluster):
-  # url: "https://mpc.lux.network/api/v1"
-
-store:
-  path: "/data/kms/keys.json"
+  # ZAP direct connect address. Leave empty for mDNS discovery (dev only).
+  addr: ""

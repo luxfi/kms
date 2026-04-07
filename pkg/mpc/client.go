@@ -19,14 +19,18 @@ type Client struct {
 }
 
 // NewClient creates an MPC client pointing at the given base URL.
-func NewClient(baseURL, token string) *Client {
+// Token is required — unauthenticated MPC access is not permitted.
+func NewClient(baseURL, token string) (*Client, error) {
+	if token == "" {
+		return nil, fmt.Errorf("mpc: auth token is required")
+	}
 	return &Client{
 		BaseURL: baseURL,
 		Token:   token,
 		HTTPClient: &http.Client{
 			Timeout: 120 * time.Second,
 		},
-	}
+	}, nil
 }
 
 // KeygenRequest is the body sent to POST /v1/vaults/{vaultID}/wallets.
@@ -288,7 +292,10 @@ func (c *Client) do(ctx context.Context, method, url string, body []byte) (*http
 // Encrypt sends a threshold encrypt request via HTTP (T-Chain API).
 func (c *Client) Encrypt(ctx context.Context, keyID string, plaintext []byte) (*EncryptResult, error) {
 	url := fmt.Sprintf("%s/v1/fhe/encrypt", c.BaseURL)
-	body, _ := json.Marshal(map[string]interface{}{"key_id": keyID, "plaintext": plaintext, "scheme": SchemeAESGCM})
+	body, err := json.Marshal(map[string]interface{}{"key_id": keyID, "plaintext": plaintext, "scheme": SchemeAESGCM})
+	if err != nil {
+		return nil, fmt.Errorf("mpc: marshal encrypt request: %w", err)
+	}
 	resp, err := c.do(ctx, http.MethodPost, url, body)
 	if err != nil {
 		return nil, err
@@ -298,14 +305,19 @@ func (c *Client) Encrypt(ctx context.Context, keyID string, plaintext []byte) (*
 		return nil, readError(resp)
 	}
 	var result EncryptResult
-	json.NewDecoder(resp.Body).Decode(&result)
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("mpc: decode encrypt response: %w", err)
+	}
 	return &result, nil
 }
 
 // Decrypt sends a threshold decrypt request via HTTP (T-Chain API).
 func (c *Client) Decrypt(ctx context.Context, keyID string, ciphertext []byte) (*DecryptResult, error) {
 	url := fmt.Sprintf("%s/v1/fhe/decrypt", c.BaseURL)
-	body, _ := json.Marshal(map[string]interface{}{"key_id": keyID, "ciphertext": ciphertext, "scheme": SchemeAESGCM})
+	body, err := json.Marshal(map[string]interface{}{"key_id": keyID, "ciphertext": ciphertext, "scheme": SchemeAESGCM})
+	if err != nil {
+		return nil, fmt.Errorf("mpc: marshal decrypt request: %w", err)
+	}
 	resp, err := c.do(ctx, http.MethodPost, url, body)
 	if err != nil {
 		return nil, err
@@ -315,7 +327,9 @@ func (c *Client) Decrypt(ctx context.Context, keyID string, ciphertext []byte) (
 		return nil, readError(resp)
 	}
 	var result DecryptResult
-	json.NewDecoder(resp.Body).Decode(&result)
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("mpc: decode decrypt response: %w", err)
+	}
 	return &result, nil
 }
 

@@ -2,6 +2,7 @@ package mpc
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -28,17 +29,27 @@ type ZapClient struct {
 
 // NewZapClient creates a ZAP client for MPC communication.
 // If mpcAddr is empty, uses mDNS discovery. Otherwise connects directly.
+//
+// SECURITY: ZAP does not yet support mutual TLS. Before production launch,
+// the ZAP library must add mTLS support and this client must be updated to
+// require it. Until then, deploy only on trusted networks (K8s pod network
+// with NetworkPolicy restricting traffic to the MPC namespace).
 func NewZapClient(nodeID, mpcAddr string) (*ZapClient, error) {
+	useMDNS := mpcAddr == ""
+	if useMDNS {
+		slog.Warn("mpc: mDNS discovery enabled — this is unsafe outside development; set MPC_ADDR for production")
+	}
+
 	node := zap.NewNode(zap.NodeConfig{
 		NodeID:      nodeID,
 		ServiceType: "_lux-kms._tcp",
-		NoDiscovery: mpcAddr != "",
+		NoDiscovery: !useMDNS,
 		Logger:      slog.Default(),
 	})
 
 	c := &ZapClient{node: node}
 
-	if mpcAddr != "" {
+	if !useMDNS {
 		if err := node.ConnectDirect(mpcAddr); err != nil {
 			return nil, fmt.Errorf("mpc: connect %s: %w", mpcAddr, err)
 		}
@@ -57,11 +68,10 @@ func (c *ZapClient) call(ctx context.Context, op uint16, payload any) ([]byte, e
 		return nil, err
 	}
 
-	// Build ZAP message: opcode (2 bytes) + JSON payload
+	// Build ZAP message: opcode (2 bytes LE) + JSON payload.
 	b := zap.NewBuilder(len(data) + 64)
 	opBytes := make([]byte, 2)
-	opBytes[0] = byte(op)
-	opBytes[1] = byte(op >> 8)
+	binary.LittleEndian.PutUint16(opBytes, op)
 	b.WriteBytes(append(opBytes, data...))
 	raw := b.Finish()
 
@@ -75,8 +85,18 @@ func (c *ZapClient) call(ctx context.Context, op uint16, payload any) ([]byte, e
 		return nil, fmt.Errorf("mpc: zap call op=0x%04x: %w", op, err)
 	}
 
-	// Response body is the full message bytes after header
+	// Response body is the full message bytes after header.
 	body := resp.Bytes()
+	if len(body) < zap.HeaderSize+2 {
+		return nil, fmt.Errorf("mpc: zap response too short (%d bytes) for op=0x%04x", len(body), op)
+	}
+
+	// Validate response opcode matches request.
+	respOp := binary.LittleEndian.Uint16(body[zap.HeaderSize : zap.HeaderSize+2])
+	if respOp != op {
+		return nil, fmt.Errorf("mpc: zap response opcode mismatch: sent=0x%04x got=0x%04x", op, respOp)
+	}
+
 	if len(body) <= zap.HeaderSize+2 {
 		return []byte("{}"), nil
 	}

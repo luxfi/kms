@@ -13,10 +13,10 @@ Lux KMS is an MPC-backed key management service for the Lux Network. It manages 
 ## Architecture
 
 ```
-Client (ATS/BD/TA) → Lux KMS (Go, :8080) → Lux MPC (CGGMP21/FROST, :8081)
+Client (ATS/BD/TA) → Lux KMS (Go, :8080) → Lux MPC (CGGMP21/FROST, via ZAP)
                                 │
-                         JSON file store
-                         (keys.json)
+                         Hanzo Base DB
+                         (SQLite local / Postgres prod)
 ```
 
 ### Active code paths
@@ -27,7 +27,7 @@ Client (ATS/BD/TA) → Lux KMS (Go, :8080) → Lux MPC (CGGMP21/FROST, :8081)
 | `pkg/server/` | Go | HTTP API (chi router) |
 | `pkg/keys/` | Go | Key lifecycle (generate, sign, rotate) |
 | `pkg/mpc/` | Go | MPC client (calls luxfi/mpc daemon) |
-| `pkg/store/` | Go | JSON file-backed metadata store |
+| `pkg/store/` | Go | Base-backed metadata store (SQLite/Postgres) |
 | `k8-operator/` | Go | K8s operator for KmsSecret/KmsDynamicSecret/KmsPushSecret CRDs |
 
 ### Legacy code (not used by Go server)
@@ -50,26 +50,26 @@ Client (ATS/BD/TA) → Lux KMS (Go, :8080) → Lux MPC (CGGMP21/FROST, :8081)
 ## API routes
 
 ```
-POST   /api/v1/keys/generate      Generate validator key set
-GET    /api/v1/keys                List all key sets
-GET    /api/v1/keys/{id}           Get key set by ID
-POST   /api/v1/keys/{id}/sign     Sign (key_type: "bls" or "ringtail")
-POST   /api/v1/keys/{id}/rotate   Reshare with new threshold/participants
-GET    /api/v1/status              KMS + MPC status
-GET    /healthz                    Health check
+POST   /v1/keys/generate      Generate validator key set
+GET    /v1/keys                List all key sets
+GET    /v1/keys/{id}           Get key set by ID
+POST   /v1/keys/{id}/sign     Sign (key_type: "bls" or "ringtail")
+POST   /v1/keys/{id}/rotate   Reshare with new threshold/participants
+GET    /v1/status              KMS + MPC status
+GET    /healthz                Health check
 ```
 
 ## Configuration (env vars)
 
-- `KMS_LISTEN` — HTTP listen address (default `:8080`)
-- `MPC_URL` — MPC daemon URL (default `http://mpc-api.lux-mpc.svc.cluster.local:8081`)
-- `MPC_TOKEN` — MPC API auth token
+- `MPC_ADDR` — ZAP address (host:port); empty = mDNS discovery (dev only)
 - `MPC_VAULT_ID` — MPC vault ID (required)
-- `KMS_STORE_PATH` — metadata store path (default `/data/kms/keys.json`)
+- `KMS_NODE_ID` — ZAP node ID (default `kms-0`)
 
 ## Integration
 
 - Auth: Hanzo IAM JWT tokens (JWKS validation)
 - Callers: ATS, BD, TA (all hanzoai/base Go services)
 - Crypto: luxfi/mpc (CGGMP21 for ECDSA, FROST for EdDSA)
-- Deployment: K8s Deployment + PVC, no database
+- Transport: ZAP (luxfi/zap) for MPC communication — no HTTP to MPC daemon
+- Deployment: K8s Deployment (replicas=1 for SQLite) + PVC for data persistence
+- Multi-replica requires PostgreSQL backend (BASE_DB_URL env var)

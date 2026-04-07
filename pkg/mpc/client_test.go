@@ -45,7 +45,7 @@ func TestKeygen(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient(srv.URL, "test-token")
+	c, _ := NewClient(srv.URL, "test-token")
 	result, err := c.Keygen(context.Background(), "vault-1", KeygenRequest{
 		Name:     "test-bls",
 		KeyType:  "secp256k1",
@@ -86,7 +86,7 @@ func TestSign(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient(srv.URL, "test-token")
+	c, _ := NewClient(srv.URL, "test-token")
 	result, err := c.Sign(context.Background(), SignRequest{WalletID: "wallet-1", KeyType: "secp256k1", Message: []byte("hello")})
 	if err != nil {
 		t.Fatalf("sign: %v", err)
@@ -116,7 +116,7 @@ func TestReshare(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient(srv.URL, "test-token")
+	c, _ := NewClient(srv.URL, "test-token")
 	err := c.Reshare(context.Background(), "wallet-1", ReshareRequest{
 		NewThreshold:    4,
 		NewParticipants: []string{"node0", "node1", "node2", "node3", "node4", "node5"},
@@ -144,7 +144,7 @@ func TestGetWallet(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient(srv.URL, "test-token")
+	c, _ := NewClient(srv.URL, "test-token")
 	wallet, err := c.GetWallet(context.Background(), "wallet-1")
 	if err != nil {
 		t.Fatalf("get wallet: %v", err)
@@ -169,7 +169,7 @@ func TestStatus(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient(srv.URL, "test-token")
+	c, _ := NewClient(srv.URL, "test-token")
 	status, err := c.Status(context.Background())
 	if err != nil {
 		t.Fatalf("status: %v", err)
@@ -190,7 +190,7 @@ func TestAPIError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient(srv.URL, "test-token")
+	c, _ := NewClient(srv.URL, "test-token")
 	_, err := c.GetWallet(context.Background(), "nonexistent")
 	if err == nil {
 		t.Fatal("expected error")

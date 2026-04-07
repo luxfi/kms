@@ -3,6 +3,7 @@ package keys
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/luxfi/kms/pkg/mpc"
@@ -110,7 +111,11 @@ func (m *Manager) GenerateValidatorKeys(ctx context.Context, req GenerateRequest
 		Protocol: "frost",
 	})
 	if err != nil {
-		return nil, fmt.Errorf("keys: ringtail keygen failed: %w", err)
+		// BLS keygen succeeded but Ringtail failed. DKG cannot be rolled back —
+		// the BLS wallet is now orphaned in the MPC cluster. Log for manual cleanup.
+		log.Printf("keys: CRITICAL: ringtail keygen failed after BLS keygen succeeded; orphaned BLS wallet_id=%s for validator=%s — manual cleanup required: %v",
+			blsResult.WalletID, req.ValidatorID, err)
+		return nil, fmt.Errorf("keys: ringtail keygen failed (orphaned bls wallet %s): %w", blsResult.WalletID, err)
 	}
 
 	blsPub := ""
@@ -201,6 +206,12 @@ func (m *Manager) Rotate(ctx context.Context, validatorID string, req RotateRequ
 		NewParticipants: req.NewParticipants,
 	}
 
+	// Build rollback params from current state.
+	rollbackReq := mpc.ReshareRequest{
+		NewThreshold:    ks.Threshold,
+		NewParticipants: nil, // same participant set
+	}
+
 	// Reshare BLS key.
 	if err := m.signer.Reshare(ctx, ks.BLSWalletID, reshareReq); err != nil {
 		return nil, fmt.Errorf("keys: bls reshare: %w", err)
@@ -208,7 +219,17 @@ func (m *Manager) Rotate(ctx context.Context, validatorID string, req RotateRequ
 
 	// Reshare Ringtail key.
 	if err := m.signer.Reshare(ctx, ks.RingtailWalletID, reshareReq); err != nil {
-		return nil, fmt.Errorf("keys: ringtail reshare: %w", err)
+		// BLS was reshared but Ringtail failed — keys are now inconsistent.
+		// Attempt to roll BLS back to previous threshold/participants.
+		log.Printf("keys: WARNING: ringtail reshare failed after BLS reshare succeeded for validator=%s, attempting BLS rollback: %v",
+			validatorID, err)
+		if rbErr := m.signer.Reshare(ctx, ks.BLSWalletID, rollbackReq); rbErr != nil {
+			log.Printf("keys: CRITICAL: BLS rollback also failed for validator=%s — keys are in inconsistent state, manual intervention required: %v",
+				validatorID, rbErr)
+			return nil, fmt.Errorf("keys: ringtail reshare failed AND bls rollback failed (inconsistent state): ringtail=%w, bls_rollback=%v", err, rbErr)
+		}
+		log.Printf("keys: BLS rollback succeeded for validator=%s after ringtail reshare failure", validatorID)
+		return nil, fmt.Errorf("keys: ringtail reshare failed (bls rolled back): %w", err)
 	}
 
 	if req.NewThreshold > 0 {

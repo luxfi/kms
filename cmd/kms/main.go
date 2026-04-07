@@ -3,15 +3,13 @@
 // Configuration precedence: flags > env vars > defaults.
 //
 //	Env vars:
-//	  MPC_URL         - MPC daemon base URL
-//	  MPC_TOKEN       - MPC API auth token
-//	  MPC_VAULT_ID    - MPC vault ID for validator keys
-//	  KMS_STORE_PATH  - Path to key metadata store
+//	  MPC_ADDR        - ZAP address (host:port); empty = mDNS discovery
+//	  MPC_VAULT_ID    - MPC vault ID for validator keys (required)
+//	  KMS_NODE_ID     - ZAP node ID (default "kms-0")
 package main
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"os"
 	"strings"
@@ -95,14 +93,21 @@ func registerKMSRoutes(r *router.Router[*core.RequestEvent], mgr *keys.Manager, 
 		if req.Parties < req.Threshold {
 			return e.BadRequestError("parties must be >= threshold", nil)
 		}
+		if req.Threshold == req.Parties {
+			log.Printf("kms: WARNING: keygen threshold==parties (%d) for validator=%s — no fault tolerance, any single node failure blocks signing",
+				req.Threshold, req.ValidatorID)
+		}
 
 		ks, err := mgr.GenerateValidatorKeys(e.Request.Context(), req)
 		if err != nil {
+			log.Printf("kms: audit: keygen FAILED validator_id=%s error=%v", req.ValidatorID, err)
 			if strings.Contains(err.Error(), "already exists") {
 				return e.JSON(409, map[string]string{"error": err.Error()})
 			}
 			return e.InternalServerError("", err)
 		}
+		log.Printf("kms: audit: keygen OK validator_id=%s bls_wallet=%s ringtail_wallet=%s threshold=%d parties=%d",
+			ks.ValidatorID, ks.BLSWalletID, ks.RingtailWalletID, ks.Threshold, ks.Parties)
 		return e.JSON(201, ks)
 	})
 
@@ -144,11 +149,13 @@ func registerKMSRoutes(r *router.Router[*core.RequestEvent], mgr *keys.Manager, 
 			return e.BadRequestError("key_type must be 'bls' or 'ringtail'", nil)
 		}
 		if err != nil {
+			log.Printf("kms: audit: sign FAILED validator_id=%s key_type=%s error=%v", id, req.KeyType, err)
 			if strings.Contains(err.Error(), "not found") {
 				return e.NotFoundError(err.Error(), nil)
 			}
 			return e.InternalServerError("", err)
 		}
+		log.Printf("kms: audit: sign OK validator_id=%s key_type=%s", id, req.KeyType)
 		return e.JSON(200, resp)
 	})
 
@@ -164,11 +171,14 @@ func registerKMSRoutes(r *router.Router[*core.RequestEvent], mgr *keys.Manager, 
 
 		ks, err := mgr.Rotate(e.Request.Context(), id, req)
 		if err != nil {
+			log.Printf("kms: audit: rotate FAILED validator_id=%s error=%v", id, err)
 			if strings.Contains(err.Error(), "not found") {
 				return e.NotFoundError(err.Error(), nil)
 			}
 			return e.InternalServerError("", err)
 		}
+		log.Printf("kms: audit: rotate OK validator_id=%s new_threshold=%d new_parties=%d",
+			id, ks.Threshold, ks.Parties)
 		return e.JSON(200, ks)
 	})
 
@@ -186,11 +196,6 @@ func registerKMSRoutes(r *router.Router[*core.RequestEvent], mgr *keys.Manager, 
 			"mpc": status,
 		})
 	})
-}
-
-// writeJSON is kept for test compatibility.
-func writeJSON(w interface{ Write([]byte) (int, error) }, _ int, v interface{}) {
-	json.NewEncoder(w).Encode(v)
 }
 
 func envOr(key, fallback string) string {

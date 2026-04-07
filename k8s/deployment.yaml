@@ -5,8 +5,9 @@ metadata:
   namespace: lux-system
   labels:
     app: kms
-spec:
-  replicas: 2
+  # replicas: 1 required for embedded SQLite. For multi-replica, switch to
+  # PostgreSQL backend (BASE_DB_URL env var) and set replicas accordingly.
+  replicas: 1
   selector:
     matchLabels:
       app: kms
@@ -23,10 +24,6 @@ spec:
               containerPort: 8080
               protocol: TCP
           env:
-            - name: MPC_URL
-              value: "http://mpc-api.lux-mpc.svc.cluster.local:8081"
-            - name: KMS_STORE_PATH
-              value: "/data/kms/keys.json"
             - name: MPC_VAULT_ID
               valueFrom:
                 secretKeyRef:
@@ -37,7 +34,6 @@ spec:
                 secretKeyRef:
                   name: kms-secrets
                   key: mpc-token
-                  optional: true
           livenessProbe:
             httpGet:
               path: /healthz
@@ -62,4 +58,5 @@ spec:
               mountPath: /data/kms
       volumes:
         - name: data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: kms-data

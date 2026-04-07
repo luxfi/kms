@@ -6,6 +6,9 @@ package store
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
+	"strings"
 	"sync"
 
 	"github.com/hanzoai/base/core"
@@ -62,13 +65,19 @@ func (s *Store) ensureCollection() error {
 func (s *Store) load() error {
 	records, err := s.app.FindAllRecords(collectionName)
 	if err != nil {
-		return nil // empty collection is fine
+		// "no rows" / empty collection is expected on first run.
+		// Any other error (schema mismatch, DB corruption) must surface.
+		if strings.Contains(err.Error(), "no rows") || strings.Contains(err.Error(), "not found") {
+			return nil
+		}
+		return fmt.Errorf("store: load records: %w", err)
 	}
 	for _, r := range records {
 		vid := r.GetString("validator_id")
 		raw := r.GetString("data")
 		var ks keys.ValidatorKeySet
 		if err := json.Unmarshal([]byte(raw), &ks); err != nil {
+			log.Printf("store: WARNING: corrupt record validator_id=%q, skipping: %v", vid, err)
 			continue
 		}
 		s.data[vid] = &ks

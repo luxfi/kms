@@ -4,11 +4,8 @@ services:
     ports:
       - "8080:8080"
     environment:
-      KMS_LISTEN: ":8080"
-      MPC_URL: "http://mpc:8081"
+      MPC_ADDR: "mpc:9000"
       MPC_VAULT_ID: "${MPC_VAULT_ID}"
-      MPC_TOKEN: "${MPC_TOKEN:-}"
-      KMS_STORE_PATH: "/data/kms/keys.json"
     volumes:
       - kms-data:/data/kms
     depends_on:
