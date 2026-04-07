@@ -16,6 +16,8 @@ const (
 	OpSign    uint16 = 0x0011
 	OpReshare uint16 = 0x0012
 	OpWallet  uint16 = 0x0020
+	OpEncrypt uint16 = 0x0030 // MPC threshold encrypt (ML-KEM)
+	OpDecrypt uint16 = 0x0031 // MPC threshold decrypt (ML-KEM)
 )
 
 // ZapClient communicates with the MPC daemon over ZAP.
@@ -146,6 +148,50 @@ func (c *ZapClient) Status(ctx context.Context) (*ClusterStatus, error) {
 		return nil, fmt.Errorf("mpc: decode status: %w", err)
 	}
 	return &status, nil
+}
+
+// Encrypt threshold-encrypts plaintext using the collective FHE public key.
+// Anyone can encrypt — the public key is published by the validator set.
+// Ciphertext can only be decrypted via threshold FHE (t-of-n E2S protocol).
+// Uses TFHE for secret storage (bit-level encryption, exact decryption).
+func (c *ZapClient) Encrypt(ctx context.Context, keyID string, plaintext []byte) (*EncryptResult, error) {
+	payload := struct {
+		KeyID     string `json:"key_id"`
+		Plaintext []byte `json:"plaintext"`
+		Scheme    string `json:"scheme"` // tfhe for secrets, ckks for ML
+	}{keyID, plaintext, "tfhe"}
+
+	data, err := c.call(ctx, OpEncrypt, payload)
+	if err != nil {
+		return nil, err
+	}
+	var result EncryptResult
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("mpc: decode encrypt: %w", err)
+	}
+	return &result, nil
+}
+
+// Decrypt threshold-decrypts ciphertext using t-of-n FHE key shares.
+// Each validator produces an E2S (Encrypt-to-Share) decryption share.
+// Combiner aggregates t shares to recover plaintext.
+// Uses luxfi/lattice TFHE threshold decryption protocol.
+func (c *ZapClient) Decrypt(ctx context.Context, keyID string, ciphertext []byte) (*DecryptResult, error) {
+	payload := struct {
+		KeyID      string `json:"key_id"`
+		Ciphertext []byte `json:"ciphertext"`
+		Scheme     string `json:"scheme"`
+	}{keyID, ciphertext, "tfhe"}
+
+	data, err := c.call(ctx, OpDecrypt, payload)
+	if err != nil {
+		return nil, err
+	}
+	var result DecryptResult
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("mpc: decode decrypt: %w", err)
+	}
+	return &result, nil
 }
 
 // Close shuts down the ZAP node.

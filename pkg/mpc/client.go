@@ -87,6 +87,20 @@ type ClusterStatus struct {
 	Version        string `json:"version"`
 }
 
+// EncryptResult is the response from a threshold FHE encryption.
+type EncryptResult struct {
+	Ciphertext []byte `json:"ciphertext"` // TFHE/CKKS ciphertext (encrypted under collective public key)
+	KeyID      string `json:"key_id"`     // FHE key set ID
+	Scheme     string `json:"scheme"`     // tfhe or ckks
+}
+
+// DecryptResult is the response from a threshold FHE decryption.
+// Requires t-of-n validators to produce decryption shares via E2S protocol.
+type DecryptResult struct {
+	Plaintext []byte `json:"plaintext"`
+	Shares    int    `json:"shares_used"` // how many validator shares contributed
+}
+
 // Wallet is the response from GET /v1/wallets/{id}.
 type Wallet struct {
 	ID           string   `json:"id"`
