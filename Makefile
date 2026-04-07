@@ -1,35 +1,18 @@
-build:
-	docker-compose -f docker-compose.yml build
+.PHONY: build-go test-go clean-go docker-go
 
-push:
-	docker-compose -f docker-compose.yml push
+BINARY := kms
+IMAGE  := ghcr.io/luxfi/kms:latest
 
-up-dev:
-	docker compose -f docker-compose.dev.yml up --build
+build-go:
+	CGO_ENABLED=0 go build -ldflags="-w -s" -o $(BINARY) ./cmd/kms/
 
-up-dev-ldap:
-	docker compose -f docker-compose.dev.yml --profile ldap up --build
+test-go:
+	go test -v -race ./...
 
-up-dev-metrics:
-	docker compose -f docker-compose.dev.yml --profile metrics up --build
+clean-go:
+	rm -f $(BINARY)
 
-up-prod:
-	docker-compose -f docker-compose.prod.yml up --build
+docker-go:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o $(BINARY) ./cmd/kms/
+	docker build --platform linux/amd64 -t $(IMAGE) -f Dockerfile.kms .
 
-down:
-	docker compose -f docker-compose.dev.yml down
-
-reviewable-ui:
-	cd frontend && \
-	npm run lint:fix && \
-	npm run type:check
-
-reviewable-api:
-	cd backend && \
-	npm run lint:fix && \
-	npm run type:check
-
-reviewable: reviewable-ui reviewable-api
-
-up-dev-sso:
-	docker compose -f docker-compose.dev.yml --profile sso up --build

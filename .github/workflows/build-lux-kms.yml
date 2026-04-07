@@ -3,9 +3,11 @@ on:
   push:
     branches: [main]
     paths:
-      - 'backend/**'
-      - 'frontend/**'
-      - 'Dockerfile.standalone-kms'
+      - 'cmd/**'
+      - 'pkg/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Dockerfile.kms'
   workflow_dispatch:
 
 permissions:
@@ -19,6 +21,17 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run tests
+        run: go test -v -race ./...
+
+      - name: Build binary
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o kms ./cmd/kms/
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -37,13 +50,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.standalone-kms
+          file: Dockerfile.kms
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: |
             ghcr.io/luxfi/kms:latest
             ghcr.io/luxfi/kms:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            KMS_PLATFORM_VERSION=${{ github.sha }}

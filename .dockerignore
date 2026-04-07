@@ -1,10 +1,8 @@
-backend/node_modules
-frontend/node_modules
-backend/frontend-build
-**/node_modules
-**/.next
-.dockerignore
 .git
-README.md
-.dockerignore
-**/Dockerfile
+.github
+k8s
+k8-operator
+data
+*.md
+LICENSE
+Makefile
