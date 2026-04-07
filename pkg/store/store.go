@@ -1,13 +1,14 @@
-// Package store provides a JSON file-backed store for validator key metadata.
+// Package store provides key metadata persistence via Hanzo Base.
+// SQLite embedded for local dev, Postgres for production.
+// Encryption at rest handled by Base.
 package store
 
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"os"
 	"sync"
 
+	"github.com/hanzoai/base/core"
 	"github.com/luxfi/kms/pkg/keys"
 )
 
@@ -16,32 +17,63 @@ var (
 	ErrAlreadyExists = errors.New("store: key set already exists")
 )
 
-// Store persists validator key set metadata to a JSON file.
+const collectionName = "kms_validator_keys"
+
+// Store persists validator key set metadata via Base collection.
 type Store struct {
-	path string
+	app  core.App
 	mu   sync.RWMutex
 	data map[string]*keys.ValidatorKeySet
 }
 
-// New creates a Store backed by the given file path.
-// If the file exists, it is loaded. Otherwise an empty store is created.
-func New(path string) (*Store, error) {
+// New creates a Store backed by a Base app's database.
+func New(app core.App) (*Store, error) {
 	s := &Store{
-		path: path,
+		app:  app,
 		data: make(map[string]*keys.ValidatorKeySet),
 	}
-	if _, err := os.Stat(path); err == nil {
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			return nil, fmt.Errorf("store: read %s: %w", path, err)
-		}
-		if len(raw) > 0 {
-			if err := json.Unmarshal(raw, &s.data); err != nil {
-				return nil, fmt.Errorf("store: parse %s: %w", path, err)
-			}
-		}
+	if err := s.ensureCollection(); err != nil {
+		return nil, err
+	}
+	if err := s.load(); err != nil {
+		return nil, err
 	}
 	return s, nil
+}
+
+// ensureCollection creates the kms_validator_keys collection if it doesn't exist.
+func (s *Store) ensureCollection() error {
+	_, err := s.app.FindCollectionByNameOrId(collectionName)
+	if err == nil {
+		return nil // already exists
+	}
+	collection := core.NewBaseCollection(collectionName)
+	collection.Fields.Add(
+		&core.TextField{Name: "validator_id", Required: true},
+		&core.JSONField{Name: "data", MaxSize: 1 << 20}, // 1MB max
+	)
+	collection.Indexes = []string{
+		"CREATE UNIQUE INDEX idx_kms_vid ON " + collectionName + " (validator_id)",
+	}
+	return s.app.Save(collection)
+}
+
+// load reads all records from the collection into memory.
+func (s *Store) load() error {
+	records, err := s.app.FindAllRecords(collectionName)
+	if err != nil {
+		return nil // empty collection is fine
+	}
+	for _, r := range records {
+		vid := r.GetString("validator_id")
+		raw := r.GetString("data")
+		var ks keys.ValidatorKeySet
+		if err := json.Unmarshal([]byte(raw), &ks); err != nil {
+			continue
+		}
+		s.data[vid] = &ks
+	}
+	return nil
 }
 
 // Put saves a validator key set. Returns ErrAlreadyExists if the validator ID is taken.
@@ -53,7 +85,7 @@ func (s *Store) Put(ks *keys.ValidatorKeySet) error {
 		return ErrAlreadyExists
 	}
 	s.data[ks.ValidatorID] = ks
-	return s.flush()
+	return s.persist(ks)
 }
 
 // Update replaces an existing validator key set.
@@ -65,7 +97,7 @@ func (s *Store) Update(ks *keys.ValidatorKeySet) error {
 		return ErrNotFound
 	}
 	s.data[ks.ValidatorID] = ks
-	return s.flush()
+	return s.persist(ks)
 }
 
 // Get retrieves a validator key set by validator ID.
@@ -77,7 +109,6 @@ func (s *Store) Get(validatorID string) (*keys.ValidatorKeySet, error) {
 	if !ok {
 		return nil, ErrNotFound
 	}
-	// Return a copy to prevent mutation.
 	cp := *ks
 	return &cp, nil
 }
@@ -104,16 +135,33 @@ func (s *Store) Delete(validatorID string) error {
 		return ErrNotFound
 	}
 	delete(s.data, validatorID)
-	return s.flush()
+
+	// Delete from DB
+	record, err := s.app.FindFirstRecordByFilter(collectionName, "validator_id = {:vid}", map[string]any{"vid": validatorID})
+	if err != nil {
+		return nil // already gone
+	}
+	return s.app.Delete(record)
 }
 
-func (s *Store) flush() error {
-	raw, err := json.MarshalIndent(s.data, "", "  ")
+// persist upserts a key set into the Base collection.
+func (s *Store) persist(ks *keys.ValidatorKeySet) error {
+	raw, err := json.Marshal(ks)
 	if err != nil {
-		return fmt.Errorf("store: marshal: %w", err)
+		return err
 	}
-	if err := os.WriteFile(s.path, raw, 0600); err != nil {
-		return fmt.Errorf("store: write %s: %w", s.path, err)
+
+	// Try to find existing record
+	record, err := s.app.FindFirstRecordByFilter(collectionName, "validator_id = {:vid}", map[string]any{"vid": ks.ValidatorID})
+	if err != nil {
+		// Create new record
+		collection, err := s.app.FindCollectionByNameOrId(collectionName)
+		if err != nil {
+			return err
+		}
+		record = core.NewRecord(collection)
+		record.Set("validator_id", ks.ValidatorID)
 	}
-	return nil
+	record.Set("data", string(raw))
+	return s.app.Save(record)
 }

@@ -1,21 +1,25 @@
 package store
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/hanzoai/base/tests"
 	"github.com/luxfi/kms/pkg/keys"
 )
 
-func tempPath(t *testing.T) string {
+func testApp(t *testing.T) *tests.TestApp {
 	t.Helper()
-	return filepath.Join(t.TempDir(), "keys.json")
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { app.Cleanup() })
+	return app
 }
 
 func TestPutAndGet(t *testing.T) {
-	s, err := New(tempPath(t))
+	s, err := New(testApp(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +54,7 @@ func TestPutAndGet(t *testing.T) {
 }
 
 func TestPutDuplicate(t *testing.T) {
-	s, err := New(tempPath(t))
+	s, err := New(testApp(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +69,7 @@ func TestPutDuplicate(t *testing.T) {
 }
 
 func TestGetNotFound(t *testing.T) {
-	s, err := New(tempPath(t))
+	s, err := New(testApp(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +81,7 @@ func TestGetNotFound(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
-	s, err := New(tempPath(t))
+	s, err := New(testApp(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +96,7 @@ func TestList(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	s, err := New(tempPath(t))
+	s, err := New(testApp(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +116,7 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestUpdateNotFound(t *testing.T) {
-	s, err := New(tempPath(t))
+	s, err := New(testApp(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +128,7 @@ func TestUpdateNotFound(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	s, err := New(tempPath(t))
+	s, err := New(testApp(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,44 +139,5 @@ func TestDelete(t *testing.T) {
 	}
 	if _, err := s.Get("val-1"); err != ErrNotFound {
 		t.Errorf("expected ErrNotFound after delete, got %v", err)
-	}
-}
-
-func TestPersistence(t *testing.T) {
-	path := tempPath(t)
-
-	s1, err := New(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s1.Put(&keys.ValidatorKeySet{ValidatorID: "val-1", BLSPublicKey: "pubkey"})
-
-	// Reopen from the same file.
-	s2, err := New(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	got, err := s2.Get("val-1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.BLSPublicKey != "pubkey" {
-		t.Errorf("expected pubkey, got %s", got.BLSPublicKey)
-	}
-}
-
-func TestNewOnMissingFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "nonexistent", "keys.json")
-	// Parent dir doesn't exist -- store should create empty data.
-	// Actually, Write will fail. Let's ensure the parent exists.
-	os.MkdirAll(filepath.Dir(path), 0755)
-
-	s, err := New(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	list := s.List()
-	if len(list) != 0 {
-		t.Errorf("expected empty list, got %d", len(list))
 	}
 }

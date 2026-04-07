@@ -14,7 +14,6 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -31,40 +30,33 @@ func main() {
 	mpcURL := envOr("MPC_URL", "http://mpc-api.lux-mpc.svc.cluster.local:8081")
 	mpcToken := envOr("MPC_TOKEN", "")
 	vaultID := envOr("MPC_VAULT_ID", "")
-	storePath := envOr("KMS_STORE_PATH", "/data/kms/keys.json")
 
 	if vaultID == "" {
 		log.Fatal("kms: MPC_VAULT_ID is required")
 	}
 
-	if dir := filepath.Dir(storePath); dir != "" {
-		if err := os.MkdirAll(dir, 0700); err != nil {
-			log.Fatalf("kms: create store dir %s: %v", dir, err)
-		}
-	}
-
-	keyStore, err := store.New(storePath)
-	if err != nil {
-		log.Fatalf("kms: store: %v", err)
-	}
-
 	mpcClient := mpc.NewClient(mpcURL, mpcToken)
-
-	// Verify MPC reachability at startup.
-	checkCtx, checkCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	if status, err := mpcClient.Status(checkCtx); err != nil {
-		log.Printf("kms: WARNING: mpc unreachable: %v", err)
-	} else {
-		log.Printf("kms: mpc ready=%v peers=%d/%d mode=%s",
-			status.Ready, status.ConnectedPeers, status.ExpectedPeers, status.Mode)
-	}
-	checkCancel()
-
-	mgr := keys.NewManager(mpcClient, keyStore, vaultID)
 
 	app := base.New()
 
+	// Store uses Base's built-in DB (SQLite local, Postgres prod).
 	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+		keyStore, err := store.New(app)
+		if err != nil {
+			return err
+		}
+
+		// Verify MPC reachability.
+		checkCtx, checkCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if status, err := mpcClient.Status(checkCtx); err != nil {
+			log.Printf("kms: WARNING: mpc unreachable: %v", err)
+		} else {
+			log.Printf("kms: mpc ready=%v peers=%d/%d mode=%s",
+				status.Ready, status.ConnectedPeers, status.ExpectedPeers, status.Mode)
+		}
+		checkCancel()
+
+		mgr := keys.NewManager(mpcClient, keyStore, vaultID)
 		registerKMSRoutes(e.Router, mgr, mpcClient)
 		return e.Next()
 	})
