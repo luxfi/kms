@@ -1,9 +1,8 @@
-// Command kms starts the Lux KMS HTTP server.
+// Command kms starts the Lux KMS server on Hanzo Base.
 //
 // Configuration precedence: flags > env vars > defaults.
 //
 //	Env vars:
-//	  KMS_LISTEN      - HTTP listen address (default ":8080")
 //	  MPC_URL         - MPC daemon base URL
 //	  MPC_TOKEN       - MPC API auth token
 //	  MPC_VAULT_ID    - MPC vault ID for validator keys
@@ -12,90 +11,184 @@ package main
 
 import (
 	"context"
-	"flag"
+	"encoding/json"
 	"log"
 	"os"
-	"os/signal"
 	"path/filepath"
-	"syscall"
+	"strings"
 	"time"
+
+	"github.com/hanzoai/base"
+	"github.com/hanzoai/base/core"
+	"github.com/hanzoai/base/tools/router"
 
 	"github.com/luxfi/kms/pkg/keys"
 	"github.com/luxfi/kms/pkg/mpc"
-	"github.com/luxfi/kms/pkg/server"
 	"github.com/luxfi/kms/pkg/store"
 )
 
 func main() {
-	var (
-		listenAddr = flag.String("listen", envOr("KMS_LISTEN", ":8080"), "HTTP listen address")
-		mpcURL     = flag.String("mpc-url", envOr("MPC_URL", "http://mpc-api.lux-mpc.svc.cluster.local:8081"), "MPC daemon base URL")
-		mpcToken   = flag.String("mpc-token", envOr("MPC_TOKEN", ""), "MPC API auth token")
-		vaultID    = flag.String("vault-id", envOr("MPC_VAULT_ID", ""), "MPC vault ID for validator keys")
-		storePath  = flag.String("store", envOr("KMS_STORE_PATH", "/data/kms/keys.json"), "Path to key metadata store")
-	)
-	flag.Parse()
+	mpcURL := envOr("MPC_URL", "http://mpc-api.lux-mpc.svc.cluster.local:8081")
+	mpcToken := envOr("MPC_TOKEN", "")
+	vaultID := envOr("MPC_VAULT_ID", "")
+	storePath := envOr("KMS_STORE_PATH", "/data/kms/keys.json")
 
-	if *vaultID == "" {
-		log.Fatal("kms: --vault-id or MPC_VAULT_ID is required")
+	if vaultID == "" {
+		log.Fatal("kms: MPC_VAULT_ID is required")
 	}
 
-	// Ensure store directory exists.
-	if dir := filepath.Dir(*storePath); dir != "" {
+	if dir := filepath.Dir(storePath); dir != "" {
 		if err := os.MkdirAll(dir, 0700); err != nil {
 			log.Fatalf("kms: create store dir %s: %v", dir, err)
 		}
 	}
 
-	// Initialize store.
-	keyStore, err := store.New(*storePath)
+	keyStore, err := store.New(storePath)
 	if err != nil {
-		log.Fatalf("kms: failed to open store: %v", err)
+		log.Fatalf("kms: store: %v", err)
 	}
 
-	// Initialize MPC client.
-	mpcClient := mpc.NewClient(*mpcURL, *mpcToken)
+	mpcClient := mpc.NewClient(mpcURL, mpcToken)
 
-	// Startup health check: verify MPC reachability (warn, don't crash).
-	log.Printf("kms: mpc backend: %s", *mpcURL)
+	// Verify MPC reachability at startup.
 	checkCtx, checkCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	if status, err := mpcClient.Status(checkCtx); err != nil {
-		log.Printf("kms: WARNING: mpc unreachable at startup: %v", err)
-		log.Printf("kms: the server will start but key operations will fail until mpc is available")
+		log.Printf("kms: WARNING: mpc unreachable: %v", err)
 	} else {
-		log.Printf("kms: mpc cluster ready=%v peers=%d/%d mode=%s",
+		log.Printf("kms: mpc ready=%v peers=%d/%d mode=%s",
 			status.Ready, status.ConnectedPeers, status.ExpectedPeers, status.Mode)
 	}
 	checkCancel()
 
-	// Initialize key manager.
-	mgr := keys.NewManager(mpcClient, keyStore, *vaultID)
+	mgr := keys.NewManager(mpcClient, keyStore, vaultID)
 
-	// Initialize and start HTTP server.
-	srv := server.New(mgr, mpcClient, *listenAddr)
-	httpSrv, errCh := srv.Start()
+	app := base.New()
 
-	// Wait for shutdown signal.
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+		registerKMSRoutes(e.Router, mgr, mpcClient)
+		return e.Next()
+	})
 
-	select {
-	case sig := <-sigCh:
-		log.Printf("kms: received %s, shutting down", sig)
-	case err := <-errCh:
-		log.Printf("kms: server error: %v", err)
+	if err := app.Start(); err != nil {
+		log.Fatalf("kms: %v", err)
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := httpSrv.Shutdown(ctx); err != nil {
-		log.Printf("kms: shutdown error: %v", err)
-	}
-	log.Println("kms: stopped")
 }
 
-// envOr returns the value of the environment variable named key,
-// or fallback if the variable is not set or empty.
+func registerKMSRoutes(r *router.Router[*core.RequestEvent], mgr *keys.Manager, mpcClient *mpc.Client) {
+	api := r.Group("/api/v1")
+
+	api.POST("/keys/generate", func(e *core.RequestEvent) error {
+		var req keys.GenerateRequest
+		if err := e.BindBody(&req); err != nil {
+			return e.BadRequestError("invalid request body", nil)
+		}
+		if req.ValidatorID == "" {
+			return e.BadRequestError("validator_id is required", nil)
+		}
+		if req.Threshold < 2 {
+			return e.BadRequestError("threshold must be >= 2", nil)
+		}
+		if req.Parties < req.Threshold {
+			return e.BadRequestError("parties must be >= threshold", nil)
+		}
+
+		ks, err := mgr.GenerateValidatorKeys(e.Request.Context(), req)
+		if err != nil {
+			if strings.Contains(err.Error(), "already exists") {
+				return e.JSON(409, map[string]string{"error": err.Error()})
+			}
+			return e.InternalServerError("", err)
+		}
+		return e.JSON(201, ks)
+	})
+
+	api.GET("/keys", func(e *core.RequestEvent) error {
+		list := mgr.List()
+		if list == nil {
+			list = []*keys.ValidatorKeySet{}
+		}
+		return e.JSON(200, list)
+	})
+
+	api.GET("/keys/{id}", func(e *core.RequestEvent) error {
+		id := e.Request.PathValue("id")
+		ks, err := mgr.Get(id)
+		if err != nil {
+			return e.NotFoundError("validator key set not found", nil)
+		}
+		return e.JSON(200, ks)
+	})
+
+	api.POST("/keys/{id}/sign", func(e *core.RequestEvent) error {
+		id := e.Request.PathValue("id")
+		var req keys.SignRequest
+		if err := e.BindBody(&req); err != nil {
+			return e.BadRequestError("invalid request body", nil)
+		}
+		if len(req.Message) == 0 {
+			return e.BadRequestError("message is required", nil)
+		}
+
+		var resp *keys.SignResponse
+		var err error
+		switch req.KeyType {
+		case "bls":
+			resp, err = mgr.SignWithBLS(e.Request.Context(), id, req.Message)
+		case "ringtail":
+			resp, err = mgr.SignWithRingtail(e.Request.Context(), id, req.Message)
+		default:
+			return e.BadRequestError("key_type must be 'bls' or 'ringtail'", nil)
+		}
+		if err != nil {
+			if strings.Contains(err.Error(), "not found") {
+				return e.NotFoundError(err.Error(), nil)
+			}
+			return e.InternalServerError("", err)
+		}
+		return e.JSON(200, resp)
+	})
+
+	api.POST("/keys/{id}/rotate", func(e *core.RequestEvent) error {
+		id := e.Request.PathValue("id")
+		var req keys.RotateRequest
+		if err := e.BindBody(&req); err != nil {
+			return e.BadRequestError("invalid request body", nil)
+		}
+		if req.NewThreshold == 0 && len(req.NewParticipants) == 0 {
+			return e.BadRequestError("new_threshold or new_participants required", nil)
+		}
+
+		ks, err := mgr.Rotate(e.Request.Context(), id, req)
+		if err != nil {
+			if strings.Contains(err.Error(), "not found") {
+				return e.NotFoundError(err.Error(), nil)
+			}
+			return e.InternalServerError("", err)
+		}
+		return e.JSON(200, ks)
+	})
+
+	api.GET("/status", func(e *core.RequestEvent) error {
+		status, err := mpcClient.Status(e.Request.Context())
+		if err != nil {
+			return e.JSON(200, map[string]string{
+				"kms":     "ok",
+				"mpc":     "unreachable",
+				"details": err.Error(),
+			})
+		}
+		return e.JSON(200, map[string]interface{}{
+			"kms": "ok",
+			"mpc": status,
+		})
+	})
+}
+
+// writeJSON is kept for test compatibility.
+func writeJSON(w interface{ Write([]byte) (int, error) }, _ int, v interface{}) {
+	json.NewEncoder(w).Encode(v)
+}
+
 func envOr(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
