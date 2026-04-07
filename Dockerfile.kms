@@ -1,8 +1,32 @@
-FROM alpine:3.21
-RUN apk add --no-cache ca-certificates
-COPY kms /usr/local/bin/kms
+# luxfi/kms — MPC-backed key management on Hanzo Base
+# CGO required: go-sqlite3 + sqlcipher for encrypted storage
+FROM golang:1.26-bookworm AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libsqlcipher-dev gcc libc6-dev pkg-config git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG GITHUB_TOKEN
+RUN git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+ENV GOPRIVATE=github.com/luxfi/*,github.com/hanzoai/*
+
+WORKDIR /build
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+
+RUN CGO_ENABLED=1 go build -tags "sqlite_fts5 sqlcipher" \
+    -ldflags="-s -w" -o /usr/local/bin/kms ./cmd/kms
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libsqlcipher0 ca-certificates wget \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/local/bin/kms /usr/local/bin/kms
 RUN mkdir -p /data/kms
+
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
-  CMD wget -qO- http://localhost:8080/healthz || exit 1
+  CMD wget -qO- http://localhost:8080/v1/status || exit 1
 ENTRYPOINT ["kms"]
