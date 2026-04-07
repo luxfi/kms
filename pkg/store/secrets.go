@@ -11,15 +11,17 @@ const secretsCollection = "kms_secrets"
 
 var ErrSecretNotFound = errors.New("store: secret not found")
 
-// Secret is an FHE-encrypted secret stored in Base.
-// Plaintext is never stored — only TFHE ciphertext.
-// Decryption requires t-of-n validator cooperation via E2S protocol.
+// Secret is an encrypted secret stored in Base.
+// Default: AES-256-GCM with ML-KEM wrapped DEK (fast, PQ-safe).
+// Optional: TFHE ciphertext for threshold-gated reveal (requires t-of-n).
+// Plaintext is never stored.
 type Secret struct {
 	Name       string    `json:"name"`
 	Path       string    `json:"path"`       // e.g. "/ci", "/securegate/local"
 	Env        string    `json:"env"`        // dev, test, main
-	Ciphertext []byte    `json:"ciphertext"` // TFHE encrypted
-	FHEKeyID   string    `json:"fhe_key_id"` // which FHE key set encrypted this
+	Ciphertext []byte    `json:"ciphertext"` // encrypted (aes-gcm or tfhe)
+	KeyID      string    `json:"key_id"`     // wrapping key (ML-KEM) or FHE key set
+	Scheme     string    `json:"scheme"`     // aes-gcm (default) or tfhe
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
@@ -49,7 +51,7 @@ func (s *SecretStore) ensureCollection() error {
 		&core.TextField{Name: "path", Required: true},
 		&core.TextField{Name: "env", Required: true},
 		&core.JSONField{Name: "ciphertext", MaxSize: 10 << 20}, // 10MB max
-		&core.TextField{Name: "fhe_key_id"},
+		&core.TextField{Name: "key_id"},
 	)
 	c.Indexes = []string{
 		"CREATE UNIQUE INDEX idx_secret_path_name_env ON " + secretsCollection + " (path, name, env)",
@@ -76,7 +78,7 @@ func (s *SecretStore) Put(secret *Secret) error {
 	record.Set("path", secret.Path)
 	record.Set("env", secret.Env)
 	record.Set("ciphertext", secret.Ciphertext)
-	record.Set("fhe_key_id", secret.FHEKeyID)
+	record.Set("key_id", secret.KeyID)
 	return s.app.Save(record)
 }
 
@@ -94,7 +96,7 @@ func (s *SecretStore) Get(path, name, env string) (*Secret, error) {
 		Path:       record.GetString("path"),
 		Env:        record.GetString("env"),
 		Ciphertext: []byte(record.GetString("ciphertext")),
-		FHEKeyID:   record.GetString("fhe_key_id"),
+		KeyID:   record.GetString("key_id"),
 	}, nil
 }
 
@@ -114,7 +116,7 @@ func (s *SecretStore) List(path, env string) ([]*Secret, error) {
 			Path:       r.GetString("path"),
 			Env:        r.GetString("env"),
 			Ciphertext: []byte(r.GetString("ciphertext")),
-			FHEKeyID:   r.GetString("fhe_key_id"),
+			KeyID:   r.GetString("key_id"),
 		})
 	}
 	return secrets, nil

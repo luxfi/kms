@@ -87,19 +87,32 @@ type ClusterStatus struct {
 	Version        string `json:"version"`
 }
 
-// EncryptResult is the response from a threshold FHE encryption.
+// EncryptResult is the response from an encrypt operation.
 type EncryptResult struct {
-	Ciphertext []byte `json:"ciphertext"` // TFHE/CKKS ciphertext (encrypted under collective public key)
-	KeyID      string `json:"key_id"`     // FHE key set ID
-	Scheme     string `json:"scheme"`     // tfhe or ckks
+	Ciphertext []byte `json:"ciphertext"`
+	KeyID      string `json:"key_id"`
+	Scheme     string `json:"scheme"` // aes-gcm (default), tfhe (threshold reveal), ckks (ML)
 }
 
-// DecryptResult is the response from a threshold FHE decryption.
-// Requires t-of-n validators to produce decryption shares via E2S protocol.
+// DecryptResult is the response from a decrypt operation.
 type DecryptResult struct {
 	Plaintext []byte `json:"plaintext"`
-	Shares    int    `json:"shares_used"` // how many validator shares contributed
+	Shares    int    `json:"shares_used,omitempty"` // >0 only for threshold schemes
 }
+
+// Encryption schemes.
+const (
+	// SchemeAESGCM is AES-256-GCM with ML-KEM wrapped DEK. Default for secrets.
+	// Fast, PQ-safe key wrapping, no threshold required for decrypt.
+	SchemeAESGCM = "aes-gcm"
+
+	// SchemeTFHE is threshold FHE. Decrypt requires t-of-n validator cooperation.
+	// Use only when threshold-gated reveal or computation on ciphertext is needed.
+	SchemeTFHE = "tfhe"
+
+	// SchemeCKKS is approximate arithmetic FHE for ML inference on encrypted data.
+	SchemeCKKS = "ckks"
+)
 
 // Wallet is the response from GET /v1/wallets/{id}.
 type Wallet struct {
@@ -275,7 +288,7 @@ func (c *Client) do(ctx context.Context, method, url string, body []byte) (*http
 // Encrypt sends a threshold encrypt request via HTTP (T-Chain API).
 func (c *Client) Encrypt(ctx context.Context, keyID string, plaintext []byte) (*EncryptResult, error) {
 	url := fmt.Sprintf("%s/v1/fhe/encrypt", c.BaseURL)
-	body, _ := json.Marshal(map[string]interface{}{"key_id": keyID, "plaintext": plaintext, "scheme": "tfhe"})
+	body, _ := json.Marshal(map[string]interface{}{"key_id": keyID, "plaintext": plaintext, "scheme": SchemeAESGCM})
 	resp, err := c.do(ctx, http.MethodPost, url, body)
 	if err != nil {
 		return nil, err
@@ -292,7 +305,7 @@ func (c *Client) Encrypt(ctx context.Context, keyID string, plaintext []byte) (*
 // Decrypt sends a threshold decrypt request via HTTP (T-Chain API).
 func (c *Client) Decrypt(ctx context.Context, keyID string, ciphertext []byte) (*DecryptResult, error) {
 	url := fmt.Sprintf("%s/v1/fhe/decrypt", c.BaseURL)
-	body, _ := json.Marshal(map[string]interface{}{"key_id": keyID, "ciphertext": ciphertext, "scheme": "tfhe"})
+	body, _ := json.Marshal(map[string]interface{}{"key_id": keyID, "ciphertext": ciphertext, "scheme": SchemeAESGCM})
 	resp, err := c.do(ctx, http.MethodPost, url, body)
 	if err != nil {
 		return nil, err

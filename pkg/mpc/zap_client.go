@@ -16,8 +16,8 @@ const (
 	OpSign    uint16 = 0x0011
 	OpReshare uint16 = 0x0012
 	OpWallet  uint16 = 0x0020
-	OpEncrypt uint16 = 0x0030 // MPC threshold encrypt (ML-KEM)
-	OpDecrypt uint16 = 0x0031 // MPC threshold decrypt (ML-KEM)
+	OpEncrypt uint16 = 0x0030 // encrypt (aes-gcm default, tfhe for threshold reveal)
+	OpDecrypt uint16 = 0x0031 // decrypt (aes-gcm default, tfhe needs t-of-n)
 )
 
 // ZapClient communicates with the MPC daemon over ZAP.
@@ -150,16 +150,14 @@ func (c *ZapClient) Status(ctx context.Context) (*ClusterStatus, error) {
 	return &status, nil
 }
 
-// Encrypt threshold-encrypts plaintext using the collective FHE public key.
-// Anyone can encrypt — the public key is published by the validator set.
-// Ciphertext can only be decrypted via threshold FHE (t-of-n E2S protocol).
-// Uses TFHE for secret storage (bit-level encryption, exact decryption).
+// Encrypt encrypts plaintext. Default: AES-256-GCM with ML-KEM wrapped DEK (fast, PQ-safe).
+// For threshold-gated reveal, use EncryptThreshold which uses TFHE.
 func (c *ZapClient) Encrypt(ctx context.Context, keyID string, plaintext []byte) (*EncryptResult, error) {
 	payload := struct {
 		KeyID     string `json:"key_id"`
 		Plaintext []byte `json:"plaintext"`
-		Scheme    string `json:"scheme"` // tfhe for secrets, ckks for ML
-	}{keyID, plaintext, "tfhe"}
+		Scheme    string `json:"scheme"`
+	}{keyID, plaintext, SchemeAESGCM}
 
 	data, err := c.call(ctx, OpEncrypt, payload)
 	if err != nil {
@@ -172,16 +170,15 @@ func (c *ZapClient) Encrypt(ctx context.Context, keyID string, plaintext []byte)
 	return &result, nil
 }
 
-// Decrypt threshold-decrypts ciphertext using t-of-n FHE key shares.
-// Each validator produces an E2S (Encrypt-to-Share) decryption share.
-// Combiner aggregates t shares to recover plaintext.
-// Uses luxfi/lattice TFHE threshold decryption protocol.
+// Decrypt decrypts ciphertext. Scheme auto-detected from ciphertext header.
+// AES-GCM: unwraps DEK via ML-KEM, decrypts locally (no threshold needed).
+// TFHE: requires t-of-n validator E2S shares via T-Chain.
 func (c *ZapClient) Decrypt(ctx context.Context, keyID string, ciphertext []byte) (*DecryptResult, error) {
 	payload := struct {
 		KeyID      string `json:"key_id"`
 		Ciphertext []byte `json:"ciphertext"`
 		Scheme     string `json:"scheme"`
-	}{keyID, ciphertext, "tfhe"}
+	}{keyID, ciphertext, ""} // empty = auto-detect from ciphertext
 
 	data, err := c.call(ctx, OpDecrypt, payload)
 	if err != nil {
