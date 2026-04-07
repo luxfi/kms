@@ -17,8 +17,9 @@ type Store interface {
 	Delete(validatorID string) error
 }
 
-// MPCBackend is the interface for MPC operations (ZAP or HTTP).
-type MPCBackend interface {
+// Signer handles MPC signing operations (M-Chain / MPC daemon).
+// FROST (Ed25519) and CGGMP21 (secp256k1) threshold signatures.
+type Signer interface {
 	Keygen(ctx context.Context, vaultID string, req mpc.KeygenRequest) (*mpc.KeygenResult, error)
 	Sign(ctx context.Context, req mpc.SignRequest) (*mpc.SignResult, error)
 	Reshare(ctx context.Context, walletID string, req mpc.ReshareRequest) error
@@ -26,19 +27,50 @@ type MPCBackend interface {
 	Status(ctx context.Context) (*mpc.ClusterStatus, error)
 }
 
-// Manager orchestrates validator key lifecycle via the MPC daemon.
+// Encryptor handles threshold FHE operations (T-Chain).
+// TFHE for secret decrypt, CKKS for ML inference.
+type Encryptor interface {
+	Encrypt(ctx context.Context, keyID string, plaintext []byte) (*mpc.EncryptResult, error)
+	Decrypt(ctx context.Context, keyID string, ciphertext []byte) (*mpc.DecryptResult, error)
+}
+
+// MPCBackend combines Signer + Encryptor for implementations that provide both
+// (e.g. ZapClient talks to a single MPC daemon that does signing + FHE).
+type MPCBackend interface {
+	Signer
+	Encryptor
+}
+
+// Manager orchestrates validator key lifecycle.
+// K-Chain concern: key registry, policy, metadata.
+// Delegates signing to Signer (M-Chain) and encryption to Encryptor (T-Chain).
 type Manager struct {
-	mpc     MPCBackend
-	store   Store
-	vaultID string
+	signer    Signer
+	encryptor Encryptor
+	store     Store
+	vaultID   string
 }
 
 // NewManager creates a key manager.
-func NewManager(mpcClient MPCBackend, store Store, vaultID string) *Manager {
+// backend implements both Signer and Encryptor (today: single MPC daemon).
+// When M-Chain and T-Chain are separate, pass them individually via NewManagerSplit.
+func NewManager(backend MPCBackend, store Store, vaultID string) *Manager {
 	return &Manager{
-		mpc:     mpcClient,
-		store:   store,
-		vaultID: vaultID,
+		signer:    backend,
+		encryptor: backend,
+		store:     store,
+		vaultID:   vaultID,
+	}
+}
+
+// NewManagerSplit creates a manager with separate signer and encryptor backends.
+// Use when M-Chain (signing) and T-Chain (FHE) are separate chains.
+func NewManagerSplit(signer Signer, encryptor Encryptor, store Store, vaultID string) *Manager {
+	return &Manager{
+		signer:    signer,
+		encryptor: encryptor,
+		store:     store,
+		vaultID:   vaultID,
 	}
 }
 
@@ -62,7 +94,7 @@ func (m *Manager) GenerateValidatorKeys(ctx context.Context, req GenerateRequest
 	}
 
 	// Generate BLS key (secp256k1 via CGGMP21 protocol).
-	blsResult, err := m.mpc.Keygen(ctx, m.vaultID, mpc.KeygenRequest{
+	blsResult, err := m.signer.Keygen(ctx, m.vaultID, mpc.KeygenRequest{
 		Name:     fmt.Sprintf("validator-%s-bls", req.ValidatorID),
 		KeyType:  "secp256k1",
 		Protocol: "cggmp21",
@@ -72,7 +104,7 @@ func (m *Manager) GenerateValidatorKeys(ctx context.Context, req GenerateRequest
 	}
 
 	// Generate Ringtail key (ed25519 via FROST protocol).
-	ringtailResult, err := m.mpc.Keygen(ctx, m.vaultID, mpc.KeygenRequest{
+	ringtailResult, err := m.signer.Keygen(ctx, m.vaultID, mpc.KeygenRequest{
 		Name:     fmt.Sprintf("validator-%s-ringtail", req.ValidatorID),
 		KeyType:  "ed25519",
 		Protocol: "frost",
@@ -118,7 +150,7 @@ func (m *Manager) SignWithBLS(ctx context.Context, validatorID string, message [
 		return nil, fmt.Errorf("keys: validator %s: %w", validatorID, err)
 	}
 
-	result, err := m.mpc.Sign(ctx, mpc.SignRequest{
+	result, err := m.signer.Sign(ctx, mpc.SignRequest{
 		WalletID: ks.BLSWalletID,
 		KeyType:  "secp256k1",
 		Message:  message,
@@ -141,7 +173,7 @@ func (m *Manager) SignWithRingtail(ctx context.Context, validatorID string, mess
 		return nil, fmt.Errorf("keys: validator %s: %w", validatorID, err)
 	}
 
-	result, err := m.mpc.Sign(ctx, mpc.SignRequest{
+	result, err := m.signer.Sign(ctx, mpc.SignRequest{
 		WalletID: ks.RingtailWalletID,
 		KeyType:  "ed25519",
 		Message:  message,
@@ -170,12 +202,12 @@ func (m *Manager) Rotate(ctx context.Context, validatorID string, req RotateRequ
 	}
 
 	// Reshare BLS key.
-	if err := m.mpc.Reshare(ctx, ks.BLSWalletID, reshareReq); err != nil {
+	if err := m.signer.Reshare(ctx, ks.BLSWalletID, reshareReq); err != nil {
 		return nil, fmt.Errorf("keys: bls reshare: %w", err)
 	}
 
 	// Reshare Ringtail key.
-	if err := m.mpc.Reshare(ctx, ks.RingtailWalletID, reshareReq); err != nil {
+	if err := m.signer.Reshare(ctx, ks.RingtailWalletID, reshareReq); err != nil {
 		return nil, fmt.Errorf("keys: ringtail reshare: %w", err)
 	}
 

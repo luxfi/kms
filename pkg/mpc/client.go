@@ -272,6 +272,40 @@ func (c *Client) do(ctx context.Context, method, url string, body []byte) (*http
 	return resp, nil
 }
 
+// Encrypt sends a threshold encrypt request via HTTP (T-Chain API).
+func (c *Client) Encrypt(ctx context.Context, keyID string, plaintext []byte) (*EncryptResult, error) {
+	url := fmt.Sprintf("%s/v1/fhe/encrypt", c.BaseURL)
+	body, _ := json.Marshal(map[string]interface{}{"key_id": keyID, "plaintext": plaintext, "scheme": "tfhe"})
+	resp, err := c.do(ctx, http.MethodPost, url, body)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, readError(resp)
+	}
+	var result EncryptResult
+	json.NewDecoder(resp.Body).Decode(&result)
+	return &result, nil
+}
+
+// Decrypt sends a threshold decrypt request via HTTP (T-Chain API).
+func (c *Client) Decrypt(ctx context.Context, keyID string, ciphertext []byte) (*DecryptResult, error) {
+	url := fmt.Sprintf("%s/v1/fhe/decrypt", c.BaseURL)
+	body, _ := json.Marshal(map[string]interface{}{"key_id": keyID, "ciphertext": ciphertext, "scheme": "tfhe"})
+	resp, err := c.do(ctx, http.MethodPost, url, body)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, readError(resp)
+	}
+	var result DecryptResult
+	json.NewDecoder(resp.Body).Decode(&result)
+	return &result, nil
+}
+
 func readError(resp *http.Response) error {
 	body, _ := io.ReadAll(resp.Body)
 	var errResp struct {
