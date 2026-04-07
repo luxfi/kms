@@ -15,7 +15,7 @@ func TestKeygen(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("expected POST, got %s", r.Method)
 		}
-		if r.URL.Path != "/api/v1/vaults/vault-1/wallets" {
+		if r.URL.Path != "/v1/vaults/vault-1/wallets" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 		if r.Header.Get("Authorization") != "Bearer test-token" {
@@ -73,7 +73,7 @@ func TestSign(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("expected POST, got %s", r.Method)
 		}
-		if r.URL.Path != "/api/v1/transactions" {
+		if r.URL.Path != "/v1/transactions" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 
@@ -101,7 +101,7 @@ func TestReshare(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("expected POST, got %s", r.Method)
 		}
-		if r.URL.Path != "/api/v1/wallets/wallet-1/reshare" {
+		if r.URL.Path != "/v1/wallets/wallet-1/reshare" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 
@@ -131,7 +131,7 @@ func TestGetWallet(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("expected GET, got %s", r.Method)
 		}
-		if r.URL.Path != "/api/v1/wallets/wallet-1" {
+		if r.URL.Path != "/v1/wallets/wallet-1" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 
@@ -156,7 +156,7 @@ func TestGetWallet(t *testing.T) {
 
 func TestStatus(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/status" {
+		if r.URL.Path != "/v1/status" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 		w.WriteHeader(http.StatusOK)

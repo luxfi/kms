@@ -29,7 +29,7 @@ func NewClient(baseURL, token string) *Client {
 	}
 }
 
-// KeygenRequest is the body sent to POST /api/v1/vaults/{vaultID}/wallets.
+// KeygenRequest is the body sent to POST /v1/vaults/{vaultID}/wallets.
 type KeygenRequest struct {
 	Name     string `json:"name"`
 	KeyType  string `json:"key_type"`
@@ -55,7 +55,7 @@ type KeygenResult struct {
 	Status       string   `json:"status"`
 }
 
-// SignRequest is the body sent to POST /api/v1/generate_mpc_sig or through
+// SignRequest is the body sent to POST /v1/generate_mpc_sig or through
 // the transaction flow. For validator signing we use the bridge sign endpoint.
 type SignRequest struct {
 	KeyType  string `json:"key_type"`
@@ -70,13 +70,13 @@ type SignResult struct {
 	Signature string `json:"signature,omitempty"`
 }
 
-// ReshareRequest is the body sent to POST /api/v1/wallets/{id}/reshare.
+// ReshareRequest is the body sent to POST /v1/wallets/{id}/reshare.
 type ReshareRequest struct {
 	NewThreshold    int      `json:"new_threshold"`
 	NewParticipants []string `json:"new_participants"`
 }
 
-// ClusterStatus is the response from GET /api/v1/status.
+// ClusterStatus is the response from GET /v1/status.
 type ClusterStatus struct {
 	NodeID         string `json:"node_id"`
 	Mode           string `json:"mode"`
@@ -87,7 +87,7 @@ type ClusterStatus struct {
 	Version        string `json:"version"`
 }
 
-// Wallet is the response from GET /api/v1/wallets/{id}.
+// Wallet is the response from GET /v1/wallets/{id}.
 type Wallet struct {
 	ID           string   `json:"id"`
 	WalletID     string   `json:"walletId"`
@@ -119,7 +119,7 @@ func (e *APIError) Error() string {
 // Keygen triggers distributed key generation via the MPC daemon.
 // vaultID is the MPC vault that will hold the wallet.
 func (c *Client) Keygen(ctx context.Context, vaultID string, req KeygenRequest) (*KeygenResult, error) {
-	url := fmt.Sprintf("%s/api/v1/vaults/%s/wallets", c.BaseURL, vaultID)
+	url := fmt.Sprintf("%s/v1/vaults/%s/wallets", c.BaseURL, vaultID)
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("mpc: marshal keygen request: %w", err)
@@ -145,7 +145,7 @@ func (c *Client) Keygen(ctx context.Context, vaultID string, req KeygenRequest) 
 // Sign triggers threshold signing via the MPC daemon.
 // This uses the transaction creation flow.
 func (c *Client) Sign(ctx context.Context, walletID, keyType string, message []byte) (*SignResult, error) {
-	url := fmt.Sprintf("%s/api/v1/transactions", c.BaseURL)
+	url := fmt.Sprintf("%s/v1/transactions", c.BaseURL)
 	body, err := json.Marshal(map[string]interface{}{
 		"wallet_id": walletID,
 		"key_type":  keyType,
@@ -175,7 +175,7 @@ func (c *Client) Sign(ctx context.Context, walletID, keyType string, message []b
 
 // Reshare triggers key resharing to change threshold or participants.
 func (c *Client) Reshare(ctx context.Context, walletID string, req ReshareRequest) error {
-	url := fmt.Sprintf("%s/api/v1/wallets/%s/reshare", c.BaseURL, walletID)
+	url := fmt.Sprintf("%s/v1/wallets/%s/reshare", c.BaseURL, walletID)
 	body, err := json.Marshal(req)
 	if err != nil {
 		return fmt.Errorf("mpc: marshal reshare request: %w", err)
@@ -195,7 +195,7 @@ func (c *Client) Reshare(ctx context.Context, walletID string, req ReshareReques
 
 // GetWallet retrieves wallet metadata from the MPC daemon.
 func (c *Client) GetWallet(ctx context.Context, walletID string) (*Wallet, error) {
-	url := fmt.Sprintf("%s/api/v1/wallets/%s", c.BaseURL, walletID)
+	url := fmt.Sprintf("%s/v1/wallets/%s", c.BaseURL, walletID)
 
 	resp, err := c.do(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -216,7 +216,7 @@ func (c *Client) GetWallet(ctx context.Context, walletID string) (*Wallet, error
 
 // Status returns the MPC cluster status.
 func (c *Client) Status(ctx context.Context) (*ClusterStatus, error) {
-	url := fmt.Sprintf("%s/api/v1/status", c.BaseURL)
+	url := fmt.Sprintf("%s/v1/status", c.BaseURL)
 
 	resp, err := c.do(ctx, http.MethodGet, url, nil)
 	if err != nil {
