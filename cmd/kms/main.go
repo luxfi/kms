@@ -77,6 +77,14 @@ func main() {
 func registerKMSRoutes(r *router.Router[*core.RequestEvent], mgr *keys.Manager, mpcClient *mpc.Client) {
 	api := r.Group("/api/v1")
 
+	// All KMS routes require superuser authentication.
+	api.BindFunc(func(e *core.RequestEvent) error {
+		if !e.HasSuperuserAuth() {
+			return e.UnauthorizedError("superuser auth required", nil)
+		}
+		return e.Next()
+	})
+
 	api.POST("/keys/generate", func(e *core.RequestEvent) error {
 		var req keys.GenerateRequest
 		if err := e.BindBody(&req); err != nil {
