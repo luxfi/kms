@@ -75,8 +75,8 @@ func main() {
 			return re.JSON(http.StatusOK, map[string]string{"status": "ok", "service": "kms"})
 		})
 
-		// Machine identity auth — /v2/kms/auth/login
-		e.Router.POST("/v2/kms/auth/login", func(re *core.RequestEvent) error {
+		// Machine identity auth
+		e.Router.POST("/v1/kms/auth/login", func(re *core.RequestEvent) error {
 			var req struct {
 				ClientID     string `json:"clientId"`
 				ClientSecret string `json:"clientSecret"`
@@ -103,8 +103,8 @@ func main() {
 			return re.JSON(http.StatusOK, map[string]any{"accessToken": at, "expiresIn": 86400, "tokenType": "Bearer"})
 		})
 
-		// Raw secret fetch — /v4/kms/secrets/{name}
-		e.Router.GET("/v4/kms/secrets/{name}", func(re *core.RequestEvent) error {
+		// Raw secret fetch
+		e.Router.GET("/v1/kms/secrets/{name}", func(re *core.RequestEvent) error {
 			name := re.Request.PathValue("name")
 			if name == "" {
 				return re.JSON(http.StatusBadRequest, map[string]any{"message": "secret name required"})
