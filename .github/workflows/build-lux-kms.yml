@@ -8,7 +8,7 @@ on:
       - 'frontend/**'
       - 'go.mod'
       - 'go.sum'
-      - 'Dockerfile.kms'
+      - 'Dockerfile'
   workflow_dispatch:
 
 permissions:
@@ -27,7 +27,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.kms
+          file: Dockerfile
           push: true
           platforms: linux/amd64
           build-args: |
