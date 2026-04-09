@@ -10,13 +10,18 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/hanzoai/base"
+	"github.com/hanzoai/base/apis"
 	"github.com/hanzoai/base/core"
+	"github.com/hanzoai/base/tools/hook"
 	"github.com/hanzoai/base/tools/router"
 
 	"github.com/luxfi/kms/pkg/keys"
@@ -25,42 +30,124 @@ import (
 )
 
 func main() {
-	mpcAddr := envOr("MPC_ADDR", "") // ZAP address (host:port). Empty = mDNS discovery.
+	mpcAddr := envOr("MPC_ADDR", "")
 	vaultID := envOr("MPC_VAULT_ID", "")
 	nodeID := envOr("KMS_NODE_ID", "kms-0")
-
-	if vaultID == "" {
-		log.Fatal("kms: MPC_VAULT_ID is required")
-	}
-
-	zapClient, err := mpc.NewZapClient(nodeID, mpcAddr)
-	if err != nil {
-		log.Fatalf("kms: zap client: %v", err)
-	}
-	defer zapClient.Close()
+	iamEndpoint := envOr("IAM_ENDPOINT", "https://hanzo.id")
+	frontendDir := envOr("KMS_FRONTEND_DIR", "./frontend")
 
 	app := base.New()
 
-	// Store uses Base's built-in DB (SQLite local, Postgres prod).
-	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
-		keyStore, err := store.New(app)
+	// MPC key management (optional — only when MPC_VAULT_ID is set).
+	if vaultID != "" {
+		zapClient, err := mpc.NewZapClient(nodeID, mpcAddr)
 		if err != nil {
-			return err
+			log.Fatalf("kms: zap client: %v", err)
 		}
 
-		// Verify MPC reachability via ZAP.
-		checkCtx, checkCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		if status, err := zapClient.Status(checkCtx); err != nil {
-			log.Printf("kms: WARNING: mpc unreachable via ZAP: %v", err)
-		} else {
-			log.Printf("kms: mpc ready=%v peers=%d/%d mode=%s",
-				status.Ready, status.ConnectedPeers, status.ExpectedPeers, status.Mode)
-		}
-		checkCancel()
+		app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+			keyStore, err := store.New(app)
+			if err != nil {
+				return err
+			}
 
-		mgr := keys.NewManager(zapClient, keyStore, vaultID)
-		registerKMSRoutes(e.Router, mgr, zapClient)
+			checkCtx, checkCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if status, err := zapClient.Status(checkCtx); err != nil {
+				log.Printf("kms: WARNING: mpc unreachable via ZAP: %v", err)
+			} else {
+				log.Printf("kms: mpc ready=%v peers=%d/%d mode=%s",
+					status.Ready, status.ConnectedPeers, status.ExpectedPeers, status.Mode)
+			}
+			checkCancel()
+
+			mgr := keys.NewManager(zapClient, keyStore, vaultID)
+			registerKMSRoutes(e.Router, mgr, zapClient)
+			return e.Next()
+		})
+	} else {
+		log.Printf("kms: MPC_VAULT_ID not set — running in secrets-only mode (no threshold signing)")
+	}
+
+	// Platform routes: auth, secrets, health.
+	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+		// Health
+		e.Router.GET("/healthz", func(re *core.RequestEvent) error {
+			return re.JSON(http.StatusOK, map[string]string{"status": "ok", "service": "kms"})
+		})
+
+		// Machine identity auth — /v2/kms/auth/login
+		e.Router.POST("/v2/kms/auth/login", func(re *core.RequestEvent) error {
+			var req struct {
+				ClientID     string `json:"clientId"`
+				ClientSecret string `json:"clientSecret"`
+			}
+			if err := json.NewDecoder(re.Request.Body).Decode(&req); err != nil || req.ClientID == "" || req.ClientSecret == "" {
+				return re.JSON(http.StatusBadRequest, map[string]any{"statusCode": 400, "message": "clientId and clientSecret required"})
+			}
+			form := url.Values{
+				"grant_type":    {"client_credentials"},
+				"client_id":     {req.ClientID},
+				"client_secret": {req.ClientSecret},
+			}
+			resp, err := http.PostForm(iamEndpoint+"/api/login/oauth/access_token", form)
+			if err != nil {
+				return re.JSON(http.StatusBadGateway, map[string]any{"statusCode": 502, "message": "identity provider unreachable"})
+			}
+			defer resp.Body.Close()
+			var tok map[string]any
+			json.NewDecoder(resp.Body).Decode(&tok)
+			at, _ := tok["access_token"].(string)
+			if at == "" {
+				return re.JSON(http.StatusUnauthorized, map[string]any{"statusCode": 401, "message": "invalid credentials"})
+			}
+			return re.JSON(http.StatusOK, map[string]any{"accessToken": at, "expiresIn": 86400, "tokenType": "Bearer"})
+		})
+
+		// Raw secret fetch — /v4/kms/secrets/{name}
+		e.Router.GET("/v4/kms/secrets/{name}", func(re *core.RequestEvent) error {
+			name := re.Request.PathValue("name")
+			if name == "" {
+				return re.JSON(http.StatusBadRequest, map[string]any{"message": "secret name required"})
+			}
+			val := os.Getenv(name)
+			if val == "" {
+				return re.JSON(http.StatusNotFound, map[string]any{"message": "not found"})
+			}
+			return re.JSON(http.StatusOK, map[string]any{
+				"secret": map[string]any{"secretKey": name, "secretValue": val},
+			})
+		})
+
 		return e.Next()
+	})
+
+	// Frontend — serve KMS UI at / (no /_/ admin panel).
+	app.OnServe().Bind(&hook.Handler[*core.ServeEvent]{
+		Func: func(e *core.ServeEvent) error {
+			if _, err := os.Stat(frontendDir); err == nil {
+				e.Router.GET("/assets/{path...}", apis.Static(os.DirFS(frontendDir), false))
+				e.Router.GET("/images/{path...}", apis.Static(os.DirFS(frontendDir), false))
+				e.Router.GET("/favicon.ico", apis.Static(os.DirFS(frontendDir), false))
+				e.Router.GET("/runtime-ui-env.js", apis.Static(os.DirFS(frontendDir), false))
+				// SPA fallback for frontend routes
+				e.Router.GET("/login", apis.Static(os.DirFS(frontendDir), true))
+				e.Router.GET("/login/{path...}", apis.Static(os.DirFS(frontendDir), true))
+				e.Router.GET("/signup/{path...}", apis.Static(os.DirFS(frontendDir), true))
+				e.Router.GET("/dashboard/{path...}", apis.Static(os.DirFS(frontendDir), true))
+				e.Router.GET("/settings/{path...}", apis.Static(os.DirFS(frontendDir), true))
+				e.Router.GET("/org/{path...}", apis.Static(os.DirFS(frontendDir), true))
+				e.Router.GET("/secret-manager/{path...}", apis.Static(os.DirFS(frontendDir), true))
+				log.Printf("kms: serving frontend from %s", frontendDir)
+			}
+			// Root → login
+			if os.Getenv("BASE_SKIP_ROOT_REDIRECT") != "" && !e.Router.HasRoute(http.MethodGet, "/") {
+				e.Router.GET("/", func(re *core.RequestEvent) error {
+					return re.Redirect(http.StatusTemporaryRedirect, "/login")
+				})
+			}
+			return e.Next()
+		},
+		Priority: 999,
 	})
 
 	if err := app.Start(); err != nil {
@@ -69,7 +156,7 @@ func main() {
 }
 
 func registerKMSRoutes(r *router.Router[*core.RequestEvent], mgr *keys.Manager, mpcBackend keys.MPCBackend) {
-	api := r.Group("/v1")
+	api := r.Group("/v1/kms")
 
 	// All KMS routes require superuser authentication.
 	api.BindFunc(func(e *core.RequestEvent) error {
