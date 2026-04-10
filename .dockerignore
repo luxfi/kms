@@ -6,3 +6,8 @@ data
 *.md
 LICENSE
 Makefile
+frontend/node_modules
+**/node_modules
+**/.next
+docs
+img
