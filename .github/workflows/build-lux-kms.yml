@@ -11,30 +11,9 @@ on:
       - 'Dockerfile'
   workflow_dispatch:
 
-permissions:
-  contents: read
-  packages: write
-
 jobs:
-  build-push:
-    name: Build and push luxfi/kms
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile
-          push: true
-          platforms: linux/amd64
-          build-args: |
-            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          tags: |
-            ghcr.io/luxfi/kms:latest
-            ghcr.io/luxfi/kms:main
-            ghcr.io/luxfi/kms:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+  docker:
+    uses: hanzoai/.github/.github/workflows/docker-build.yml@main
+    with:
+      image: ghcr.io/luxfi/kms
+    secrets: inherit
