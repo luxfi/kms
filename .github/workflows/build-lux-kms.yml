@@ -1,14 +1,8 @@
 name: Build Lux KMS
 on:
   push:
-    branches: [main]
-    paths:
-      - 'cmd/**'
-      - 'pkg/**'
-      - 'frontend/**'
-      - 'go.mod'
-      - 'go.sum'
-      - 'Dockerfile'
+    branches: [main, dev, test]
+    tags: ['v*']
   workflow_dispatch:
 
 jobs:
