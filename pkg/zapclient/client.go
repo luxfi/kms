@@ -96,10 +96,14 @@ func DialWithConfig(ctx context.Context, cfg Config) (*Client, error) {
 		cfg.Logger = slog.Default()
 	}
 
+	// Direct-address callers don't need mDNS and shouldn't advertise
+	// themselves on the network. Only request discovery when the caller
+	// explicitly leaves PeerAddr empty.
 	n := zap.NewNode(zap.NodeConfig{
 		NodeID:      cfg.NodeID,
 		ServiceType: cfg.ServiceType,
 		Port:        cfg.Port,
+		NoDiscovery: cfg.PeerAddr != "",
 	})
 	if err := n.Start(); err != nil {
 		return nil, fmt.Errorf("zapclient: start node: %w", err)
