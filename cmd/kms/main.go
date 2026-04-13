@@ -21,6 +21,7 @@ import (
 	"github.com/hanzoai/base"
 	"github.com/hanzoai/base/apis"
 	"github.com/hanzoai/base/core"
+	"github.com/hanzoai/base/plugins/replicate"
 	"github.com/hanzoai/base/tools/hook"
 	"github.com/hanzoai/base/tools/router"
 
@@ -37,6 +38,10 @@ func main() {
 	frontendDir := envOr("KMS_FRONTEND_DIR", "./frontend")
 
 	app := base.New()
+
+	// In-process WAL replication to S3 — no sidecar needed.
+	// No-op if REPLICATE_S3_ENDPOINT is not set.
+	replicate.MustRegister(app)
 
 	// MPC key management (optional — only when MPC_VAULT_ID is set).
 	if vaultID != "" {

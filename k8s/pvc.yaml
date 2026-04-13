@@ -1,13 +1,7 @@
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: kms-data
-  namespace: lux-system
-  labels:
-    app: kms
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
+# PVC managed by StatefulSet volumeClaimTemplates in deployment.yaml.
+# This file kept empty to avoid kustomize breakage; delete after confirming
+# no references remain.
+#
+# Old standalone PVC (kms-data) can be deleted from cluster once StatefulSet
+# is running with its own PVC:
+#   kubectl -n lux-system delete pvc kms-data --ignore-not-found

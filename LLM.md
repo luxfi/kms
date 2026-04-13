@@ -73,3 +73,7 @@ GET    /healthz                Health check
 - Transport: ZAP (luxfi/zap) for MPC communication — no HTTP to MPC daemon
 - Deployment: K8s Deployment (replicas=1 for SQLite) + PVC for data persistence
 - Multi-replica requires PostgreSQL backend (BASE_DB_URL env var)
+- Replication: in-process via `hanzoai/base/plugins/replicate` (no sidecar). Set `REPLICATE_S3_ENDPOINT` to enable.
+- Base module: v0.40.3+ (replicate plugin added in v0.40.0)
+- Local dev replace: `github.com/hanzoai/replicate => /Users/z/work/hanzo/replicate`
+- No lux/base fork exists -- both lux/kms and hanzo/kms import `github.com/hanzoai/base` directly
