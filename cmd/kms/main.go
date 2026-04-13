@@ -3,18 +3,23 @@
 // Configuration precedence: flags > env vars > defaults.
 //
 //	Env vars:
-//	  MPC_ADDR        - ZAP address (host:port); empty = mDNS discovery
-//	  MPC_VAULT_ID    - MPC vault ID for validator keys (required)
-//	  KMS_NODE_ID     - ZAP node ID (default "kms-0")
+//	  MPC_ADDR         - ZAP address (host:port); empty = mDNS discovery
+//	  MPC_VAULT_ID     - MPC vault ID for validator keys (required for MPC)
+//	  KMS_NODE_ID      - ZAP node ID (default "kms-0")
+//	  KMS_ZAP_PORT     - ZAP secrets-server listen port (default 9652, 0 = disable)
+//	  KMS_MASTER_KEY_B64 - 32-byte master key (base64) for SecretStore envelope
 package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,6 +33,8 @@ import (
 	"github.com/luxfi/kms/pkg/keys"
 	"github.com/luxfi/kms/pkg/mpc"
 	"github.com/luxfi/kms/pkg/store"
+	"github.com/luxfi/kms/pkg/zapserver"
+	"github.com/luxfi/zap"
 )
 
 func main() {
@@ -71,6 +78,46 @@ func main() {
 		})
 	} else {
 		log.Printf("kms: MPC_VAULT_ID not set — running in secrets-only mode (no threshold signing)")
+	}
+
+	// ZAP secrets server — exposes the SecretStore over luxfi/zap on its own
+	// port so in-cluster callers can fetch with zero REST round-trip. Enable
+	// by setting KMS_MASTER_KEY_B64 (32-byte base64) and KMS_ZAP_PORT != 0.
+	masterKeyB64 := envOr("KMS_MASTER_KEY_B64", "")
+	zapPortStr := envOr("KMS_ZAP_PORT", "9652")
+	zapPort, _ := strconv.Atoi(zapPortStr)
+	if masterKeyB64 != "" && zapPort > 0 {
+		app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+			masterKey, err := base64.StdEncoding.DecodeString(masterKeyB64)
+			if err != nil || len(masterKey) != 32 {
+				log.Printf("kms: KMS_MASTER_KEY_B64 invalid (need 32 bytes base64); ZAP secrets-server disabled")
+				return e.Next()
+			}
+			secStore, err := store.NewSecretStore(app)
+			if err != nil {
+				log.Printf("kms: SecretStore init failed: %v — ZAP secrets-server disabled", err)
+				return e.Next()
+			}
+			n := zap.NewNode(zap.NodeConfig{
+				NodeID:      nodeID + "-secrets",
+				ServiceType: "_kms._tcp",
+				Port:        zapPort,
+			})
+			if err := n.Start(); err != nil {
+				log.Printf("kms: ZAP secrets-server failed to start on :%d: %v", zapPort, err)
+				return e.Next()
+			}
+			zs := zapserver.New(zapserver.Config{
+				Store:     secStore,
+				MasterKey: masterKey,
+				Logger:    slog.Default(),
+			})
+			zs.Register(n)
+			log.Printf("kms: ZAP secrets-server listening on :%d (service=_kms._tcp)", zapPort)
+			return e.Next()
+		})
+	} else {
+		log.Printf("kms: ZAP secrets-server disabled (set KMS_MASTER_KEY_B64 and KMS_ZAP_PORT to enable)")
 	}
 
 	// Platform routes: auth, secrets, health.
