@@ -6,10 +6,6 @@ import (
 	"github.com/luxfi/zap"
 )
 
-// These tests lock the wire-format constants to the server's values so drift
-// between pkg/zapclient and pkg/zapserver is caught at compile/test time.
-// Live interop is tested in cmd/kms integration tests.
-
 func TestOpcodes_MatchServer(t *testing.T) {
 	cases := []struct {
 		name string
@@ -30,28 +26,29 @@ func TestOpcodes_MatchServer(t *testing.T) {
 
 func TestStatusBytes(t *testing.T) {
 	if statusOK != 0x00 || statusNotFound != 0x01 || statusError != 0x02 || statusForbid != 0x03 {
-		t.Fatalf("status bytes drift from server: ok=%d nf=%d err=%d forbid=%d",
+		t.Fatalf("status bytes drift: ok=%d nf=%d err=%d forbid=%d",
 			statusOK, statusNotFound, statusError, statusForbid)
 	}
 }
 
-func TestBuildMessage_Parseable(t *testing.T) {
-	// buildMessage must produce a message that zap.Parse can re-read. Exact
-	// wire contents are a luxfi/zap detail; we only assert shape.
+func TestBuildMessageWithType_Parseable(t *testing.T) {
 	body := []byte("hello-zap")
-	msg := buildMessage(body)
+	msg := buildMessageWithType(0x0040, body)
 	if msg == nil {
-		t.Fatalf("buildMessage returned nil")
+		t.Fatal("buildMessageWithType returned nil")
 	}
 	if msg.Size() == 0 {
-		t.Fatalf("message size is zero")
+		t.Fatal("message size is zero")
 	}
-	// Round-trip through Parse — if the framing is wrong, this errors out.
 	reparsed, err := zap.Parse(msg.Bytes())
 	if err != nil {
-		t.Fatalf("built message is not re-parseable: %v", err)
+		t.Fatalf("not re-parseable: %v", err)
 	}
 	if reparsed == nil {
-		t.Fatalf("re-parsed message is nil")
+		t.Fatal("re-parsed message is nil")
+	}
+	// Verify the flags encode our opcode
+	if got := reparsed.Flags() >> 8; got != 0x0040 {
+		t.Fatalf("flags>>8 = 0x%04x, want 0x0040", got)
 	}
 }

@@ -96,7 +96,10 @@ func (s *Server) Register(n *zap.Node) {
 		OpSecretDelete: s.handleDelete,
 	}
 	n.Handle(0, func(ctx context.Context, from string, msg *zap.Message) (*zap.Message, error) {
-		raw := msg.Bytes()
+		raw := msg.Root().Bytes(0)
+		if raw == nil {
+			raw = msg.Bytes()
+		}
 		if len(raw) < 2 {
 			return respond(statusError, errJSON("empty payload")), nil
 		}
@@ -122,7 +125,12 @@ type handlerFn func(ctx context.Context, from string, payload []byte) (byte, []b
 // caller's principal ID.
 func (s *Server) wrap(h handlerFn) zap.Handler {
 	return func(ctx context.Context, from string, msg *zap.Message) (*zap.Message, error) {
-		raw := msg.Bytes()
+		// Access body via Root Object. Builder writes the payload at field 0.
+		raw := msg.Root().Bytes(0)
+		if raw == nil {
+			// Fallback: raw frame bytes (for callers that don't use structured objects).
+			raw = msg.Bytes()
+		}
 		// Opcode was already matched by Node — but we carry it in for tracing.
 		if len(raw) < 2 {
 			return respond(statusError, errJSON("empty payload")), nil

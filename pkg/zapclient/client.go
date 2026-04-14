@@ -228,11 +228,12 @@ func (c *Client) DeleteAt(ctx context.Context, path, name, env string) error {
 // status(1 byte) || json for the response, all packed in a ZAP Message via
 // the Builder.
 func (c *Client) call(ctx context.Context, op uint16, body []byte) ([]byte, error) {
-	// Request: op || body.
+	// Request: opcode in flags field (handler dispatch) + body in payload.
+	// Body still carries the op prefix for the universal handler fallback.
 	reqPayload := make([]byte, 2+len(body))
 	binary.LittleEndian.PutUint16(reqPayload[:2], op)
 	copy(reqPayload[2:], body)
-	reqMsg := buildMessage(reqPayload)
+	reqMsg := buildMessageWithType(op, reqPayload)
 	if reqMsg == nil {
 		return nil, errors.New("zapclient: failed to build request message")
 	}
@@ -241,9 +242,16 @@ func (c *Client) call(ctx context.Context, op uint16, body []byte) ([]byte, erro
 	if err != nil {
 		return nil, fmt.Errorf("zapclient: call: %w", err)
 	}
-	raw := resp.Bytes()
+	// Response body: the zapserver builds it via Builder.WriteBytes({status || json}).
+	// Access via Root().Bytes(0) to get the actual payload (not the framing).
+	root := resp.Root()
+	raw := root.Bytes(0)
 	if len(raw) < 1 {
-		return nil, io.ErrUnexpectedEOF
+		// Fallback: try raw message bytes (older server versions).
+		raw = resp.Bytes()
+		if len(raw) < 1 {
+			return nil, io.ErrUnexpectedEOF
+		}
 	}
 	status, payload := raw[0], raw[1:]
 	switch status {
@@ -258,11 +266,13 @@ func (c *Client) call(ctx context.Context, op uint16, body []byte) ([]byte, erro
 	}
 }
 
-// buildMessage packs bytes into a parseable ZAP Message.
-func buildMessage(body []byte) *zap.Message {
-	b := zap.NewBuilder(len(body) + 8)
+// buildMessageWithType packs bytes into a parseable ZAP Message with the
+// message type set in the flags field so the Node dispatches to the correct
+// per-opcode handler (msgType = flags >> 8).
+func buildMessageWithType(op uint16, body []byte) *zap.Message {
+	b := zap.NewBuilder(len(body) + 32)
 	b.WriteBytes(body)
-	raw := b.Finish()
+	raw := b.FinishWithFlags(op << 8)
 	msg, err := zap.Parse(raw)
 	if err != nil {
 		return nil
