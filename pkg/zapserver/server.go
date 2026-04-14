@@ -75,11 +75,44 @@ func New(cfg Config) *Server {
 }
 
 // Register attaches the Server's handlers to the ZAP Node.
+//
+// Handlers are registered at both the opcode-specific message type (for
+// callers that set the ZAP flags/type field correctly) AND at type 0 (the
+// default when callers use zap.Builder without setting flags). Type 0 is a
+// universal multiplexer that reads the opcode from the first 2 bytes of the
+// payload and dispatches internally.
 func (s *Server) Register(n *zap.Node) {
+	// Per-opcode (future: once Builder supports setting msg type)
 	n.Handle(OpSecretGet, s.wrap(s.handleGet))
 	n.Handle(OpSecretPut, s.wrap(s.handlePut))
 	n.Handle(OpSecretList, s.wrap(s.handleList))
 	n.Handle(OpSecretDelete, s.wrap(s.handleDelete))
+
+	// Universal handler at type 0: reads opcode from body, dispatches.
+	handlers := map[uint16]handlerFn{
+		OpSecretGet:    s.handleGet,
+		OpSecretPut:    s.handlePut,
+		OpSecretList:   s.handleList,
+		OpSecretDelete: s.handleDelete,
+	}
+	n.Handle(0, func(ctx context.Context, from string, msg *zap.Message) (*zap.Message, error) {
+		raw := msg.Bytes()
+		if len(raw) < 2 {
+			return respond(statusError, errJSON("empty payload")), nil
+		}
+		op := binary.LittleEndian.Uint16(raw[:2])
+		payload := raw[2:]
+		h, ok := handlers[op]
+		if !ok {
+			return respond(statusError, errJSON("unknown opcode")), nil
+		}
+		status, body, err := h(ctx, from, payload)
+		if err != nil {
+			s.log.Warn("kms.zap handler error (mux)", "from", from, "op", op, "err", err)
+			return respond(statusError, errJSON(err.Error())), nil
+		}
+		return respond(status, body), nil
+	})
 }
 
 // handlerFn is the shape of our op handlers before wrapping with framing.
