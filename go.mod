@@ -36,7 +36,7 @@ require (
 	github.com/hablullah/go-juliandays v1.0.0 // indirect
 	github.com/hanzoai/dbx v1.15.0 // indirect
 	github.com/hanzoai/pubsub-go v1.0.0 // indirect
-	github.com/hanzoai/replicate v0.4.0 // indirect
+	github.com/hanzoai/replicate v0.7.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -110,5 +110,3 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.48.1 // indirect
 )
-
-replace github.com/hanzoai/replicate => /Users/z/work/hanzo/replicate
