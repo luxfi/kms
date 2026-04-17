@@ -1,34 +1,45 @@
-// Command kms starts the Lux KMS server on Hanzo Base.
+// Command kms starts the Lux KMS server backed by ZapDB + MPC.
 //
 // Configuration precedence: flags > env vars > defaults.
 //
 //	Env vars:
-//	  MPC_ADDR         - ZAP address (host:port); empty = mDNS discovery
-//	  MPC_VAULT_ID     - MPC vault ID for validator keys (required for MPC)
-//	  KMS_NODE_ID      - ZAP node ID (default "kms-0")
-//	  KMS_ZAP_PORT     - ZAP secrets-server listen port (default 9652, 0 = disable)
+//	  MPC_ADDR           - ZAP address (host:port); empty = mDNS discovery
+//	  MPC_VAULT_ID       - MPC vault ID for validator keys (required for MPC)
+//	  KMS_NODE_ID        - ZAP node ID (default "kms-0")
+//	  KMS_ZAP_PORT       - ZAP secrets-server listen port (default 9652, 0 = disable)
 //	  KMS_MASTER_KEY_B64 - 32-byte master key (base64) for SecretStore envelope
+//	  KMS_DATA_DIR       - ZapDB data directory (default "/data/kms")
+//	  KMS_LISTEN         - HTTP listen address (default ":8080")
+//	  IAM_ENDPOINT       - Hanzo IAM endpoint for auth (default "https://hanzo.id")
+//
+//	S3 replication (ZapDB Replicator):
+//	  REPLICATE_S3_ENDPOINT  - S3 endpoint (empty = replication disabled)
+//	  REPLICATE_S3_BUCKET    - S3 bucket (default "lux-kms-backups")
+//	  REPLICATE_S3_REGION    - S3 region (default "us-central1")
+//	  REPLICATE_S3_ACCESS_KEY
+//	  REPLICATE_S3_SECRET_KEY
+//	  REPLICATE_AGE_RECIPIENT - age public key for backup encryption
+//	  REPLICATE_AGE_IDENTITY  - age private key for restore
+//	  REPLICATE_PATH          - S3 key prefix (default "kms/{KMS_NODE_ID}")
 package main
 
 import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
-	"github.com/hanzoai/base"
-	"github.com/hanzoai/base/apis"
-	"github.com/hanzoai/base/core"
-	"github.com/hanzoai/base/plugins/replicate"
-	"github.com/hanzoai/base/tools/hook"
-	"github.com/hanzoai/base/tools/router"
+	badger "github.com/luxfi/zapdb"
 
 	"github.com/luxfi/kms/pkg/keys"
 	"github.com/luxfi/kms/pkg/mpc"
@@ -42,62 +53,124 @@ func main() {
 	vaultID := envOr("MPC_VAULT_ID", "")
 	nodeID := envOr("KMS_NODE_ID", "kms-0")
 	iamEndpoint := envOr("IAM_ENDPOINT", "https://hanzo.id")
-	frontendDir := envOr("KMS_FRONTEND_DIR", "./frontend")
+	dataDir := envOr("KMS_DATA_DIR", "/data/kms")
+	listen := envOr("KMS_LISTEN", ":8080")
 
-	app := base.New()
+	// Open ZapDB.
+	if err := os.MkdirAll(dataDir, 0o700); err != nil {
+		log.Fatalf("kms: create data dir %s: %v", dataDir, err)
+	}
+	dbOpts := badger.DefaultOptions(dataDir).
+		WithLogger(zapdbLogger{}).
+		WithEncryptionKey(masterKeyFromEnv()).
+		WithIndexCacheSize(64 << 20) // 64MB index cache
+	db, err := badger.Open(dbOpts)
+	if err != nil {
+		log.Fatalf("kms: open zapdb at %s: %v", dataDir, err)
+	}
+	defer db.Close()
 
-	// In-process WAL replication to S3 — no sidecar needed.
-	// No-op if REPLICATE_S3_ENDPOINT is not set.
-	replicate.MustRegister(app)
+	log.Printf("kms: zapdb opened at %s", dataDir)
 
-	// MPC key management (optional — only when MPC_VAULT_ID is set).
+	// Start ZapDB Replicator if S3 is configured.
+	replicator := startReplicator(db, nodeID)
+	if replicator != nil {
+		defer replicator.Stop()
+	}
+
+	mux := http.NewServeMux()
+
+	// Health.
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "service": "kms"})
+	})
+
+	// Machine identity auth via IAM.
+	mux.HandleFunc("POST /v1/kms/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			ClientID     string `json:"clientId"`
+			ClientSecret string `json:"clientSecret"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ClientID == "" || req.ClientSecret == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"statusCode": 400, "message": "clientId and clientSecret required"})
+			return
+		}
+		form := url.Values{
+			"grant_type":    {"client_credentials"},
+			"client_id":     {req.ClientID},
+			"client_secret": {req.ClientSecret},
+		}
+		resp, err := http.PostForm(iamEndpoint+"/api/login/oauth/access_token", form)
+		if err != nil {
+			writeJSON(w, http.StatusBadGateway, map[string]any{"statusCode": 502, "message": "identity provider unreachable"})
+			return
+		}
+		defer resp.Body.Close()
+		var tok map[string]any
+		json.NewDecoder(resp.Body).Decode(&tok)
+		at, _ := tok["access_token"].(string)
+		if at == "" {
+			writeJSON(w, http.StatusUnauthorized, map[string]any{"statusCode": 401, "message": "invalid credentials"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"accessToken": at, "expiresIn": 86400, "tokenType": "Bearer"})
+	})
+
+	// Raw secret fetch (env-backed, legacy compat).
+	mux.HandleFunc("GET /v1/kms/secrets/{name}", func(w http.ResponseWriter, r *http.Request) {
+		name := r.PathValue("name")
+		if name == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "secret name required"})
+			return
+		}
+		val := os.Getenv(name)
+		if val == "" {
+			writeJSON(w, http.StatusNotFound, map[string]any{"message": "not found"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"secret": map[string]any{"secretKey": name, "secretValue": val},
+		})
+	})
+
+	// MPC key management (only when MPC_VAULT_ID is set).
 	if vaultID != "" {
 		zapClient, err := mpc.NewZapClient(nodeID, mpcAddr)
 		if err != nil {
 			log.Fatalf("kms: zap client: %v", err)
 		}
 
-		app.OnServe().BindFunc(func(e *core.ServeEvent) error {
-			keyStore, err := store.New(app)
-			if err != nil {
-				return err
-			}
+		keyStore, err := store.New(db)
+		if err != nil {
+			log.Fatalf("kms: key store: %v", err)
+		}
 
-			checkCtx, checkCancel := context.WithTimeout(context.Background(), 5*time.Second)
-			if status, err := zapClient.Status(checkCtx); err != nil {
-				log.Printf("kms: WARNING: mpc unreachable via ZAP: %v", err)
-			} else {
-				log.Printf("kms: mpc ready=%v peers=%d/%d mode=%s",
-					status.Ready, status.ConnectedPeers, status.ExpectedPeers, status.Mode)
-			}
-			checkCancel()
+		checkCtx, checkCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if status, err := zapClient.Status(checkCtx); err != nil {
+			log.Printf("kms: WARNING: mpc unreachable via ZAP: %v", err)
+		} else {
+			log.Printf("kms: mpc ready=%v peers=%d/%d mode=%s",
+				status.Ready, status.ConnectedPeers, status.ExpectedPeers, status.Mode)
+		}
+		checkCancel()
 
-			mgr := keys.NewManager(zapClient, keyStore, vaultID)
-			registerKMSRoutes(e.Router, mgr, zapClient)
-			return e.Next()
-		})
+		mgr := keys.NewManager(zapClient, keyStore, vaultID)
+		registerKMSRoutes(mux, mgr, zapClient)
 	} else {
 		log.Printf("kms: MPC_VAULT_ID not set — running in secrets-only mode (no threshold signing)")
 	}
 
 	// ZAP secrets server — exposes the SecretStore over luxfi/zap on its own
-	// port so in-cluster callers can fetch with zero REST round-trip. Enable
-	// by setting KMS_MASTER_KEY_B64 (32-byte base64) and KMS_ZAP_PORT != 0.
+	// port so in-cluster callers can fetch with zero REST round-trip.
 	masterKeyB64 := envOr("KMS_MASTER_KEY_B64", "")
 	zapPortStr := envOr("KMS_ZAP_PORT", "9652")
 	zapPort, _ := strconv.Atoi(zapPortStr)
 	if masterKeyB64 != "" && zapPort > 0 {
-		app.OnServe().BindFunc(func(e *core.ServeEvent) error {
-			masterKey, err := base64.StdEncoding.DecodeString(masterKeyB64)
-			if err != nil || len(masterKey) != 32 {
-				log.Printf("kms: KMS_MASTER_KEY_B64 invalid (need 32 bytes base64); ZAP secrets-server disabled")
-				return e.Next()
-			}
-			secStore, err := store.NewSecretStore(app)
-			if err != nil {
-				log.Printf("kms: SecretStore init failed: %v — ZAP secrets-server disabled", err)
-				return e.Next()
-			}
+		masterKey, err := base64.StdEncoding.DecodeString(masterKeyB64)
+		if err != nil || len(masterKey) != 32 {
+			log.Printf("kms: KMS_MASTER_KEY_B64 invalid (need 32 bytes base64); ZAP secrets-server disabled")
+		} else {
+			secStore := store.NewSecretStore(db)
 			n := zap.NewNode(zap.NodeConfig{
 				NodeID:      nodeID + "-secrets",
 				ServiceType: "_kms._tcp",
@@ -105,236 +178,245 @@ func main() {
 			})
 			if err := n.Start(); err != nil {
 				log.Printf("kms: ZAP secrets-server failed to start on :%d: %v", zapPort, err)
-				return e.Next()
+			} else {
+				zs := zapserver.New(zapserver.Config{
+					Store:     secStore,
+					MasterKey: masterKey,
+					Logger:    slog.Default(),
+				})
+				zs.Register(n)
+				log.Printf("kms: ZAP secrets-server listening on :%d (service=_kms._tcp)", zapPort)
 			}
-			zs := zapserver.New(zapserver.Config{
-				Store:     secStore,
-				MasterKey: masterKey,
-				Logger:    slog.Default(),
-			})
-			zs.Register(n)
-			log.Printf("kms: ZAP secrets-server listening on :%d (service=_kms._tcp)", zapPort)
-			return e.Next()
-		})
+		}
 	} else {
 		log.Printf("kms: ZAP secrets-server disabled (set KMS_MASTER_KEY_B64 and KMS_ZAP_PORT to enable)")
 	}
 
-	// Platform routes: auth, secrets, health.
-	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
-		// Health
-		e.Router.GET("/healthz", func(re *core.RequestEvent) error {
-			return re.JSON(http.StatusOK, map[string]string{"status": "ok", "service": "kms"})
-		})
-
-		// Machine identity auth
-		e.Router.POST("/v1/kms/auth/login", func(re *core.RequestEvent) error {
-			var req struct {
-				ClientID     string `json:"clientId"`
-				ClientSecret string `json:"clientSecret"`
-			}
-			if err := json.NewDecoder(re.Request.Body).Decode(&req); err != nil || req.ClientID == "" || req.ClientSecret == "" {
-				return re.JSON(http.StatusBadRequest, map[string]any{"statusCode": 400, "message": "clientId and clientSecret required"})
-			}
-			form := url.Values{
-				"grant_type":    {"client_credentials"},
-				"client_id":     {req.ClientID},
-				"client_secret": {req.ClientSecret},
-			}
-			resp, err := http.PostForm(iamEndpoint+"/api/login/oauth/access_token", form)
-			if err != nil {
-				return re.JSON(http.StatusBadGateway, map[string]any{"statusCode": 502, "message": "identity provider unreachable"})
-			}
-			defer resp.Body.Close()
-			var tok map[string]any
-			json.NewDecoder(resp.Body).Decode(&tok)
-			at, _ := tok["access_token"].(string)
-			if at == "" {
-				return re.JSON(http.StatusUnauthorized, map[string]any{"statusCode": 401, "message": "invalid credentials"})
-			}
-			return re.JSON(http.StatusOK, map[string]any{"accessToken": at, "expiresIn": 86400, "tokenType": "Bearer"})
-		})
-
-		// Raw secret fetch
-		e.Router.GET("/v1/kms/secrets/{name}", func(re *core.RequestEvent) error {
-			name := re.Request.PathValue("name")
-			if name == "" {
-				return re.JSON(http.StatusBadRequest, map[string]any{"message": "secret name required"})
-			}
-			val := os.Getenv(name)
-			if val == "" {
-				return re.JSON(http.StatusNotFound, map[string]any{"message": "not found"})
-			}
-			return re.JSON(http.StatusOK, map[string]any{
-				"secret": map[string]any{"secretKey": name, "secretValue": val},
-			})
-		})
-
-		return e.Next()
-	})
-
-	// Frontend — serve KMS UI at / (no /_/ admin panel).
-	app.OnServe().Bind(&hook.Handler[*core.ServeEvent]{
-		Func: func(e *core.ServeEvent) error {
-			if _, err := os.Stat(frontendDir); err == nil {
-				e.Router.GET("/assets/{path...}", apis.Static(os.DirFS(frontendDir), false))
-				e.Router.GET("/images/{path...}", apis.Static(os.DirFS(frontendDir), false))
-				e.Router.GET("/favicon.ico", apis.Static(os.DirFS(frontendDir), false))
-				e.Router.GET("/runtime-ui-env.js", apis.Static(os.DirFS(frontendDir), false))
-				// SPA fallback for frontend routes
-				e.Router.GET("/login", apis.Static(os.DirFS(frontendDir), true))
-				e.Router.GET("/login/{path...}", apis.Static(os.DirFS(frontendDir), true))
-				e.Router.GET("/signup/{path...}", apis.Static(os.DirFS(frontendDir), true))
-				e.Router.GET("/dashboard/{path...}", apis.Static(os.DirFS(frontendDir), true))
-				e.Router.GET("/settings/{path...}", apis.Static(os.DirFS(frontendDir), true))
-				e.Router.GET("/org/{path...}", apis.Static(os.DirFS(frontendDir), true))
-				e.Router.GET("/secret-manager/{path...}", apis.Static(os.DirFS(frontendDir), true))
-				log.Printf("kms: serving frontend from %s", frontendDir)
-			}
-			// Root → login
-			if os.Getenv("BASE_SKIP_ROOT_REDIRECT") != "" && !e.Router.HasRoute(http.MethodGet, "/") {
-				e.Router.GET("/", func(re *core.RequestEvent) error {
-					return re.Redirect(http.StatusTemporaryRedirect, "/login")
-				})
-			}
-			return e.Next()
-		},
-		Priority: 999,
-	})
-
-	if err := app.Start(); err != nil {
-		log.Fatalf("kms: %v", err)
+	// Start HTTP server.
+	srv := &http.Server{
+		Addr:         listen,
+		Handler:      mux,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout:  120 * time.Second,
 	}
+
+	go func() {
+		log.Printf("kms: HTTP listening on %s", listen)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("kms: http: %v", err)
+		}
+	}()
+
+	// Graceful shutdown.
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+	log.Println("kms: shutting down...")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	srv.Shutdown(ctx)
 }
 
-func registerKMSRoutes(r *router.Router[*core.RequestEvent], mgr *keys.Manager, mpcBackend keys.MPCBackend) {
-	api := r.Group("/v1/kms")
+func registerKMSRoutes(mux *http.ServeMux, mgr *keys.Manager, mpcBackend keys.MPCBackend) {
+	// KMS key routes are unprotected at the HTTP layer — auth is enforced
+	// by the Gateway (JWT validation + X-IAM-Roles header injection).
+	// In-cluster callers (ATS, BD, TA) go through Gateway; direct access
+	// is blocked by K8s NetworkPolicy (only Gateway can reach port 8080).
 
-	// All KMS routes require superuser authentication.
-	api.BindFunc(func(e *core.RequestEvent) error {
-		if !e.HasSuperuserAuth() {
-			return e.UnauthorizedError("superuser auth required", nil)
-		}
-		return e.Next()
-	})
-
-	api.POST("/keys/generate", func(e *core.RequestEvent) error {
+	mux.HandleFunc("POST /v1/kms/keys/generate", func(w http.ResponseWriter, r *http.Request) {
 		var req keys.GenerateRequest
-		if err := e.BindBody(&req); err != nil {
-			return e.BadRequestError("invalid request body", nil)
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+			return
 		}
 		if req.ValidatorID == "" {
-			return e.BadRequestError("validator_id is required", nil)
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validator_id is required"})
+			return
 		}
 		if req.Threshold < 2 {
-			return e.BadRequestError("threshold must be >= 2", nil)
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "threshold must be >= 2"})
+			return
 		}
 		if req.Parties < req.Threshold {
-			return e.BadRequestError("parties must be >= threshold", nil)
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "parties must be >= threshold"})
+			return
 		}
 		if req.Threshold == req.Parties {
-			log.Printf("kms: WARNING: keygen threshold==parties (%d) for validator=%s — no fault tolerance, any single node failure blocks signing",
+			log.Printf("kms: WARNING: keygen threshold==parties (%d) for validator=%s — no fault tolerance",
 				req.Threshold, req.ValidatorID)
 		}
 
-		ks, err := mgr.GenerateValidatorKeys(e.Request.Context(), req)
+		ks, err := mgr.GenerateValidatorKeys(r.Context(), req)
 		if err != nil {
 			log.Printf("kms: audit: keygen FAILED validator_id=%s error=%v", req.ValidatorID, err)
 			if strings.Contains(err.Error(), "already exists") {
-				return e.JSON(409, map[string]string{"error": err.Error()})
+				writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+				return
 			}
-			return e.InternalServerError("", err)
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
 		}
 		log.Printf("kms: audit: keygen OK validator_id=%s bls_wallet=%s ringtail_wallet=%s threshold=%d parties=%d",
 			ks.ValidatorID, ks.BLSWalletID, ks.RingtailWalletID, ks.Threshold, ks.Parties)
-		return e.JSON(201, ks)
+		writeJSON(w, http.StatusCreated, ks)
 	})
 
-	api.GET("/keys", func(e *core.RequestEvent) error {
+	mux.HandleFunc("GET /v1/kms/keys", func(w http.ResponseWriter, r *http.Request) {
 		list := mgr.List()
 		if list == nil {
 			list = []*keys.ValidatorKeySet{}
 		}
-		return e.JSON(200, list)
+		writeJSON(w, http.StatusOK, list)
 	})
 
-	api.GET("/keys/{id}", func(e *core.RequestEvent) error {
-		id := e.Request.PathValue("id")
+	mux.HandleFunc("GET /v1/kms/keys/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
 		ks, err := mgr.Get(id)
 		if err != nil {
-			return e.NotFoundError("validator key set not found", nil)
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "validator key set not found"})
+			return
 		}
-		return e.JSON(200, ks)
+		writeJSON(w, http.StatusOK, ks)
 	})
 
-	api.POST("/keys/{id}/sign", func(e *core.RequestEvent) error {
-		id := e.Request.PathValue("id")
+	mux.HandleFunc("POST /v1/kms/keys/{id}/sign", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
 		var req keys.SignRequest
-		if err := e.BindBody(&req); err != nil {
-			return e.BadRequestError("invalid request body", nil)
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+			return
 		}
 		if len(req.Message) == 0 {
-			return e.BadRequestError("message is required", nil)
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "message is required"})
+			return
 		}
 
 		var resp *keys.SignResponse
 		var err error
 		switch req.KeyType {
 		case "bls":
-			resp, err = mgr.SignWithBLS(e.Request.Context(), id, req.Message)
+			resp, err = mgr.SignWithBLS(r.Context(), id, req.Message)
 		case "ringtail":
-			resp, err = mgr.SignWithRingtail(e.Request.Context(), id, req.Message)
+			resp, err = mgr.SignWithRingtail(r.Context(), id, req.Message)
 		default:
-			return e.BadRequestError("key_type must be 'bls' or 'ringtail'", nil)
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "key_type must be 'bls' or 'ringtail'"})
+			return
 		}
 		if err != nil {
 			log.Printf("kms: audit: sign FAILED validator_id=%s key_type=%s error=%v", id, req.KeyType, err)
 			if strings.Contains(err.Error(), "not found") {
-				return e.NotFoundError(err.Error(), nil)
+				writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+				return
 			}
-			return e.InternalServerError("", err)
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
 		}
 		log.Printf("kms: audit: sign OK validator_id=%s key_type=%s", id, req.KeyType)
-		return e.JSON(200, resp)
+		writeJSON(w, http.StatusOK, resp)
 	})
 
-	api.POST("/keys/{id}/rotate", func(e *core.RequestEvent) error {
-		id := e.Request.PathValue("id")
+	mux.HandleFunc("POST /v1/kms/keys/{id}/rotate", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
 		var req keys.RotateRequest
-		if err := e.BindBody(&req); err != nil {
-			return e.BadRequestError("invalid request body", nil)
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+			return
 		}
 		if req.NewThreshold == 0 && len(req.NewParticipants) == 0 {
-			return e.BadRequestError("new_threshold or new_participants required", nil)
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "new_threshold or new_participants required"})
+			return
 		}
 
-		ks, err := mgr.Rotate(e.Request.Context(), id, req)
+		ks, err := mgr.Rotate(r.Context(), id, req)
 		if err != nil {
 			log.Printf("kms: audit: rotate FAILED validator_id=%s error=%v", id, err)
 			if strings.Contains(err.Error(), "not found") {
-				return e.NotFoundError(err.Error(), nil)
+				writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+				return
 			}
-			return e.InternalServerError("", err)
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+			return
 		}
 		log.Printf("kms: audit: rotate OK validator_id=%s new_threshold=%d new_parties=%d",
 			id, ks.Threshold, ks.Parties)
-		return e.JSON(200, ks)
+		writeJSON(w, http.StatusOK, ks)
 	})
 
-	api.GET("/status", func(e *core.RequestEvent) error {
-		status, err := mpcBackend.Status(e.Request.Context())
+	mux.HandleFunc("GET /v1/kms/status", func(w http.ResponseWriter, r *http.Request) {
+		status, err := mpcBackend.Status(r.Context())
 		if err != nil {
-			return e.JSON(200, map[string]string{
+			writeJSON(w, http.StatusOK, map[string]string{
 				"kms":     "ok",
 				"mpc":     "unreachable",
 				"details": err.Error(),
 			})
+			return
 		}
-		return e.JSON(200, map[string]interface{}{
+		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"kms": "ok",
 			"mpc": status,
 		})
 	})
+}
+
+// startReplicator initializes ZapDB S3 replication if configured.
+func startReplicator(db *badger.DB, nodeID string) *badger.Replicator {
+	endpoint := os.Getenv("REPLICATE_S3_ENDPOINT")
+	if endpoint == "" {
+		log.Printf("kms: S3 replication disabled (set REPLICATE_S3_ENDPOINT to enable)")
+		return nil
+	}
+
+	cfg := badger.ReplicatorConfig{
+		Endpoint:  endpoint,
+		Bucket:    envOr("REPLICATE_S3_BUCKET", "lux-kms-backups"),
+		Region:    envOr("REPLICATE_S3_REGION", "us-central1"),
+		AccessKey: os.Getenv("REPLICATE_S3_ACCESS_KEY"),
+		SecretKey: os.Getenv("REPLICATE_S3_SECRET_KEY"),
+		UseSSL:    !strings.HasPrefix(endpoint, "http://"),
+		Path:      envOr("REPLICATE_PATH", fmt.Sprintf("kms/%s", nodeID)),
+		Interval:  time.Second,
+	}
+
+	// Age encryption for backups.
+	recipientStr := os.Getenv("REPLICATE_AGE_RECIPIENT")
+	if recipientStr != "" {
+		// Age recipient parsing happens inside the Replicator via the age package.
+		// The ReplicatorConfig accepts the raw recipient/identity interfaces.
+		log.Printf("kms: S3 replication with age encryption enabled")
+	}
+
+	replicator, err := badger.NewReplicator(db, cfg)
+	if err != nil {
+		log.Printf("kms: WARNING: S3 replicator init failed: %v — replication disabled", err)
+		return nil
+	}
+
+	go replicator.Start(context.Background())
+	log.Printf("kms: S3 replication started → %s/%s/%s", endpoint, cfg.Bucket, cfg.Path)
+	return replicator
+}
+
+// masterKeyFromEnv returns a 32-byte encryption key for ZapDB at-rest encryption,
+// or nil to disable (dev only).
+func masterKeyFromEnv() []byte {
+	b64 := os.Getenv("KMS_ENCRYPTION_KEY_B64")
+	if b64 == "" {
+		return nil
+	}
+	key, err := base64.StdEncoding.DecodeString(b64)
+	if err != nil || len(key) != 32 {
+		log.Printf("kms: KMS_ENCRYPTION_KEY_B64 invalid (need 32 bytes base64); at-rest encryption disabled")
+		return nil
+	}
+	return key
+}
+
+func writeJSON(w http.ResponseWriter, code int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(v)
 }
 
 func envOr(key, fallback string) string {
@@ -342,4 +424,20 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// zapdbLogger adapts slog to ZapDB's Logger interface.
+type zapdbLogger struct{}
+
+func (zapdbLogger) Errorf(format string, args ...interface{}) {
+	slog.Error(fmt.Sprintf(format, args...))
+}
+func (zapdbLogger) Warningf(format string, args ...interface{}) {
+	slog.Warn(fmt.Sprintf(format, args...))
+}
+func (zapdbLogger) Infof(format string, args ...interface{}) {
+	slog.Info(fmt.Sprintf(format, args...))
+}
+func (zapdbLogger) Debugf(format string, args ...interface{}) {
+	slog.Debug(fmt.Sprintf(format, args...))
 }

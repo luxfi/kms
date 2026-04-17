@@ -1,0 +1,29 @@
+steps:
+  - id: build
+    name: golang:1.26-bookworm
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        apt-get update -qq && apt-get install -y -qq libsqlcipher-dev gcc libc6-dev pkg-config git >/dev/null 2>&1
+        git config --global url."https://${_GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+        export GOPRIVATE=github.com/luxfi/*,github.com/hanzoai/*
+        go build -tags "sqlite_fts5 sqlcipher" -ldflags="-s -w" -o /workspace/kms ./cmd/kms
+
+  - id: image
+    name: gcr.io/cloud-builders/docker
+    args: [build, -t, us-docker.pkg.dev/onyxplus-devnet/backend/kms:v1.3.0, -f, Dockerfile.runtime, /workspace]
+    waitFor: [build]
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: [push, us-docker.pkg.dev/onyxplus-devnet/backend/kms:v1.3.0]
+    waitFor: [image]
+
+substitutions:
+  _GITHUB_TOKEN: ''  # Pass via --substitutions at submit time or Cloud Build trigger
+
+options:
+  machineType: E2_HIGHCPU_8
+  logging: CLOUD_LOGGING_ONLY
+timeout: 900s

@@ -3,13 +3,38 @@
 # All values can be overridden by env vars or CLI flags.
 # Env vars take precedence over this file; flags take precedence over env vars.
 #
-# Env vars:
-#   MPC_ADDR        - ZAP address (host:port); empty = mDNS discovery (dev only)
-#   MPC_VAULT_ID    - MPC vault for validator keys (keep in K8s secret, not here)
-#   KMS_NODE_ID     - ZAP node ID (default "kms-0")
+# Server:
+#   KMS_LISTEN          - HTTP listen address (default ":8080")
+#   KMS_DATA_DIR        - ZapDB data directory (default "/data/kms")
+#
+# MPC (signing backend):
+#   MPC_ADDR            - ZAP address (host:port); empty = mDNS discovery (dev only)
+#   MPC_VAULT_ID        - MPC vault for validator keys (keep in K8s secret, not here)
+#   KMS_NODE_ID         - ZAP node ID (default "kms-0")
+#
+# Secrets server (ZAP transport):
+#   KMS_ZAP_PORT        - ZAP listen port (default 9652, 0 = disable)
+#   KMS_MASTER_KEY_B64  - 32-byte master key (base64) for envelope encryption
+#
+# ZapDB at-rest encryption:
+#   KMS_ENCRYPTION_KEY_B64 - 32-byte key (base64) for ZapDB encryption
+#
+# ZapDB S3 replication:
+#   REPLICATE_S3_ENDPOINT   - S3 endpoint (empty = replication disabled)
+#   REPLICATE_S3_BUCKET     - S3 bucket (default "lux-kms-backups")
+#   REPLICATE_S3_REGION     - S3 region (default "us-central1")
+#   REPLICATE_S3_ACCESS_KEY
+#   REPLICATE_S3_SECRET_KEY
+#   REPLICATE_AGE_RECIPIENT - age public key for backup encryption
+#   REPLICATE_AGE_IDENTITY  - age private key for restore
+#   REPLICATE_PATH          - S3 key prefix (default "kms/{KMS_NODE_ID}")
+#
+# Auth:
+#   IAM_ENDPOINT        - Hanzo IAM endpoint (default "https://hanzo.id")
 
 server:
   addr: ":8080"
+  data_dir: "/data/kms"
 
 mpc:
   # ZAP direct connect address. Leave empty for mDNS discovery (dev only).

@@ -23,11 +23,22 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
+            - name: zap
+              containerPort: 9652
+              protocol: TCP
           env:
-            - name: BASE_DB_PATH
-              value: /data/kms/kms.db
-            - name: BASE_DB_ORG_ISOLATION
-              value: sqlite
+            # ZapDB storage.
+            - name: KMS_DATA_DIR
+              value: /data/kms
+            - name: KMS_LISTEN
+              value: ":8080"
+            # MPC integration — signing backend.
+            - name: MPC_ADDR
+              valueFrom:
+                secretKeyRef:
+                  name: kms-secrets
+                  key: mpc-addr
+                  optional: true
             - name: MPC_VAULT_ID
               valueFrom:
                 secretKeyRef:
@@ -38,6 +49,23 @@ spec:
                 secretKeyRef:
                   name: kms-secrets
                   key: mpc-token
+            # ZAP secrets server.
+            - name: KMS_ZAP_PORT
+              value: "9652"
+            - name: KMS_MASTER_KEY_B64
+              valueFrom:
+                secretKeyRef:
+                  name: kms-secrets
+                  key: master-key-b64
+                  optional: true
+            # ZapDB at-rest encryption.
+            - name: KMS_ENCRYPTION_KEY_B64
+              valueFrom:
+                secretKeyRef:
+                  name: kms-secrets
+                  key: encryption-key-b64
+                  optional: true
+            # ZapDB S3 replication (replaces replicate sidecar).
             - name: REPLICATE_S3_ENDPOINT
               valueFrom:
                 secretKeyRef:
@@ -46,6 +74,18 @@ spec:
                   optional: true
             - name: REPLICATE_S3_BUCKET
               value: lux-kms-backups
+            - name: REPLICATE_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: kms-backup
+                  key: S3_ACCESS_KEY
+                  optional: true
+            - name: REPLICATE_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: kms-backup
+                  key: S3_SECRET_KEY
+                  optional: true
             - name: REPLICATE_AGE_RECIPIENT
               valueFrom:
                 secretKeyRef:
@@ -70,7 +110,7 @@ spec:
               memory: 64Mi
             limits:
               cpu: 200m
-              memory: 128Mi
+              memory: 256Mi
           volumeMounts:
             - name: data
               mountPath: /data/kms

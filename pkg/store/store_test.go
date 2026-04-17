@@ -4,22 +4,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hanzoai/base/tests"
+	badger "github.com/luxfi/zapdb"
 	"github.com/luxfi/kms/pkg/keys"
 )
 
-func testApp(t *testing.T) *tests.TestApp {
+func testDB(t *testing.T) *badger.DB {
 	t.Helper()
-	app, err := tests.NewTestApp()
+	opts := badger.DefaultOptions("").WithInMemory(true)
+	db, err := badger.Open(opts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { app.Cleanup() })
-	return app
+	t.Cleanup(func() { db.Close() })
+	return db
 }
 
 func TestPutAndGet(t *testing.T) {
-	s, err := New(testApp(t))
+	s, err := New(testDB(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +55,7 @@ func TestPutAndGet(t *testing.T) {
 }
 
 func TestPutDuplicate(t *testing.T) {
-	s, err := New(testApp(t))
+	s, err := New(testDB(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +70,7 @@ func TestPutDuplicate(t *testing.T) {
 }
 
 func TestGetNotFound(t *testing.T) {
-	s, err := New(testApp(t))
+	s, err := New(testDB(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +82,7 @@ func TestGetNotFound(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
-	s, err := New(testApp(t))
+	s, err := New(testDB(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +97,7 @@ func TestList(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	s, err := New(testApp(t))
+	s, err := New(testDB(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +117,7 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestUpdateNotFound(t *testing.T) {
-	s, err := New(testApp(t))
+	s, err := New(testDB(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +129,7 @@ func TestUpdateNotFound(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	s, err := New(testApp(t))
+	s, err := New(testDB(t))
 	if err != nil {
 		t.Fatal(err)
 	}

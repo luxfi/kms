@@ -1,17 +1,15 @@
-// Package store provides key metadata persistence via Hanzo Base.
-// SQLite embedded for local dev, Postgres for production.
-// Encryption at rest handled by Base.
+// Package store provides key metadata and secret persistence via ZapDB.
+// ZapDB is an embedded LSM key-value store with built-in S3 replication.
+// No SQLite, no PostgreSQL, no Base dependency.
 package store
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
-	"strings"
 	"sync"
 
-	"github.com/hanzoai/base/core"
+	badger "github.com/luxfi/zapdb"
 	"github.com/luxfi/kms/pkg/keys"
 )
 
@@ -20,23 +18,21 @@ var (
 	ErrAlreadyExists = errors.New("store: key set already exists")
 )
 
-const collectionName = "kms_validator_keys"
+// Key prefix for validator key sets in ZapDB.
+var keyPrefix = []byte("kms/keys/")
 
-// Store persists validator key set metadata via Base collection.
+// Store persists validator key set metadata in ZapDB.
 type Store struct {
-	app  core.App
+	db   *badger.DB
 	mu   sync.RWMutex
 	data map[string]*keys.ValidatorKeySet
 }
 
-// New creates a Store backed by a Base app's database.
-func New(app core.App) (*Store, error) {
+// New creates a Store backed by a ZapDB instance.
+func New(db *badger.DB) (*Store, error) {
 	s := &Store{
-		app:  app,
+		db:   db,
 		data: make(map[string]*keys.ValidatorKeySet),
-	}
-	if err := s.ensureCollection(); err != nil {
-		return nil, err
 	}
 	if err := s.load(); err != nil {
 		return nil, err
@@ -44,45 +40,35 @@ func New(app core.App) (*Store, error) {
 	return s, nil
 }
 
-// ensureCollection creates the kms_validator_keys collection if it doesn't exist.
-func (s *Store) ensureCollection() error {
-	_, err := s.app.FindCollectionByNameOrId(collectionName)
-	if err == nil {
-		return nil // already exists
-	}
-	collection := core.NewBaseCollection(collectionName)
-	collection.Fields.Add(
-		&core.TextField{Name: "validator_id", Required: true},
-		&core.JSONField{Name: "data", MaxSize: 1 << 20}, // 1MB max
-	)
-	collection.Indexes = []string{
-		"CREATE UNIQUE INDEX idx_kms_vid ON " + collectionName + " (validator_id)",
-	}
-	return s.app.Save(collection)
+// load reads all validator key sets from ZapDB into memory.
+func (s *Store) load() error {
+	return s.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.Prefix = keyPrefix
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			err := item.Value(func(val []byte) error {
+				var ks keys.ValidatorKeySet
+				if err := json.Unmarshal(val, &ks); err != nil {
+					return fmt.Errorf("store: corrupt record key=%s: %w", item.Key(), err)
+				}
+				s.data[ks.ValidatorID] = &ks
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
-// load reads all records from the collection into memory.
-func (s *Store) load() error {
-	records, err := s.app.FindAllRecords(collectionName)
-	if err != nil {
-		// "no rows" / empty collection is expected on first run.
-		// Any other error (schema mismatch, DB corruption) must surface.
-		if strings.Contains(err.Error(), "no rows") || strings.Contains(err.Error(), "not found") {
-			return nil
-		}
-		return fmt.Errorf("store: load records: %w", err)
-	}
-	for _, r := range records {
-		vid := r.GetString("validator_id")
-		raw := r.GetString("data")
-		var ks keys.ValidatorKeySet
-		if err := json.Unmarshal([]byte(raw), &ks); err != nil {
-			log.Printf("store: WARNING: corrupt record validator_id=%q, skipping: %v", vid, err)
-			continue
-		}
-		s.data[vid] = &ks
-	}
-	return nil
+// dbKey returns the ZapDB key for a validator ID.
+func dbKey(validatorID string) []byte {
+	return append(keyPrefix, []byte(validatorID)...)
 }
 
 // Put saves a validator key set. Returns ErrAlreadyExists if the validator ID is taken.
@@ -145,32 +131,18 @@ func (s *Store) Delete(validatorID string) error {
 	}
 	delete(s.data, validatorID)
 
-	// Delete from DB
-	record, err := s.app.FindFirstRecordByFilter(collectionName, "validator_id = {:vid}", map[string]any{"vid": validatorID})
-	if err != nil {
-		return nil // already gone
-	}
-	return s.app.Delete(record)
+	return s.db.Update(func(txn *badger.Txn) error {
+		return txn.Delete(dbKey(validatorID))
+	})
 }
 
-// persist upserts a key set into the Base collection.
+// persist writes a key set to ZapDB.
 func (s *Store) persist(ks *keys.ValidatorKeySet) error {
 	raw, err := json.Marshal(ks)
 	if err != nil {
 		return err
 	}
-
-	// Try to find existing record
-	record, err := s.app.FindFirstRecordByFilter(collectionName, "validator_id = {:vid}", map[string]any{"vid": ks.ValidatorID})
-	if err != nil {
-		// Create new record
-		collection, err := s.app.FindCollectionByNameOrId(collectionName)
-		if err != nil {
-			return err
-		}
-		record = core.NewRecord(collection)
-		record.Set("validator_id", ks.ValidatorID)
-	}
-	record.Set("data", string(raw))
-	return s.app.Save(record)
+	return s.db.Update(func(txn *badger.Txn) error {
+		return txn.Set(dbKey(ks.ValidatorID), raw)
+	})
 }

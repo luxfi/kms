@@ -1,13 +1,13 @@
 package store
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
-	"github.com/hanzoai/base/core"
+	badger "github.com/luxfi/zapdb"
 )
-
-const secretsCollection = "kms_secrets"
 
 var ErrSecretNotFound = errors.New("store: secret not found")
 
@@ -27,7 +27,10 @@ const (
 	ModeConfidentialCompute = "ckks"
 )
 
-// Secret is an encrypted record stored in Base. Plaintext is never stored.
+// Key prefix for secrets in ZapDB.
+var secretPrefix = []byte("kms/secrets/")
+
+// Secret is an encrypted record stored in ZapDB. Plaintext is never stored.
 //
 // Standard path (default):
 //
@@ -53,40 +56,24 @@ type Secret struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-// SecretStore manages encrypted secrets in Base.
+// SecretStore manages encrypted secrets in ZapDB.
 type SecretStore struct {
-	app core.App
+	db *badger.DB
 }
 
-// NewSecretStore creates a secret store backed by Base.
-func NewSecretStore(app core.App) (*SecretStore, error) {
-	s := &SecretStore{app: app}
-	if err := s.ensureCollection(); err != nil {
-		return nil, err
-	}
-	return s, nil
+// NewSecretStore creates a secret store backed by ZapDB.
+func NewSecretStore(db *badger.DB) *SecretStore {
+	return &SecretStore{db: db}
 }
 
-func (s *SecretStore) ensureCollection() error {
-	_, err := s.app.FindCollectionByNameOrId(secretsCollection)
-	if err == nil {
-		return nil
-	}
-	c := core.NewBaseCollection(secretsCollection)
-	c.Fields.Add(
-		&core.TextField{Name: "name", Required: true},
-		&core.TextField{Name: "path", Required: true},
-		&core.TextField{Name: "env", Required: true},
-		&core.JSONField{Name: "ciphertext", MaxSize: 10 << 20},
-		&core.JSONField{Name: "wrapped_dek", MaxSize: 8192},
-		&core.TextField{Name: "scheme"},
-		&core.TextField{Name: "key_handle"},
-		&core.TextField{Name: "policy_id"},
-	)
-	c.Indexes = []string{
-		"CREATE UNIQUE INDEX idx_secret_path_name_env ON " + secretsCollection + " (path, name, env)",
-	}
-	return s.app.Save(c)
+// secretKey returns the ZapDB key for a secret: kms/secrets/{path}/{env}/{name}
+func secretKey(path, name, env string) []byte {
+	return []byte(fmt.Sprintf("kms/secrets/%s/%s/%s", path, env, name))
+}
+
+// secretListPrefix returns the prefix for listing secrets at a path/env.
+func secretListPrefix(path, env string) []byte {
+	return []byte(fmt.Sprintf("kms/secrets/%s/%s/", path, env))
 }
 
 // Put stores an encrypted secret (upsert).
@@ -94,81 +81,88 @@ func (s *SecretStore) Put(secret *Secret) error {
 	if secret.Scheme == "" {
 		secret.Scheme = ModeStandard
 	}
-
-	collection, err := s.app.FindCollectionByNameOrId(secretsCollection)
+	raw, err := json.Marshal(secret)
 	if err != nil {
 		return err
 	}
-
-	record, err := s.app.FindFirstRecordByFilter(secretsCollection,
-		"path = {:path} AND name = {:name} AND env = {:env}",
-		map[string]any{"path": secret.Path, "name": secret.Name, "env": secret.Env})
-	if err != nil {
-		record = core.NewRecord(collection)
-	}
-
-	record.Set("name", secret.Name)
-	record.Set("path", secret.Path)
-	record.Set("env", secret.Env)
-	record.Set("ciphertext", secret.Ciphertext)
-	record.Set("wrapped_dek", secret.WrappedDEK)
-	record.Set("scheme", secret.Scheme)
-	record.Set("key_handle", secret.KeyHandle)
-	record.Set("policy_id", secret.PolicyID)
-	return s.app.Save(record)
+	return s.db.Update(func(txn *badger.Txn) error {
+		return txn.Set(secretKey(secret.Path, secret.Name, secret.Env), raw)
+	})
 }
 
 // Get retrieves an encrypted secret. Caller must decrypt via appropriate path.
 func (s *SecretStore) Get(path, name, env string) (*Secret, error) {
-	record, err := s.app.FindFirstRecordByFilter(secretsCollection,
-		"path = {:path} AND name = {:name} AND env = {:env}",
-		map[string]any{"path": path, "name": name, "env": env})
+	var secret Secret
+	err := s.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(secretKey(path, name, env))
+		if err == badger.ErrKeyNotFound {
+			return ErrSecretNotFound
+		}
+		if err != nil {
+			return err
+		}
+		return item.Value(func(val []byte) error {
+			return json.Unmarshal(val, &secret)
+		})
+	})
 	if err != nil {
-		return nil, ErrSecretNotFound
+		return nil, err
 	}
-
-	return &Secret{
-		Name:       record.GetString("name"),
-		Path:       record.GetString("path"),
-		Env:        record.GetString("env"),
-		Ciphertext: []byte(record.GetString("ciphertext")),
-		WrappedDEK: []byte(record.GetString("wrapped_dek")),
-		Scheme:     record.GetString("scheme"),
-		KeyHandle:  record.GetString("key_handle"),
-		PolicyID:   record.GetString("policy_id"),
-	}, nil
+	return &secret, nil
 }
 
 // List returns all secrets at a path/env (metadata + ciphertext, no plaintext).
 func (s *SecretStore) List(path, env string) ([]*Secret, error) {
-	records, err := s.app.FindRecordsByFilter(secretsCollection,
-		"path = {:path} AND env = {:env}", "", 0, 0,
-		map[string]any{"path": path, "env": env})
+	var secrets []*Secret
+	prefix := secretListPrefix(path, env)
+
+	err := s.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.Prefix = prefix
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			err := item.Value(func(val []byte) error {
+				var sec Secret
+				if err := json.Unmarshal(val, &sec); err != nil {
+					return err
+				}
+				// For listing, strip ciphertext to reduce payload.
+				secrets = append(secrets, &Secret{
+					Name:      sec.Name,
+					Path:      sec.Path,
+					Env:       sec.Env,
+					Scheme:    sec.Scheme,
+					KeyHandle: sec.KeyHandle,
+					PolicyID:  sec.PolicyID,
+				})
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
-	}
-
-	secrets := make([]*Secret, 0, len(records))
-	for _, r := range records {
-		secrets = append(secrets, &Secret{
-			Name:       r.GetString("name"),
-			Path:       r.GetString("path"),
-			Env:        r.GetString("env"),
-			Scheme:     r.GetString("scheme"),
-			KeyHandle:  r.GetString("key_handle"),
-			PolicyID:   r.GetString("policy_id"),
-		})
 	}
 	return secrets, nil
 }
 
 // Delete removes a secret.
 func (s *SecretStore) Delete(path, name, env string) error {
-	record, err := s.app.FindFirstRecordByFilter(secretsCollection,
-		"path = {:path} AND name = {:name} AND env = {:env}",
-		map[string]any{"path": path, "name": name, "env": env})
-	if err != nil {
-		return ErrSecretNotFound
-	}
-	return s.app.Delete(record)
+	key := secretKey(path, name, env)
+	return s.db.Update(func(txn *badger.Txn) error {
+		_, err := txn.Get(key)
+		if err == badger.ErrKeyNotFound {
+			return ErrSecretNotFound
+		}
+		if err != nil {
+			return err
+		}
+		return txn.Delete(key)
+	})
 }

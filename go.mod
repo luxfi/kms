@@ -3,7 +3,7 @@ module github.com/luxfi/kms
 go 1.26.1
 
 require (
-	github.com/hanzoai/base v0.40.3
+	github.com/luxfi/zapdb v1.0.0
 	github.com/luxfi/zap v0.2.0
 )
 
