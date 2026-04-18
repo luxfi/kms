@@ -116,7 +116,82 @@ func main() {
 		writeJSON(w, http.StatusOK, map[string]any{"accessToken": at, "expiresIn": 86400, "tokenType": "Bearer"})
 	})
 
-	// Raw secret fetch (env-backed, legacy compat).
+	// Secret store — ZapDB-backed, encrypted at rest.
+	secStore := store.NewSecretStore(db)
+
+	// GET /v1/kms/orgs/{org}/secrets/{path...}/{name}
+	// Matches the ATS kmsclient.Get() URL pattern.
+	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", func(w http.ResponseWriter, r *http.Request) {
+		rest := r.PathValue("rest")
+		idx := strings.LastIndex(rest, "/")
+		if idx < 0 {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "path and name required"})
+			return
+		}
+		path, name := rest[:idx], rest[idx+1:]
+		env := r.URL.Query().Get("env")
+		if env == "" {
+			env = "default"
+		}
+		sec, err := secStore.Get(path, name, env)
+		if err != nil {
+			writeJSON(w, http.StatusNotFound, map[string]any{"message": "not found"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"secret": map[string]any{"value": string(sec.Ciphertext)},
+		})
+	})
+
+	// POST /v1/kms/orgs/{org}/secrets — create a secret.
+	mux.HandleFunc("POST /v1/kms/orgs/{org}/secrets", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Path  string `json:"path"`
+			Name  string `json:"name"`
+			Env   string `json:"env"`
+			Value string `json:"value"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "name and value required"})
+			return
+		}
+		if req.Env == "" {
+			req.Env = "default"
+		}
+		sec := &store.Secret{
+			Name:       req.Name,
+			Path:       req.Path,
+			Env:        req.Env,
+			Ciphertext: []byte(req.Value),
+		}
+		if err := secStore.Put(sec); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]any{"message": err.Error()})
+			return
+		}
+		writeJSON(w, http.StatusCreated, map[string]any{"ok": true})
+	})
+
+	// DELETE /v1/kms/orgs/{org}/secrets/{rest...}/{name}
+	mux.HandleFunc("DELETE /v1/kms/orgs/{org}/secrets/{rest...}", func(w http.ResponseWriter, r *http.Request) {
+		rest := r.PathValue("rest")
+		idx := strings.LastIndex(rest, "/")
+		if idx < 0 {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "path and name required"})
+			return
+		}
+		path, name := rest[:idx], rest[idx+1:]
+		env := r.URL.Query().Get("env")
+		if env == "" {
+			env = "default"
+		}
+		if err := secStore.Delete(path, name, env); err != nil {
+			writeJSON(w, http.StatusNotFound, map[string]any{"message": "not found"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	})
+
+	// Legacy: env-backed secret fetch.
 	mux.HandleFunc("GET /v1/kms/secrets/{name}", func(w http.ResponseWriter, r *http.Request) {
 		name := r.PathValue("name")
 		if name == "" {
@@ -170,7 +245,6 @@ func main() {
 		if err != nil || len(masterKey) != 32 {
 			log.Printf("kms: KMS_MASTER_KEY_B64 invalid (need 32 bytes base64); ZAP secrets-server disabled")
 		} else {
-			secStore := store.NewSecretStore(db)
 			n := zap.NewNode(zap.NodeConfig{
 				NodeID:      nodeID + "-secrets",
 				ServiceType: "_kms._tcp",
