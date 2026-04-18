@@ -70,7 +70,7 @@ github.com/luxfi/mdns
 # github.com/luxfi/zap v0.2.0
 ## explicit; go 1.23.0
 github.com/luxfi/zap
-# github.com/luxfi/zapdb v1.0.0 => ../zapdb
+# github.com/luxfi/zapdb v1.9.0
 ## explicit; go 1.26.1
 github.com/luxfi/zapdb
 github.com/luxfi/zapdb/fb
@@ -236,4 +236,3 @@ google.golang.org/protobuf/reflect/protoreflect
 google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
-# github.com/luxfi/zapdb => ../zapdb

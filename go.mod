@@ -4,7 +4,7 @@ go 1.26.1
 
 require (
 	github.com/luxfi/zap v0.2.0
-	github.com/luxfi/zapdb v1.0.0
+	github.com/luxfi/zapdb v1.9.0
 )
 
 require (
@@ -47,5 +47,3 @@ require (
 	golang.org/x/tools v0.43.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
-
-replace github.com/luxfi/zapdb => ../zapdb
