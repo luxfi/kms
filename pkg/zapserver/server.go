@@ -22,9 +22,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/luxfi/kms/pkg/store"
+	"github.com/luxfi/log"
 	"github.com/luxfi/zap"
 )
 
@@ -48,14 +48,16 @@ const (
 type Server struct {
 	store     *store.SecretStore
 	masterKey []byte
-	log       *slog.Logger
+	log       log.Logger
 }
 
 // Config wires a Server with the required dependencies.
 type Config struct {
 	Store     *store.SecretStore
 	MasterKey []byte
-	Logger    *slog.Logger
+	// Logger is the luxfi/log Logger. nil falls back to the package
+	// root logger (log.Root()).
+	Logger log.Logger
 }
 
 // New returns a Server ready to attach to a ZAP node via Register.
@@ -65,7 +67,7 @@ func New(cfg Config) *Server {
 		panic("zapserver: master key must be 32 bytes")
 	}
 	if cfg.Logger == nil {
-		cfg.Logger = slog.Default()
+		cfg.Logger = log.Root()
 	}
 	return &Server{
 		store:     cfg.Store,

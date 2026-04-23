@@ -64,6 +64,10 @@ github.com/luxfi/age
 github.com/luxfi/age/internal/bech32
 github.com/luxfi/age/internal/format
 github.com/luxfi/age/internal/stream
+# github.com/luxfi/log v1.4.1
+## explicit; go 1.24.9
+github.com/luxfi/log
+github.com/luxfi/log/internal/json
 # github.com/luxfi/mdns v0.1.0
 ## explicit; go 1.23.0
 github.com/luxfi/mdns
@@ -80,6 +84,12 @@ github.com/luxfi/zapdb/skl
 github.com/luxfi/zapdb/table
 github.com/luxfi/zapdb/trie
 github.com/luxfi/zapdb/y
+# github.com/mattn/go-colorable v0.1.14
+## explicit; go 1.18
+github.com/mattn/go-colorable
+# github.com/mattn/go-isatty v0.0.20
+## explicit; go 1.15
+github.com/mattn/go-isatty
 # github.com/miekg/dns v1.1.72
 ## explicit; go 1.24.0
 github.com/miekg/dns
@@ -236,3 +246,6 @@ google.golang.org/protobuf/reflect/protoreflect
 google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
+# gopkg.in/natefinch/lumberjack.v2 v2.2.1
+## explicit; go 1.13
+gopkg.in/natefinch/lumberjack.v2
