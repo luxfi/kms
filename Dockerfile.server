@@ -1,0 +1,38 @@
+# luxfi/kms — MPC-backed KMS server (headless, no React UI)
+# Server-only build: Go + sqlcipher + MPC/ZAP. Skips the React SPA frontend
+# stage so emulated cross-platform builds (M-series Mac → linux/amd64) don't
+# trip QEMU's esbuild crash.
+
+FROM golang:1.26-bookworm AS builder
+ENV GOTOOLCHAIN=auto
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libsqlcipher-dev gcc libc6-dev pkg-config git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG GITHUB_TOKEN
+RUN git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+ENV GOPRIVATE=github.com/luxfi/*,github.com/hanzoai/*
+
+WORKDIR /build
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+
+RUN CGO_ENABLED=1 go build -tags "sqlite_fts5 sqlcipher" \
+    -ldflags="-s -w" -o /usr/local/bin/kms ./cmd/kms
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libsqlcipher0 ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/local/bin/kms /usr/local/bin/kms
+RUN mkdir -p /data/kms
+
+ENV BASE_SKIP_ROOT_REDIRECT=1
+ENV BASE_DISABLE_ADMIN_UI=1
+
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
+  CMD curl -f http://localhost:8080/healthz || exit 1
+ENTRYPOINT ["kms", "serve", "--http=0.0.0.0:8080"]
