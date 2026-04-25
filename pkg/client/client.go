@@ -1,5 +1,7 @@
 // Package client provides a Go SDK for the Lux KMS API.
-// Replaces github.com/luxfi/kms-go (archived Infisical fork).
+//
+// All routes hit `/v1/kms/<path>` per the Hanzo "/v1/<service>/<path>" standard.
+// No legacy /api/v1 or /api/v3 paths.
 package client
 
 import (
@@ -9,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 )
@@ -38,55 +41,52 @@ type Secret struct {
 
 // ListSecretsOptions controls secret listing.
 type ListSecretsOptions struct {
-	ProjectSlug            string
-	Environment            string
-	SecretPath             string
+	ProjectSlug            string // → org segment in /v1/kms/orgs/{org}/secrets
+	Environment            string // → ?env=prod
+	SecretPath             string // → ?path=/some/sub
 	ExpandSecretReferences bool
 	IncludeImports         bool
 	Recursive              bool
 }
 
-// NewKMSClient creates a new KMS client. Drop-in replacement for kms-go.
+// NewKMSClient creates a new KMS client.
 func NewKMSClient(_ context.Context, cfg Config) *Client {
-	baseURL := cfg.SiteUrl
-	if baseURL == "" {
-		baseURL = os.Getenv("LUX_KMS_URL")
+	site := cfg.SiteUrl
+	if site == "" {
+		site = os.Getenv("LUX_KMS_URL")
 	}
-	if baseURL == "" {
-		baseURL = "https://kms.hanzo.ai"
+	if site == "" {
+		site = "http://kms.lux-kms.svc.cluster.local"
 	}
-
 	return &Client{
-		baseURL: baseURL,
+		baseURL: site,
 		httpClient: &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: 30 * time.Second,
 		},
 	}
 }
 
-// Auth returns the auth interface.
-func (c *Client) Auth() *AuthClient {
-	return &AuthClient{c: c}
-}
+// Auth returns the authentication client.
+func (c *Client) Auth() *AuthClient { return &AuthClient{c: c} }
 
-// Secrets returns the secrets interface.
-func (c *Client) Secrets() *SecretsClient {
-	return &SecretsClient{c: c}
-}
+// Secrets returns the secrets client.
+func (c *Client) Secrets() *SecretsClient { return &SecretsClient{c: c} }
+
+// SetAccessToken sets the bearer token for authenticated requests.
+func (c *Client) SetAccessToken(token string) { c.token = token }
 
 // AuthClient handles authentication.
-type AuthClient struct {
-	c *Client
-}
+type AuthClient struct{ c *Client }
 
 // UniversalAuthLogin authenticates with machine identity credentials.
+// POST /v1/kms/auth/login { clientId, clientSecret } → { accessToken }
 func (a *AuthClient) UniversalAuthLogin(clientID, clientSecret string) (string, error) {
 	body, _ := json.Marshal(map[string]string{
 		"clientId":     clientID,
 		"clientSecret": clientSecret,
 	})
 
-	req, err := http.NewRequest("POST", a.c.baseURL+"/api/v1/auth/universal-auth/login", bytes.NewReader(body))
+	req, err := http.NewRequest("POST", a.c.baseURL+"/v1/kms/auth/login", bytes.NewReader(body))
 	if err != nil {
 		return "", fmt.Errorf("kms auth: %w", err)
 	}
@@ -119,13 +119,31 @@ type SecretsClient struct {
 	c *Client
 }
 
-// List returns all secrets for a project/environment.
-func (s *SecretsClient) List(opts ListSecretsOptions) ([]Secret, error) {
-	url := fmt.Sprintf("%s/api/v3/secrets/raw?workspaceSlug=%s&environment=%s&secretPath=%s&expandSecretReferences=%t&include_imports=%t&recursive=%t",
-		s.c.baseURL, opts.ProjectSlug, opts.Environment, opts.SecretPath,
-		opts.ExpandSecretReferences, opts.IncludeImports, opts.Recursive)
+// secretsBaseURL → `${baseURL}/v1/kms/orgs/{org}/secrets`
+func (s *SecretsClient) secretsBaseURL(org string) string {
+	return fmt.Sprintf("%s/v1/kms/orgs/%s/secrets", s.c.baseURL, url.PathEscape(org))
+}
 
-	req, err := http.NewRequest("GET", url, nil)
+// List returns all secrets for a project/environment.
+// GET /v1/kms/orgs/{org}/secrets?env=ENV&path=PATH&recursive=BOOL
+func (s *SecretsClient) List(opts ListSecretsOptions) ([]Secret, error) {
+	q := url.Values{}
+	q.Set("env", opts.Environment)
+	if opts.SecretPath != "" {
+		q.Set("path", opts.SecretPath)
+	}
+	if opts.Recursive {
+		q.Set("recursive", "true")
+	}
+	if opts.ExpandSecretReferences {
+		q.Set("expand", "true")
+	}
+	if opts.IncludeImports {
+		q.Set("includeImports", "true")
+	}
+	u := s.secretsBaseURL(opts.ProjectSlug) + "?" + q.Encode()
+
+	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, fmt.Errorf("kms list: %w", err)
 	}
@@ -153,11 +171,13 @@ func (s *SecretsClient) List(opts ListSecretsOptions) ([]Secret, error) {
 }
 
 // Get returns a single secret by key.
+// GET /v1/kms/orgs/{org}/secrets/{key}?env=ENV
 func (s *SecretsClient) Get(project, env, key string) (*Secret, error) {
-	url := fmt.Sprintf("%s/api/v3/secrets/raw/%s?workspaceSlug=%s&environment=%s&secretPath=/",
-		s.c.baseURL, key, project, env)
+	q := url.Values{}
+	q.Set("env", env)
+	u := s.secretsBaseURL(project) + "/" + url.PathEscape(key) + "?" + q.Encode()
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, fmt.Errorf("kms get: %w", err)
 	}
@@ -185,45 +205,51 @@ func (s *SecretsClient) Get(project, env, key string) (*Secret, error) {
 }
 
 // Create creates a new secret.
+// POST /v1/kms/orgs/{org}/secrets { env, path, secretKey, secretValue }
 func (s *SecretsClient) Create(project, env, key, value string) error {
 	body, _ := json.Marshal(map[string]string{
-		"workspaceSlug": project,
-		"environment":   env,
-		"secretPath":    "/",
-		"secretKey":     key,
-		"secretValue":   value,
+		"env":         env,
+		"path":        "/",
+		"secretKey":   key,
+		"secretValue": value,
 	})
-	return s.mutate("POST", s.c.baseURL+"/api/v3/secrets/raw", body)
+	return s.mutate("POST", s.secretsBaseURL(project), body)
 }
 
 // Update updates an existing secret.
+// PATCH /v1/kms/orgs/{org}/secrets/{key} { env, path, secretValue }
 func (s *SecretsClient) Update(project, env, key, value string) error {
 	body, _ := json.Marshal(map[string]string{
-		"workspaceSlug": project,
-		"environment":   env,
-		"secretPath":    "/",
-		"secretValue":   value,
+		"env":         env,
+		"path":        "/",
+		"secretValue": value,
 	})
-	return s.mutate("PATCH", fmt.Sprintf("%s/api/v3/secrets/raw/%s", s.c.baseURL, key), body)
+	return s.mutate("PATCH", s.secretsBaseURL(project)+"/"+url.PathEscape(key), body)
 }
 
 // Delete deletes a secret.
+// DELETE /v1/kms/orgs/{org}/secrets/{key}?env=ENV
 func (s *SecretsClient) Delete(project, env, key string) error {
-	body, _ := json.Marshal(map[string]string{
-		"workspaceSlug": project,
-		"environment":   env,
-		"secretPath":    "/",
-	})
-	return s.mutate("DELETE", fmt.Sprintf("%s/api/v3/secrets/raw/%s", s.c.baseURL, key), body)
+	q := url.Values{}
+	q.Set("env", env)
+	q.Set("path", "/")
+	u := s.secretsBaseURL(project) + "/" + url.PathEscape(key) + "?" + q.Encode()
+	return s.mutate("DELETE", u, nil)
 }
 
-func (s *SecretsClient) mutate(method, url string, body []byte) error {
-	req, err := http.NewRequest(method, url, bytes.NewReader(body))
+func (s *SecretsClient) mutate(method, urlStr string, body []byte) error {
+	var reader io.Reader
+	if body != nil {
+		reader = bytes.NewReader(body)
+	}
+	req, err := http.NewRequest(method, urlStr, reader)
 	if err != nil {
 		return fmt.Errorf("kms %s: %w", method, err)
 	}
 	req.Header.Set("Authorization", "Bearer "+s.c.token)
-	req.Header.Set("Content-Type", "application/json")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 
 	resp, err := s.c.httpClient.Do(req)
 	if err != nil {

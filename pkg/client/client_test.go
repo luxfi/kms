@@ -9,9 +9,10 @@ import (
 )
 
 func TestNewKMSClient_DefaultURL(t *testing.T) {
+	t.Setenv("LUX_KMS_URL", "")
 	c := NewKMSClient(context.Background(), Config{})
-	if c.baseURL != "https://kms.hanzo.ai" {
-		t.Errorf("default URL = %s, want https://kms.hanzo.ai", c.baseURL)
+	if c.baseURL != "http://kms.lux-kms.svc.cluster.local" {
+		t.Errorf("default URL = %s, want http://kms.lux-kms.svc.cluster.local", c.baseURL)
 	}
 }
 
@@ -24,7 +25,7 @@ func TestNewKMSClient_CustomURL(t *testing.T) {
 
 func TestAuth_UniversalAuthLogin(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/auth/universal-auth/login" {
+		if r.URL.Path != "/v1/kms/auth/login" {
 			t.Errorf("path = %s", r.URL.Path)
 		}
 		if r.Method != "POST" {
