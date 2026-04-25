@@ -9,7 +9,7 @@ RUN corepack enable pnpm && pnpm install --frozen-lockfile
 COPY frontend/ .
 RUN pnpm vite build
 
-FROM golang:1.26-bookworm AS builder
+FROM golang:1.25-bookworm AS builder
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlcipher-dev gcc libc6-dev pkg-config git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
