@@ -45,6 +45,7 @@ import (
 	"github.com/luxfi/kms/pkg/mpc"
 	"github.com/luxfi/kms/pkg/store"
 	"github.com/luxfi/kms/pkg/zapserver"
+	luxlog "github.com/luxfi/log"
 	"github.com/luxfi/zap"
 )
 
@@ -256,7 +257,7 @@ func main() {
 				zs := zapserver.New(zapserver.Config{
 					Store:     secStore,
 					MasterKey: masterKey,
-					Logger:    slog.Default(),
+					Logger:    luxlog.New("component", "kms-zapserver"),
 				})
 				zs.Register(n)
 				log.Printf("kms: ZAP secrets-server listening on :%d (service=_kms._tcp)", zapPort)
