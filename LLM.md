@@ -105,7 +105,7 @@ all, err := kms.GetSecrets(ctx)
 
 | Var | Default | Purpose |
 |-----|---------|---------|
-| `KMS_ADDR` | `kms.lux-kms-go.svc.cluster.local:9999` | KMS host:port |
+| `KMS_ADDR` | `zap.kms.svc.cluster.local:9999` | KMS host:port |
 | `KMS_PATH` | `/` | secret path prefix |
 | `KMS_ENV` | `default` | secret environment slug |
 

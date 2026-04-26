@@ -7,7 +7,7 @@
 //
 // Defaults read from environment:
 //
-//	KMS_ADDR   host:port             (default kms.lux-kms-go.svc.cluster.local:9999)
+//	KMS_ADDR   host:port             (default zap.kms.svc.cluster.local:9999)
 //	KMS_PATH   secret path prefix    (default "/")
 //	KMS_ENV    secret environment    (default "default")
 //
@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	defaultAddr = "kms.lux-kms-go.svc.cluster.local:9999"
+	defaultAddr = "zap.kms.svc.cluster.local:9999"
 	defaultPath = "/"
 	defaultEnv  = "default"
 )

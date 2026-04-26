@@ -116,7 +116,7 @@ func reconcile(ctx context.Context, kc kubernetes.Interface, obj map[string]any,
 
 	hostAPI := str(spec, "hostAPI")
 	if hostAPI == "" {
-		hostAPI = "http://kms.lux-kms-go.svc.cluster.local"
+		hostAPI = "http://zap.kms.svc.cluster.local"
 	}
 	zapAddr := zapAddrFromHost(hostAPI, zapPort)
 
@@ -199,8 +199,8 @@ func reconcile(ctx context.Context, kc kubernetes.Interface, obj map[string]any,
 }
 
 // zapAddrFromHost extracts the host from a URL or bare host string and
-// joins it with the ZAP port. e.g. "http://kms.lux-kms-go.svc:80" + 9999
-//                              → "kms.lux-kms-go.svc:9999".
+// joins it with the ZAP port. e.g. "http://api.kms.svc:80" + 9999
+//                              → "api.kms.svc:9999".
 func zapAddrFromHost(hostAPI string, port int) string {
 	host := hostAPI
 	if u, err := url.Parse(hostAPI); err == nil && u.Host != "" {

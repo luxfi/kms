@@ -6,7 +6,7 @@
 //	  MPC_ADDR           - ZAP address (host:port); empty = mDNS discovery
 //	  MPC_VAULT_ID       - MPC vault ID for validator keys (required for MPC)
 //	  KMS_NODE_ID        - ZAP node ID (default "kms-0")
-//	  KMS_ZAP_PORT       - ZAP secrets-server listen port (default 9652, 0 = disable)
+//	  KMS_ZAP_PORT       - ZAP secrets-server listen port (default 9999, 0 = disable)
 //	  KMS_MASTER_KEY_B64 - 32-byte master key (base64) for SecretStore envelope
 //	  KMS_DATA_DIR       - ZapDB data directory (default "/data/kms")
 //	  KMS_LISTEN         - HTTP listen address (default ":8080")
