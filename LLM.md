@@ -128,7 +128,7 @@ OpSecretDelete 0x0043   { path, name, env }         → { ok: true }
 | `MPC_ADDR` | (empty) | ZAP address (host:port); empty = mDNS discovery (dev only) |
 | `MPC_VAULT_ID` | (required) | MPC vault ID for validator keys |
 | `KMS_NODE_ID` | `kms-0` | ZAP node ID |
-| `KMS_ZAP_PORT` | `9652` | ZAP secrets-server listen port (0 = disable) |
+| `KMS_ZAP_PORT` | `9999` | ZAP secrets-server listen port (0 = disable) |
 | `KMS_MASTER_KEY_B64` | — | 32-byte master key (base64) for SecretStore envelope |
 | `KMS_DATA_DIR` | `/data/kms` | ZapDB data directory |
 | `IAM_ENDPOINT` | `https://hanzo.id` | Hanzo IAM for auth |
@@ -143,7 +143,7 @@ StatefulSet (replicas=1) with PVC for ZapDB data. ZapDB Replicator runs in-proce
 
 **Ports:**
 - 8080: HTTP API (health, keys, secrets, auth)
-- 9652: ZAP secrets server (in-cluster binary transport)
+- 9999: ZAP secrets server (in-cluster binary transport)
 
 **Volumes:**
 - `/data/kms`: ZapDB data directory (PVC, 5Gi)

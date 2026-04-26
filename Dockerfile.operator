@@ -11,7 +11,7 @@ WORKDIR /build
 COPY go.mod go.sum ./
 COPY vendor ./vendor
 COPY cmd/kms-operator ./cmd/kms-operator
-COPY pkg/client ./pkg/client
+COPY pkg/zapclient ./pkg/zapclient
 
 RUN CGO_ENABLED=0 go build -mod=vendor \
     -ldflags="-s -w" -o /usr/local/bin/kms-operator ./cmd/kms-operator
