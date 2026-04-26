@@ -239,7 +239,7 @@ func main() {
 	// ZAP secrets server — exposes the SecretStore over luxfi/zap on its own
 	// port so in-cluster callers can fetch with zero REST round-trip.
 	masterKeyB64 := envOr("KMS_MASTER_KEY_B64", "")
-	zapPortStr := envOr("KMS_ZAP_PORT", "9652")
+	zapPortStr := envOr("KMS_ZAP_PORT", "9999")
 	zapPort, _ := strconv.Atoi(zapPortStr)
 	if masterKeyB64 != "" && zapPort > 0 {
 		masterKey, err := base64.StdEncoding.DecodeString(masterKeyB64)
