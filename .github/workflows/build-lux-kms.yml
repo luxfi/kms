@@ -1,4 +1,4 @@
-name: Build Lux KMS
+name: Build KMS
 on:
   push:
     branches: [main, dev, test]

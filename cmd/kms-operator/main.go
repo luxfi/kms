@@ -1,11 +1,11 @@
-// Command kms-operator reconciles KMSSecret CRDs against Lux KMS via ZAP.
+// Command kms-operator reconciles KMSSecret CRDs against KMS via ZAP.
 //
 // In-cluster consumers fetch secrets over the native luxfi/zap binary
 // protocol (port 9999 on the KMS pod) — no HTTP, no auth tokens, no REST
 // round-trips. Reconcile loop:
 //
 //  1. List KMSSecret CRDs via dynamic client
-//  2. For each: Dial Lux KMS at spec.hostAPI:9999 with secretsPath as default
+//  2. For each: Dial KMS at spec.hostAPI:9999 with secretsPath as default
 //  3. List then Get every secret in the scope
 //  4. Write/update the K8s Secret named in spec.managedSecretReference
 //

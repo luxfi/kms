@@ -1,4 +1,4 @@
-// Package kms is the canonical Go client for Lux KMS.
+// Package kms is the canonical Go client for KMS.
 //
 // Transport: native luxfi/zap binary protocol on port 9999. There is no
 // HTTP fallback in this package — services that need cross-cluster reach

@@ -1,4 +1,4 @@
-# Lux KMS configuration.
+# KMS configuration.
 #
 # All values can be overridden by env vars or CLI flags.
 # Env vars take precedence over this file; flags take precedence over env vars.

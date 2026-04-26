@@ -1,14 +1,14 @@
-# Lux KMS
+# KMS
 
 MPC-backed key management service for the Lux Network. Manages validator keys, threshold signing, and key rotation using distributed MPC (Multi-Party Computation).
 
-**No Infisical. No PostgreSQL.** Pure Go server backed by [Lux MPC](https://github.com/luxfi/mpc) for threshold cryptography and a JSON file store for metadata.
+**No Infisical. No PostgreSQL.** Pure Go server backed by [MPC](https://github.com/luxfi/mpc) for threshold cryptography and a JSON file store for metadata.
 
 ## Architecture
 
 ```
 ┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-│   Client     │─────▶│   Lux KMS   │─────▶│   Lux MPC   │
+│   Client     │─────▶│   KMS   │─────▶│   MPC   │
 │ (ATS / BD)   │ HTTP │  Go Server  │ HTTP │  CGGMP21 /  │
 │              │      │  :8080      │      │  FROST      │
 └─────────────┘      └──────┬──────┘      └─────────────┘
@@ -52,7 +52,7 @@ KMS runs as a standalone service alongside [Hanzo Base](https://github.com/hanzo
           └────────────────────┼────────────────────┘
                                │
                          ┌─────▼─────┐       ┌───────────┐
-                         │  Lux KMS  │──────▶│  Lux MPC  │
+                         │  KMS  │──────▶│  MPC  │
                          │  :8080    │       │  :8081    │
                          └───────────┘       └───────────┘
 ```

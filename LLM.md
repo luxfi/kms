@@ -1,4 +1,4 @@
-# Lux KMS — AI Assistant Knowledge Base
+# KMS — AI Assistant Knowledge Base
 
 **Last Updated**: 2026-04-17
 **Project**: Lux Key Management Service (KMS)
@@ -6,14 +6,14 @@
 
 ## Project Overview
 
-Lux KMS is an MPC-backed key management service for the Lux Network. It manages validator keys, threshold signing, secret storage, and key rotation using distributed Multi-Party Computation.
+KMS is an MPC-backed key management service for the Lux Network. It manages validator keys, threshold signing, secret storage, and key rotation using distributed Multi-Party Computation.
 
 **No Infisical. No PostgreSQL. No Node.js.** The active server is a pure Go binary in `cmd/kms/` backed by `luxfi/mpc` for threshold cryptography and `luxfi/zapdb` for storage.
 
 ## Architecture
 
 ```
-Client (ATS/BD/TA) → Lux KMS (Go, :8080) → Lux MPC (CGGMP21/FROST, via ZAP)
+Client (ATS/BD/TA) → KMS (Go, :8080) → MPC (CGGMP21/FROST, via ZAP)
                                │
                           ZapDB (embedded)
                                │
@@ -40,7 +40,7 @@ s3://lux-kms-backups/kms/{node-id}/
   └── inc/{version}.zap.age        # 1s incremental backups
 ```
 
-### Signing: Lux MPC (not standalone crypto)
+### Signing: MPC (not standalone crypto)
 
 All key operations delegate to the MPC service at `~/work/lux/mpc/`. KMS never holds private key material — it holds metadata (validator IDs, wallet IDs, public keys, policy) and delegates all cryptographic operations to MPC.
 

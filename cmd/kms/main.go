@@ -1,4 +1,4 @@
-// Command kms starts the Lux KMS server backed by ZapDB + MPC.
+// Command kms starts the KMS server backed by ZapDB + MPC.
 //
 // Configuration precedence: flags > env vars > defaults.
 //

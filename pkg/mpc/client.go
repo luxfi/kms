@@ -1,4 +1,4 @@
-// Package mpc provides an HTTP client for the Lux MPC daemon API.
+// Package mpc provides an HTTP client for the MPC daemon API.
 package mpc
 
 import (

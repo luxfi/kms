@@ -1,4 +1,4 @@
-name: Build Lux KMS Server (self-contained)
+name: Build KMS Server (self-contained)
 
 # Self-contained workflow — does NOT call hanzoai/.github reusable workflow.
 # Runs directly on the amd64 ARC pool to bypass the cross-org `secrets:

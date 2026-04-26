@@ -1,6 +1,6 @@
 // Package zapclient is the native ZAP-transport counterpart to pkg/zapserver.
 //
-// Services wanting to fetch secrets from Lux KMS without a REST round-trip
+// Services wanting to fetch secrets from KMS without a REST round-trip
 // spin up a short-lived ZAP Node (mDNS-discovered or direct-addressed) and
 // call the four opcodes defined in zapserver:
 //

@@ -156,7 +156,7 @@ Q-Chain validators require `HybridProofOfPossession` binding both BLS and RT key
 ### New Fields on MpcSpec
 
 ```rust
-/// Lux MPC configuration
+/// MPC configuration
 pub struct MpcSpec {
     // ... existing fields ...
 
