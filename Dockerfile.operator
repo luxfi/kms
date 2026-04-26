@@ -1,0 +1,23 @@
+# luxfi/kms-operator — minimal KMSSecret reconciler.
+# Single static Go binary, no CGO, distroless runtime.
+
+FROM golang:1.26-bookworm AS builder
+ENV GOTOOLCHAIN=auto
+ARG GITHUB_TOKEN
+RUN git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+ENV GOPRIVATE=github.com/luxfi/*,github.com/hanzoai/*
+
+WORKDIR /build
+COPY go.mod go.sum ./
+COPY vendor ./vendor
+COPY cmd/kms-operator ./cmd/kms-operator
+COPY pkg/client ./pkg/client
+
+RUN CGO_ENABLED=0 go build -mod=vendor \
+    -ldflags="-s -w" -o /usr/local/bin/kms-operator ./cmd/kms-operator
+
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=builder /usr/local/bin/kms-operator /usr/local/bin/kms-operator
+USER nonroot:nonroot
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/kms-operator"]
