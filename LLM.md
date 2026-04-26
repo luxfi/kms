@@ -75,13 +75,41 @@ The `pkg/store/crypto.go` implements envelope encryption:
 
 | Path | Language | Purpose |
 |------|----------|---------|
+| `kms.go` | Go | **Canonical client API** — `kms.{Get,GetSecrets,LoadEnv}` |
 | `cmd/kms/` | Go | Server entrypoint |
 | `pkg/keys/` | Go | Key lifecycle (generate, sign, rotate) — delegates to MPC |
 | `pkg/mpc/` | Go | MPC client (ZAP + HTTP transports to luxfi/mpc daemon) |
 | `pkg/store/` | Go | ZapDB-backed metadata + secret store |
-| `pkg/zapclient/` | Go | ZAP client for in-cluster secret fetching |
+| `pkg/zapclient/` | Go | Low-level ZAP client (used by root `kms` package) |
 | `pkg/zapserver/` | Go | ZAP server exposing SecretStore over luxfi/zap |
 | `k8s/` | YAML | K8s manifests (StatefulSet + Service) |
+
+## Canonical client usage
+
+```go
+import "github.com/luxfi/kms"
+
+// One line at process start — populates os.Setenv with every secret.
+func main() {
+    kms.LoadEnv()
+    db := os.Getenv("DATABASE_URL")
+    run(db)
+}
+
+// Programmatic fetch:
+v, err   := kms.Get(ctx, "DATABASE_URL")
+all, err := kms.GetSecrets(ctx)
+```
+
+**Defaults** (override via env vars):
+
+| Var | Default | Purpose |
+|-----|---------|---------|
+| `KMS_ADDR` | `kms.lux-kms-go.svc.cluster.local:9999` | KMS host:port |
+| `KMS_PATH` | `/` | secret path prefix |
+| `KMS_ENV` | `default` | secret environment slug |
+
+Transport is always native ZAP — there is no HTTP fallback in the Go client.
 
 ### Legacy code (not used by Go server)
 
