@@ -243,15 +243,19 @@ func (c *Client) call(ctx context.Context, op uint16, body []byte) ([]byte, erro
 		return nil, fmt.Errorf("zapclient: call: %w", err)
 	}
 	// Response body: the zapserver builds it via Builder.WriteBytes({status || json}).
-	// Access via Root().Bytes(0) to get the actual payload (not the framing).
+	// Try Root().Bytes(0) first (when the server wraps in an Object). Fall back
+	// to msg.Bytes()[HeaderSize:] which strips the 16-byte ZAP frame header.
 	root := resp.Root()
 	raw := root.Bytes(0)
 	if len(raw) < 1 {
-		// Fallback: try raw message bytes (older server versions).
-		raw = resp.Bytes()
-		if len(raw) < 1 {
+		b := resp.Bytes()
+		if len(b) <= zap.HeaderSize {
 			return nil, io.ErrUnexpectedEOF
 		}
+		raw = b[zap.HeaderSize:]
+	}
+	if len(raw) < 1 {
+		return nil, io.ErrUnexpectedEOF
 	}
 	status, payload := raw[0], raw[1:]
 	switch status {

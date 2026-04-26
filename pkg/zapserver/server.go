@@ -100,7 +100,12 @@ func (s *Server) Register(n *zap.Node) {
 	n.Handle(0, func(ctx context.Context, from string, msg *zap.Message) (*zap.Message, error) {
 		raw := msg.Root().Bytes(0)
 		if raw == nil {
-			raw = msg.Bytes()
+			// Fallback: caller wrote raw bytes via Builder.WriteBytes without
+			// an enclosing Object — strip the 16-byte ZAP frame header.
+			b := msg.Bytes()
+			if len(b) > zap.HeaderSize {
+				raw = b[zap.HeaderSize:]
+			}
 		}
 		if len(raw) < 2 {
 			return respond(statusError, errJSON("empty payload")), nil
@@ -130,8 +135,13 @@ func (s *Server) wrap(h handlerFn) zap.Handler {
 		// Access body via Root Object. Builder writes the payload at field 0.
 		raw := msg.Root().Bytes(0)
 		if raw == nil {
-			// Fallback: raw frame bytes (for callers that don't use structured objects).
-			raw = msg.Bytes()
+			// Fallback: raw frame bytes (for callers that don't use structured
+			// objects) — strip the 16-byte ZAP header so payload begins with the
+			// opcode prefix.
+			b := msg.Bytes()
+			if len(b) > zap.HeaderSize {
+				raw = b[zap.HeaderSize:]
+			}
 		}
 		// Opcode was already matched by Node — but we carry it in for tracing.
 		if len(raw) < 2 {
