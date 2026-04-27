@@ -1,6 +1,6 @@
 # KMS — AI Assistant Knowledge Base
 
-**Last Updated**: 2026-04-17
+**Last Updated**: 2026-04-26
 **Project**: Lux Key Management Service (KMS)
 **Organization**: Lux Network
 
@@ -78,6 +78,7 @@ The `pkg/store/crypto.go` implements envelope encryption:
 | `kms.go` | Go | **Canonical client API** — `kms.{Get,GetSecrets,LoadEnv}` |
 | `cmd/kms/` | Go | Server entrypoint |
 | `pkg/keys/` | Go | Key lifecycle (generate, sign, rotate) — delegates to MPC |
+| `pkg/attestation/` | Go | Composite confidential-attestation gate for epoch-key release (mirrors luxcpp/crypto/attestation C ABI) |
 | `pkg/mpc/` | Go | MPC client (ZAP + HTTP transports to luxfi/mpc daemon) |
 | `pkg/store/` | Go | ZapDB-backed metadata + secret store |
 | `pkg/zapclient/` | Go | Low-level ZAP client (used by root `kms` package) |
