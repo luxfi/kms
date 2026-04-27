@@ -10,9 +10,16 @@
 //	0x0042  OpSecretList  { path, env }                → { names: []string }
 //	0x0043  OpSecretDelete{ path, name, env }          → { ok: true }           (admin only)
 //
-// Auth: the caller identity is enforced by the ZAP transport layer (mTLS +
-// X-Wing in the PQ-upgrade path — see upstream luxfi/zap). Admin ops require
-// the Principal to carry `role=admin` claim.
+// Auth: the caller identity is the peer NodeID established by the ZAP
+// transport handshake (PQ-TLS in production — see upstream luxfi/zap).
+// Authorization is enforced by an ACL: each NodeID is bound to a role
+// (read | admin) at a path prefix. Read permits Get + List; admin
+// permits all four opcodes. The path prefix is segment-aligned to mirror
+// the HTTP-side `canActOnOrg` contract from cmd/kmsd/main.go.
+//
+// When no ACL is configured the server runs in open mode and emits a
+// startup warning. Once `KMS_ZAP_ACL` is set the server is fail-closed:
+// any request from an unknown NodeID receives 0x03 forbidden.
 package zapserver
 
 import (
@@ -48,6 +55,7 @@ const (
 type Server struct {
 	store     *store.SecretStore
 	masterKey []byte
+	acl       *ACL
 	log       log.Logger
 }
 
@@ -55,6 +63,13 @@ type Server struct {
 type Config struct {
 	Store     *store.SecretStore
 	MasterKey []byte
+	// ACL gates every secret opcode by peer NodeID + path + role. nil
+	// means open mode — the server permits every request and emits a
+	// one-line warning at boot. Mirror the HTTP-side `canActOnOrg`
+	// contract from cmd/kmsd/main.go: a request is permitted iff the
+	// principal's role allows the opcode AND the requested path begins
+	// with one of the principal's allowed path prefixes.
+	ACL *ACL
 	// Logger is the luxfi/log Logger. nil falls back to the package
 	// root logger (log.Root()).
 	Logger log.Logger
@@ -69,11 +84,18 @@ func New(cfg Config) *Server {
 	if cfg.Logger == nil {
 		cfg.Logger = log.Root()
 	}
-	return &Server{
+	s := &Server{
 		store:     cfg.Store,
 		masterKey: cfg.MasterKey,
+		acl:       cfg.ACL,
 		log:       cfg.Logger,
 	}
+	if cfg.ACL == nil {
+		s.log.Warn("kms.zap acl=open — every peer permitted (set KMS_ZAP_ACL to enable)")
+	} else {
+		s.log.Info("kms.zap acl=enforced")
+	}
+	return s
 }
 
 // Register attaches the Server's handlers to the ZAP Node.
@@ -177,6 +199,34 @@ func errJSON(msg string) []byte {
 
 // ---- handlers ----
 
+// authz runs the ACL check for an opcode and returns true if the request
+// is permitted. On a deny it logs an audit row at INFO and the caller
+// should respond with statusForbid. The audit row mirrors the HTTP
+// authorize() pattern in cmd/kmsd/main.go: structured key/value with
+// the opcode, NodeID, decision, and the requested path/name.
+func (s *Server) authz(from, path, name, env string, op uint16) bool {
+	if err := s.acl.Decide(from, path, op); err != nil {
+		s.log.Info("kms.zap authz",
+			"decision", "forbid",
+			"op", opName(op),
+			"from", from,
+			"path", path,
+			"name", name,
+			"env", env,
+		)
+		return false
+	}
+	s.log.Info("kms.zap authz",
+		"decision", "ok",
+		"op", opName(op),
+		"from", from,
+		"path", path,
+		"name", name,
+		"env", env,
+	)
+	return true
+}
+
 type getReq struct {
 	Path string `json:"path"`
 	Name string `json:"name"`
@@ -191,6 +241,9 @@ func (s *Server) handleGet(_ context.Context, from string, payload []byte) (byte
 	var req getReq
 	if err := json.Unmarshal(payload, &req); err != nil {
 		return statusError, errJSON(err.Error()), nil
+	}
+	if !s.authz(from, req.Path, req.Name, req.Env, OpSecretGet) {
+		return statusForbid, errJSON("forbidden"), nil
 	}
 	sec, err := s.store.Get(req.Path, req.Name, req.Env)
 	if errors.Is(err, store.ErrSecretNotFound) {
@@ -217,10 +270,12 @@ type putReq struct {
 }
 
 func (s *Server) handlePut(_ context.Context, from string, payload []byte) (byte, []byte, error) {
-	// TODO(auth): require admin role from the ZAP principal.
 	var req putReq
 	if err := json.Unmarshal(payload, &req); err != nil {
 		return statusError, errJSON(err.Error()), nil
+	}
+	if !s.authz(from, req.Path, req.Name, req.Env, OpSecretPut) {
+		return statusForbid, errJSON("forbidden"), nil
 	}
 	pt, err := base64.StdEncoding.DecodeString(req.Value)
 	if err != nil {
@@ -248,10 +303,13 @@ type listResp struct {
 	Names []string `json:"names"`
 }
 
-func (s *Server) handleList(_ context.Context, _ string, payload []byte) (byte, []byte, error) {
+func (s *Server) handleList(_ context.Context, from string, payload []byte) (byte, []byte, error) {
 	var req listReq
 	if err := json.Unmarshal(payload, &req); err != nil {
 		return statusError, errJSON(err.Error()), nil
+	}
+	if !s.authz(from, req.Path, "", req.Env, OpSecretList) {
+		return statusForbid, errJSON("forbidden"), nil
 	}
 	secs, err := s.store.List(req.Path, req.Env)
 	if err != nil {
@@ -272,10 +330,12 @@ type delReq struct {
 }
 
 func (s *Server) handleDelete(_ context.Context, from string, payload []byte) (byte, []byte, error) {
-	// TODO(auth): require admin role from the ZAP principal.
 	var req delReq
 	if err := json.Unmarshal(payload, &req); err != nil {
 		return statusError, errJSON(err.Error()), nil
+	}
+	if !s.authz(from, req.Path, req.Name, req.Env, OpSecretDelete) {
+		return statusForbid, errJSON("forbidden"), nil
 	}
 	if err := s.store.Delete(req.Path, req.Name, req.Env); err != nil {
 		if errors.Is(err, store.ErrSecretNotFound) {

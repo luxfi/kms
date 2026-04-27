@@ -11,6 +11,9 @@
 //	  KMS_DATA_DIR       - ZapDB data directory (default "/data/kms")
 //	  KMS_LISTEN         - HTTP listen address (default ":8080")
 //	  IAM_ENDPOINT       - Hanzo IAM endpoint for auth (default "https://hanzo.id")
+//	  KMS_ZAP_ACL        - path to ZAP ACL file (CSV: nodeId,pathPrefix,role).
+//	                       Empty = open mode (legacy). Set to enforce
+//	                       principal-role authn on Op Secret*.
 //
 //	S3 replication (ZapDB Replicator):
 //	  REPLICATE_S3_ENDPOINT  - S3 endpoint (empty = replication disabled)
@@ -254,9 +257,16 @@ func main() {
 			if err := n.Start(); err != nil {
 				log.Printf("kms: ZAP secrets-server failed to start on :%d: %v", zapPort, err)
 			} else {
+				acl, aclErr := zapserver.LoadACLFromEnv()
+				if aclErr != nil {
+					// Refuse to boot with a bad ACL — silent open mode
+					// after a misconfigured ACL would be a regression.
+					log.Fatalf("kms: KMS_ZAP_ACL load failed: %v", aclErr)
+				}
 				zs := zapserver.New(zapserver.Config{
 					Store:     secStore,
 					MasterKey: masterKey,
+					ACL:       acl,
 					Logger:    luxlog.New("component", "kms-zapserver"),
 				})
 				zs.Register(n)
