@@ -13,7 +13,7 @@
 #   KMS_NODE_ID         - ZAP node ID (default "kms-0")
 #
 # Secrets server (ZAP transport):
-#   KMS_ZAP_PORT        - ZAP listen port (default 9652, 0 = disable)
+#   KMS_ZAP_PORT        - ZAP listen port (default 9999, 0 = disable)
 #   KMS_MASTER_KEY_B64  - 32-byte master key (base64) for envelope encryption
 #
 # ZapDB at-rest encryption:

@@ -84,10 +84,17 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// Health.
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+	// Health probes — wired in every shape callers might try:
+	//   /healthz / /health               — root, for direct/standalone probes
+	//   /v1/kms/healthz / /v1/kms/health — gateway-routed, no prefix strip
+	// All return the same shape so probes are interchangeable.
+	healthOK := func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "service": "kms"})
-	})
+	}
+	mux.HandleFunc("GET /healthz", healthOK)
+	mux.HandleFunc("GET /health", healthOK)
+	mux.HandleFunc("GET /v1/kms/healthz", healthOK)
+	mux.HandleFunc("GET /v1/kms/health", healthOK)
 
 	// Machine identity auth via IAM.
 	mux.HandleFunc("POST /v1/kms/auth/login", func(w http.ResponseWriter, r *http.Request) {
