@@ -28,7 +28,7 @@ KMS uses `luxfi/zapdb` as its embedded storage engine. ZapDB is a Badger-derived
 
 **Why ZapDB over Base/SQLite:**
 - Built-in `Replicator` with incremental + snapshot backup to S3 (no sidecar, no plugin)
-- Age encryption (X25519, PQ-upgrade via X-Wing/ML-KEM-768) on all replicated data
+- Age encryption on all replicated data; the active envelope is AES-256-GCM with X25519 key wrapping. X-Wing / ML-KEM-768 hybrid wrapping is roadmap, not in production.
 - No WAL locking issues with single-writer — ZapDB handles concurrency natively
 - Redis-compatible bindings available (`zapdb/bindings/`) for cache interop
 - Eliminates the `hanzoai/base` dependency and its SQLite/Postgres abstraction layer
