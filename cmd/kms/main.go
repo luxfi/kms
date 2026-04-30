@@ -456,21 +456,46 @@ func registerKMSRoutes(mux *http.ServeMux, mgr *keys.Manager, mpcBackend keys.MP
 }
 
 // startReplicator initializes ZapDB S3 replication if configured.
+//
+// REPLICATE_S3_ENDPOINT is normalized to bare host:port — minio.New
+// rejects fully-qualified URLs ("Endpoint url cannot have fully
+// qualified paths") and silently disables replication when an operator
+// passes a scheme- or path-bearing value. We parse defensively and
+// drop both the scheme and any path component, logging a warning so
+// the misconfiguration is visible.
 func startReplicator(db *badger.DB, nodeID string) *badger.Replicator {
-	endpoint := os.Getenv("REPLICATE_S3_ENDPOINT")
-	if endpoint == "" {
+	rawEndpoint := os.Getenv("REPLICATE_S3_ENDPOINT")
+	if rawEndpoint == "" {
 		log.Printf("kms: S3 replication disabled (set REPLICATE_S3_ENDPOINT to enable)")
 		return nil
 	}
+
+	endpoint, useSSL := normalizeS3Endpoint(rawEndpoint)
+
+	// Backwards-compatible env reads: AWS SDK names take precedence,
+	// REPLICATE_S3_* legacy names are honoured, and the historical
+	// REPLICATE_S3_ACCESS_KEY / _SECRET_KEY shorthand still wins as a
+	// last resort. Operators should pick one — we accept all three so
+	// a stale chart cannot silently zero-out credentials.
+	access := firstNonEmpty(
+		os.Getenv("REPLICATE_S3_ACCESS_KEY_ID"),
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("REPLICATE_S3_ACCESS_KEY"),
+	)
+	secret := firstNonEmpty(
+		os.Getenv("REPLICATE_S3_SECRET_ACCESS_KEY"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		os.Getenv("REPLICATE_S3_SECRET_KEY"),
+	)
 
 	cfg := badger.ReplicatorConfig{
 		Endpoint:  endpoint,
 		Bucket:    envOr("REPLICATE_S3_BUCKET", "lux-kms-backups"),
 		Region:    envOr("REPLICATE_S3_REGION", "us-central1"),
-		AccessKey: os.Getenv("REPLICATE_S3_ACCESS_KEY"),
-		SecretKey: os.Getenv("REPLICATE_S3_SECRET_KEY"),
-		UseSSL:    !strings.HasPrefix(endpoint, "http://"),
-		Path:      envOr("REPLICATE_PATH", fmt.Sprintf("kms/%s", nodeID)),
+		AccessKey: access,
+		SecretKey: secret,
+		UseSSL:    useSSL,
+		Path:      envOr("REPLICATE_S3_PATH", envOr("REPLICATE_PATH", fmt.Sprintf("kms/%s", nodeID))),
 		Interval:  time.Second,
 	}
 
@@ -519,6 +544,49 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// firstNonEmpty returns the first argument with non-zero length, or "" if
+// all are empty. Used to fall back across the AWS / REPLICATE_S3 env-name
+// variants without picking a default that could silently mask a typo.
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+// normalizeS3Endpoint strips scheme + path from a REPLICATE_S3_ENDPOINT
+// value so minio.New receives the bare host:port it expects. Returns
+// (host[:port], useSSL) where useSSL is true unless the operator
+// explicitly specified an http:// scheme. A non-empty path is logged as
+// a warning so the misconfiguration is visible — minio rejects path-
+// bearing endpoints with "Endpoint url cannot have fully qualified
+// paths." and the historical behaviour was to silently disable
+// replication.
+func normalizeS3Endpoint(raw string) (host string, useSSL bool) {
+	useSSL = !strings.HasPrefix(raw, "http://")
+
+	// strings.HasPrefix above already covers "http://"; treat the bare
+	// "https://" case explicitly so the parse path stays simple.
+	if strings.Contains(raw, "://") {
+		u, err := url.Parse(raw)
+		if err != nil || u.Host == "" {
+			log.Printf("kms: REPLICATE_S3_ENDPOINT %q failed to parse — using as-is, replication may fail", raw)
+			return raw, useSSL
+		}
+		if u.Path != "" && u.Path != "/" {
+			log.Printf("kms: REPLICATE_S3_ENDPOINT %q has a path component (%q) — stripping; put the bucket in REPLICATE_S3_BUCKET", raw, u.Path)
+		}
+		if u.RawQuery != "" {
+			log.Printf("kms: REPLICATE_S3_ENDPOINT %q has a query string — stripping", raw)
+		}
+		return u.Host, useSSL
+	}
+	// Already bare host:port. Trim a trailing "/" if any operator added one.
+	return strings.TrimRight(raw, "/"), useSSL
 }
 
 // zapdbLogger adapts slog to ZapDB's Logger interface.
