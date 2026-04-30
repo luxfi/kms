@@ -1,2 +1,2 @@
-// PostHog analytics removed. This module is a noop stub.
+// Insights analytics removed. This module is a noop stub.
 export const initPostHog = () => undefined;
