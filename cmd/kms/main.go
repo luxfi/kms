@@ -111,7 +111,10 @@ func main() {
 			"client_id":     {req.ClientID},
 			"client_secret": {req.ClientSecret},
 		}
-		resp, err := http.PostForm(iamEndpoint+"/api/login/oauth/access_token", form)
+		// Canonical OAuth2 path on hanzoai/iam — no `/api/` prefix (killed in
+		// v2.381.0). `/login/oauth/access_token` is mounted at root per the
+		// OAuth2 spec; `/oauth/access_token` is also wired as an alias.
+		resp, err := http.PostForm(iamEndpoint+"/login/oauth/access_token", form)
 		if err != nil {
 			writeJSON(w, http.StatusBadGateway, map[string]any{"statusCode": 502, "message": "identity provider unreachable"})
 			return
