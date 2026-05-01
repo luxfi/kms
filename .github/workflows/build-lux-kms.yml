@@ -1,14 +1,73 @@
 name: Build KMS
+
+# Self-contained — calling hanzoai/.github/.github/workflows/docker-build.yml@main
+# via `secrets: inherit` triggers a cross-org startup_failure (organization
+# secrets aren't inherited across orgs even with `inherit`). Same pattern
+# already used by build-server-self.yml.
+
 on:
   push:
-    branches: [main, dev, test]
+    branches: [main]
     tags: ['v*']
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
-  docker:
-    uses: hanzoai/.github/.github/workflows/docker-build.yml@main
-    with:
-      image: ghcr.io/luxfi/kms
-      platforms: linux/amd64
-    secrets: inherit
+  build:
+    runs-on: hanzo-build-linux-amd64
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute tags
+        id: meta
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            {
+              echo "tags<<EOF"
+              echo "ghcr.io/luxfi/kms:v${VERSION}"
+              echo "ghcr.io/luxfi/kms:${VERSION}"
+              echo "ghcr.io/luxfi/kms:sha-${GITHUB_SHA:0:7}"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "tags<<EOF"
+              echo "ghcr.io/luxfi/kms:sha-${GITHUB_SHA:0:7}"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push (linux/amd64, with embedded SPA)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          build-args: |
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        run: |
+          echo "### Build complete" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo '${{ steps.meta.outputs.tags }}' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
