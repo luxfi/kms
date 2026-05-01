@@ -25,6 +25,13 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 
+# Embed the React SPA into the Go binary at the embed.FS path (cmd/kms/web).
+# The Makefile `copy-ui` target does this; we replicate it inline so the
+# Dockerfile path is independent of `make`. Without this step, registerWebUI
+# embeds an empty filesystem and `/` returns 404 even though the SPA is
+# bundled at /app/frontend in the runtime layer.
+COPY --from=frontend /src/frontend/dist /build/cmd/kms/web
+
 RUN CGO_ENABLED=1 go build -tags "sqlite_fts5 sqlcipher" \
     -ldflags="-s -w" -o /usr/local/bin/kms ./cmd/kms
 
