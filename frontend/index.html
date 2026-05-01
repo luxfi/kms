@@ -19,6 +19,22 @@
   "
     />
     <title>KMS</title>
+    <script>
+      // White-label by hostname (matches getWhiteLabelBrand convention).
+      // Sets document.title and exposes window.__BRAND__ for the SPA.
+      (function () {
+        var h = (location.hostname || "").toLowerCase();
+        var b = { name: "Hanzo", title: "Hanzo KMS" };
+        if (/(^|\.)(satschel\.com|liquidity\.io)$/.test(h))
+          b = { name: "Liquidity", title: "Liquidity KMS" };
+        else if (/(^|\.)lux\.network$/.test(h))
+          b = { name: "Lux", title: "Lux KMS" };
+        else if (/(^|\.)zoo\.(ngo|network)$/.test(h))
+          b = { name: "Zoo", title: "Zoo KMS" };
+        document.title = b.title;
+        window.__BRAND__ = b;
+      })();
+    </script>
     <script src="/runtime-ui-env.js"></script>
   </head>
   <body>
