@@ -5,9 +5,11 @@
 //	1. GET  /v1/sso/oidc/login?orgSlug=...   →  302 IAM /login/oauth/authorize
 //	   Sets HttpOnly+Secure state cookie (HMAC-signed, 5-min expiry, single-use).
 //	2. GET  /v1/sso/oidc/callback?code&state →  exchange code, set session cookie, 302 /
-//	   Validates state (signature + expiry + cookie match), Origin/Referer.
+//	   Validates state (signature + expiry + cookie match + server-side nonce
+//	   blacklist), Origin/Referer (parsed-Host equality, no prefix extension).
 //	3. GET  /v1/sso/whoami                   →  echo session subject (used by SPA after redirect)
 //	4. POST /v1/sso/logout                   →  clear session cookie, 204
+//	5. POST /v1/kms/credentials              →  mint M2M client (kms-admin role + JWKS-validated session required)
 //
 // State and session cookies are independent: the state cookie is short-lived
 // (5 min) and consumed exactly once on callback; the session cookie holds the
@@ -15,8 +17,16 @@
 //
 // CSRF protection on /callback:
 //   - state parameter is HMAC-signed, expires in 5 min, single-use (matched
-//     against the kms_oidc_state cookie value)
-//   - Referer/Origin (if present) must be from IAM_ENDPOINT host
+//     against the kms_oidc_state cookie value AND a server-side nonce LRU
+//     so a replica fleet can't double-redeem)
+//   - Referer/Origin (if present) must be from IAM_ENDPOINT or this Host —
+//     compared by parsed URL.Host equality, not prefix.
+//
+// Mint authorization (POST /v1/kms/credentials):
+//   - Session JWT validated against IAM JWKS (sig, iss, aud, exp, owner)
+//   - Caller must have `kms-admin` or `superadmin` in `roles` claim
+//   - Per-subject rate limit: 5 mints / hour
+//   - Audited: subject + name + outcome
 package main
 
 import (
@@ -26,13 +36,18 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
+
+	gojose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 )
 
 const (
@@ -46,6 +61,14 @@ const (
 	// sessionTTL matches the IAM access-token lifetime we accept (24h).
 	// IAM enforces its own expiry inside the JWT; this is the cookie cap.
 	sessionTTL = 24 * time.Hour
+
+	// mintRateLimit caps mint-credential requests per subject per window.
+	mintRateLimit  = 5
+	mintRateWindow = time.Hour
+
+	// Roles permitted to mint M2M client credentials.
+	roleKMSAdmin   = "kms-admin"
+	roleSuperadmin = "superadmin"
 )
 
 // oidcConfig captures the static OIDC settings for KMS. The clientID is
@@ -53,10 +76,23 @@ const (
 // in env-only and is supplied via KMS_OIDC_CLIENT_SECRET (KMSSecret CRD).
 type oidcConfig struct {
 	iamEndpoint  string // e.g. https://iam.dev.satschel.com
+	iamHost      string // parsed Host of iamEndpoint (for origin comparisons)
 	clientID     string // e.g. liquidity-kms
 	clientSecret string // KMSSecret-injected
 	stateSecret  []byte // HMAC key for state-nonce signing (>=32 bytes)
+	owner        string // KMS_IAM_OWNER — required JWT `owner` claim value
 	cookieDomain string // optional; empty = host-only cookie (recommended)
+
+	// Server-side single-use nonce blacklist. Replicated boxes share state
+	// only via cookie+HMAC; this LRU prevents intra-replica replay before
+	// the cookie clear lands on the client.
+	nonces *nonceLRU
+
+	// Per-subject mint rate limiter.
+	mintLimiter *rateLimiter
+
+	// JWT validator for session tokens (mint-credential gate).
+	jwtValidator *sessionJWTValidator
 }
 
 // loadOIDCConfig reads the OIDC settings. Returns nil if OIDC is not
@@ -67,6 +103,7 @@ func loadOIDCConfig() *oidcConfig {
 	cid := envOr("KMS_OIDC_CLIENT_ID", "")
 	cs := envOr("KMS_OIDC_CLIENT_SECRET", "")
 	ss := envOr("KMS_STATE_SECRET", "")
+	owner := envOr("KMS_IAM_OWNER", "liquidity")
 	if iam == "" || cid == "" || cs == "" || ss == "" {
 		return nil
 	}
@@ -77,12 +114,30 @@ func loadOIDCConfig() *oidcConfig {
 		log.Printf("kms: KMS_STATE_SECRET must be >= 32 bytes; OIDC disabled")
 		return nil
 	}
+	cookieDomain := envOr("KMS_COOKIE_DOMAIN", "")
+	// Reject leading-dot wildcard cookie domains. Setting Domain=.foo.com
+	// makes the session cookie visible to every subdomain — leakage we don't
+	// want. Operator must use host-only (the empty default) or an exact host.
+	if strings.HasPrefix(cookieDomain, ".") {
+		log.Printf("kms: KMS_COOKIE_DOMAIN=%q starts with '.' (wildcard); OIDC disabled — set host-only or exact host", cookieDomain)
+		return nil
+	}
+	iamURL, err := url.Parse(strings.TrimRight(iam, "/"))
+	if err != nil || iamURL.Host == "" {
+		log.Printf("kms: IAM_ENDPOINT %q failed to parse; OIDC disabled", iam)
+		return nil
+	}
 	return &oidcConfig{
 		iamEndpoint:  strings.TrimRight(iam, "/"),
+		iamHost:      iamURL.Host,
 		clientID:     cid,
 		clientSecret: cs,
 		stateSecret:  []byte(ss),
-		cookieDomain: envOr("KMS_COOKIE_DOMAIN", ""),
+		owner:        owner,
+		cookieDomain: cookieDomain,
+		nonces:       newNonceLRU(10000, stateTTL),
+		mintLimiter:  newRateLimiter(mintRateLimit, mintRateWindow),
+		jwtValidator: newSessionJWTValidator(strings.TrimRight(iam, "/"), cid, owner),
 	}
 }
 
@@ -109,15 +164,16 @@ func (c *oidcConfig) signState(orgSlug string) (string, error) {
 }
 
 // verifyState confirms the state token was issued by us, hasn't expired,
-// and is bound to the given orgSlug. Returns nil on success.
-func (c *oidcConfig) verifyState(token, orgSlug string) error {
+// and is bound to the given orgSlug. Returns the 16-byte nonce on success
+// for caller-side single-use enforcement.
+func (c *oidcConfig) verifyState(token, orgSlug string) ([]byte, error) {
 	raw, err := base64.RawURLEncoding.DecodeString(token)
 	if err != nil {
-		return fmt.Errorf("state: bad encoding")
+		return nil, fmt.Errorf("state: bad encoding")
 	}
 	// 16-byte nonce + 8-byte expiry + 32-byte HMAC = 56 bytes minimum.
 	if len(raw) != 16+8+sha256.Size {
-		return fmt.Errorf("state: bad length")
+		return nil, fmt.Errorf("state: bad length")
 	}
 	nonce := raw[:16]
 	exp := readBE64(raw[16:24])
@@ -128,25 +184,20 @@ func (c *oidcConfig) verifyState(token, orgSlug string) error {
 	mac.Write([]byte(orgSlug))
 	wantMAC := mac.Sum(nil)
 	if !hmac.Equal(gotMAC, wantMAC) {
-		return fmt.Errorf("state: bad signature")
+		return nil, fmt.Errorf("state: bad signature")
 	}
 	if time.Now().Unix() > exp {
-		return fmt.Errorf("state: expired")
+		return nil, fmt.Errorf("state: expired")
 	}
-	return nil
+	return nonce, nil
 }
 
-// callbackURL returns the absolute callback URL the request was served
-// from. Trusting the Host header is acceptable here because IAM verifies
-// redirect_uri against its registered allowlist — a forged Host would
-// produce a redirect_uri IAM rejects.
+// callbackURL returns the absolute callback URL. KMS runs behind
+// hanzoai/ingress with TLS termination; the scheme is always https in
+// production. Hardcoded to avoid X-Forwarded-Proto misconfig regressions
+// silently producing http:// redirect_uri values that IAM rejects.
 func callbackURL(r *http.Request) string {
-	scheme := "https"
-	if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
-		// Local dev only. Production runs behind hanzoai/ingress with TLS.
-		scheme = "http"
-	}
-	return scheme + "://" + r.Host + "/v1/sso/oidc/callback"
+	return "https://" + r.Host + "/v1/sso/oidc/callback"
 }
 
 // registerOIDCRoutes wires the SSO endpoints onto the given mux. If OIDC
@@ -158,10 +209,11 @@ func registerOIDCRoutes(mux *http.ServeMux) {
 		mux.HandleFunc("GET /v1/sso/oidc/callback", oidcUnconfigured)
 		mux.HandleFunc("GET /v1/sso/whoami", oidcUnconfigured)
 		mux.HandleFunc("POST /v1/sso/logout", oidcUnconfigured)
+		mux.HandleFunc("POST /v1/kms/credentials", oidcUnconfigured)
 		log.Printf("kms: OIDC SSO disabled (set IAM_ENDPOINT, KMS_OIDC_CLIENT_ID, KMS_OIDC_CLIENT_SECRET, KMS_STATE_SECRET)")
 		return
 	}
-	log.Printf("kms: OIDC SSO enabled — issuer=%s client_id=%s", cfg.iamEndpoint, cfg.clientID)
+	log.Printf("kms: OIDC SSO enabled — issuer=%s client_id=%s owner=%s", cfg.iamEndpoint, cfg.clientID, cfg.owner)
 	mux.HandleFunc("GET /v1/sso/oidc/login", cfg.handleLogin)
 	mux.HandleFunc("GET /v1/sso/oidc/callback", cfg.handleCallback)
 	mux.HandleFunc("GET /v1/sso/whoami", cfg.handleWhoami)
@@ -212,12 +264,11 @@ func (c *oidcConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 // handleCallback: validate state + Origin/Referer, exchange code, set session.
 func (c *oidcConfig) handleCallback(w http.ResponseWriter, r *http.Request) {
-	// CSRF: if the browser sent Origin or Referer, it must match this host.
-	// Per OAuth2 the IAM redirect is a top-level navigation from iam.*; the
-	// browser sends Referer = iam host (acceptable) OR the request is a
-	// direct GET (no Referer at all). Reject only when Referer/Origin is
-	// present AND points somewhere unrelated — that's the smuggling case.
-	if !originLooksOK(r, c.iamEndpoint, "https://"+r.Host) {
+	// CSRF: if the browser sent Origin or Referer, it must match this host
+	// or IAM. Comparison is parsed-URL.Host equality (case-insensitive),
+	// not prefix — `iam.dev.satschel.com.evil.com` does not match
+	// `iam.dev.satschel.com`.
+	if !originLooksOK(r, c.iamHost, r.Host) {
 		log.Printf("kms: oidc callback rejected — bad origin/referer")
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
@@ -242,11 +293,18 @@ func (c *oidcConfig) handleCallback(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"message": "state mismatch"})
 		return
 	}
-	if err := c.verifyState(state, orgSlug); err != nil {
+	nonce, err := c.verifyState(state, orgSlug)
+	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"message": err.Error()})
 		return
 	}
-	// Single-use: clear the state cookie so it can't be replayed.
+	// Single-use: cookie clear (race-prone across replicas) + server-side
+	// nonce blacklist (authoritative). If the same nonce arrives a second
+	// time on this replica it's rejected here.
+	if !c.nonces.consume(nonce) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"message": "state: already used"})
+		return
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name: stateCookie, Value: "", Path: "/v1/sso/oidc/callback",
 		Domain: c.cookieDomain, MaxAge: -1, HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode,
@@ -263,8 +321,9 @@ func (c *oidcConfig) handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Session cookie = IAM access token. Server-side validation on every
-	// API hit happens at the gateway; KMS treats this cookie as opaque.
+	// Session cookie = IAM access token. We validate it ourselves on the
+	// mint-credential gate; SPA-only routes treat it as an opaque presence
+	// signal.
 	http.SetCookie(w, &http.Cookie{
 		Name:     sessionCookie,
 		Value:    tok,
@@ -293,30 +352,45 @@ func (c *oidcConfig) handleWhoami(w http.ResponseWriter, r *http.Request) {
 
 // handleMintClientCredential creates a new KMS service application
 // (clientId/clientSecret pair) via Casdoor admin API and returns the
-// secret to the caller exactly once. The caller must be authenticated
-// (session cookie) — the IAM admin credentials live in env, never in the
-// browser.
+// secret to the caller exactly once.
 //
-// Frontend wires a "Generate KMS Client Credential" button to this. The
-// returned secret is shown once for clipboard copy and never persisted by
-// KMS — Casdoor stores it. To rotate, generate a new one and revoke the
-// old via Casdoor admin UI.
+// Authz chain (every check fail-closed):
+//  1. session cookie present
+//  2. session JWT verified against IAM JWKS (sig, iss, aud, exp)
+//  3. JWT `owner` claim equals KMS_IAM_OWNER
+//  4. JWT `roles` claim contains kms-admin or superadmin
+//  5. per-subject rate limit (5 / hour)
 //
-// IAM admin auth: Casdoor takes adminId/adminSecret as query params on
-// the admin API. We pull them from KMS_IAM_ADMIN_CLIENT_ID and
-// KMS_IAM_ADMIN_CLIENT_SECRET (KMSSecret-injected).
+// On success the IAM admin credential (env-only) is used to create the
+// app; the generated secret is forwarded to the caller exactly once.
 func (c *oidcConfig) handleMintClientCredential(w http.ResponseWriter, r *http.Request) {
-	// Require an authenticated session — the session cookie holds the
-	// IAM access token granted via the OIDC flow above. We don't decode
-	// it here; presence is enough since the gateway validates upstream.
-	if cookie, err := r.Cookie(sessionCookie); err != nil || cookie.Value == "" {
+	cookie, err := r.Cookie(sessionCookie)
+	if err != nil || cookie.Value == "" {
 		writeJSON(w, http.StatusUnauthorized, map[string]any{"message": "session required"})
+		return
+	}
+
+	claims, err := c.jwtValidator.validate(r.Context(), cookie.Value)
+	if err != nil {
+		log.Printf("kms: audit: mint-credential rejected — jwt: %v", err)
+		writeJSON(w, http.StatusUnauthorized, map[string]any{"message": "invalid session"})
+		return
+	}
+
+	if !hasRole(claims.Roles, roleKMSAdmin) && !hasRole(claims.Roles, roleSuperadmin) {
+		log.Printf("kms: audit: mint-credential subject=%s ok=false reason=role", claims.Subject)
+		writeJSON(w, http.StatusForbidden, map[string]any{"message": "kms-admin role required"})
+		return
+	}
+
+	if !c.mintLimiter.allow(claims.Subject) {
+		log.Printf("kms: audit: mint-credential subject=%s ok=false reason=rate", claims.Subject)
+		writeJSON(w, http.StatusTooManyRequests, map[string]any{"message": "rate limited"})
 		return
 	}
 
 	adminID := envOr("KMS_IAM_ADMIN_CLIENT_ID", "")
 	adminSecret := envOr("KMS_IAM_ADMIN_CLIENT_SECRET", "")
-	owner := envOr("KMS_IAM_OWNER", "liquidity")
 	if adminID == "" || adminSecret == "" {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]any{
 			"message": "IAM admin credentials not configured",
@@ -331,20 +405,35 @@ func (c *oidcConfig) handleMintClientCredential(w http.ResponseWriter, r *http.R
 	_ = json.NewDecoder(r.Body).Decode(&req) // body optional
 	if req.Name == "" {
 		// Default name: kms-client-{8 hex} so duplicates can't collide.
-		nonce := make([]byte, 4)
-		_, _ = rand.Read(nonce)
-		req.Name = fmt.Sprintf("kms-client-%x", nonce)
+		nb := make([]byte, 4)
+		_, _ = rand.Read(nb)
+		req.Name = fmt.Sprintf("kms-client-%x", nb)
 	}
 
-	// Casdoor add-application endpoint; clientId/secret rendered into the
-	// JSON body, owner & app name in the URL. Casdoor returns the
-	// generated clientSecret in the response — capture and forward.
-	body := map[string]any{
-		"owner":        owner,
+	clientID, clientSecret, err := c.callIAMAddApplication(r.Context(), adminID, adminSecret, req.Name, req.Description)
+	if err != nil {
+		log.Printf("kms: audit: mint-credential subject=%s name=%s ok=false reason=iam: %v", claims.Subject, req.Name, err)
+		writeJSON(w, http.StatusBadGateway, map[string]any{"message": err.Error()})
+		return
+	}
+	log.Printf("kms: audit: mint-credential subject=%s name=%s ok=true", claims.Subject, req.Name)
+	writeJSON(w, http.StatusCreated, map[string]any{
 		"name":         req.Name,
-		"displayName":  req.Name,
-		"description":  req.Description,
-		"organization": owner,
+		"clientId":     clientID,
+		"clientSecret": clientSecret,
+	})
+}
+
+// callIAMAddApplication posts the create request to Casdoor and parses
+// the response. Validates HTTP status AND the IAM envelope `status` so a
+// 200-with-error body is treated as the failure it is.
+func (c *oidcConfig) callIAMAddApplication(ctx context.Context, adminID, adminSecret, name, description string) (string, string, error) {
+	body := map[string]any{
+		"owner":        c.owner,
+		"name":         name,
+		"displayName":  name,
+		"description":  description,
+		"organization": c.owner,
 		// Mark as M2M (Casdoor "Service" type) so it doesn't appear in
 		// the user-facing app picker.
 		"clientId":     "", // server-generated
@@ -356,57 +445,56 @@ func (c *oidcConfig) handleMintClientCredential(w http.ResponseWriter, r *http.R
 		"clientSecret": {adminSecret},
 	}
 	adminURL := c.iamEndpoint + "/api/add-application?" + q.Encode()
-	adminReq, err := http.NewRequestWithContext(r.Context(), http.MethodPost, adminURL,
-		strings.NewReader(string(bodyJSON)))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, adminURL, strings.NewReader(string(bodyJSON)))
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"message": err.Error()})
-		return
+		return "", "", err
 	}
-	adminReq.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(adminReq)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		writeJSON(w, http.StatusBadGateway, map[string]any{"message": "iam unreachable"})
-		return
+		return "", "", fmt.Errorf("iam unreachable: %w", err)
 	}
 	defer resp.Body.Close()
 	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
+
+	if resp.StatusCode/100 != 2 {
+		return "", "", fmt.Errorf("iam status=%d", resp.StatusCode)
+	}
+
+	// Casdoor returns the generated app under either `data` or `data2`
+	// depending on version — try both shapes.
 	var iam struct {
-		Status string `json:"status"`
-		Msg    string `json:"msg"`
-		Data   struct {
-			ClientID     string `json:"clientId"`
-			ClientSecret string `json:"clientSecret"`
-		} `json:"data2"`
+		Status string          `json:"status"`
+		Msg    string          `json:"msg"`
+		Data   json.RawMessage `json:"data"`
+		Data2  json.RawMessage `json:"data2"`
 	}
-	if err := json.Unmarshal(respBody, &iam); err != nil || iam.Data.ClientID == "" {
-		// Casdoor sometimes returns the generated app under `data` (not
-		// data2) depending on version — try the other shape before giving up.
-		var alt struct {
-			Status string `json:"status"`
-			Data   struct {
-				ClientID     string `json:"clientId"`
-				ClientSecret string `json:"clientSecret"`
-			} `json:"data"`
+	if err := json.Unmarshal(respBody, &iam); err != nil {
+		return "", "", fmt.Errorf("iam: bad json: %w", err)
+	}
+	if iam.Status != "" && iam.Status != "ok" {
+		return "", "", fmt.Errorf("iam: %s", iam.Msg)
+	}
+
+	type appShape struct {
+		ClientID     string `json:"clientId"`
+		ClientSecret string `json:"clientSecret"`
+	}
+	var app appShape
+	for _, raw := range []json.RawMessage{iam.Data2, iam.Data} {
+		if len(raw) == 0 || string(raw) == "null" {
+			continue
 		}
-		if err := json.Unmarshal(respBody, &alt); err == nil && alt.Data.ClientID != "" {
-			iam.Data = alt.Data
-			iam.Status = alt.Status
+		var a appShape
+		if err := json.Unmarshal(raw, &a); err == nil && a.ClientID != "" {
+			app = a
+			break
 		}
 	}
-	if iam.Data.ClientID == "" || iam.Data.ClientSecret == "" {
-		log.Printf("kms: mint-credential: iam returned no clientId/secret (status=%d)", resp.StatusCode)
-		writeJSON(w, http.StatusBadGateway, map[string]any{
-			"message": "IAM did not return credentials",
-		})
-		return
+	if app.ClientID == "" || app.ClientSecret == "" {
+		return "", "", errors.New("iam returned no credentials")
 	}
-	// Return ONCE. KMS does not store the secret. Operator copies to KMS
-	// or env and revokes via IAM admin if it ever needs to be rotated.
-	writeJSON(w, http.StatusCreated, map[string]any{
-		"name":         req.Name,
-		"clientId":     iam.Data.ClientID,
-		"clientSecret": iam.Data.ClientSecret,
-	})
+	return app.ClientID, app.ClientSecret, nil
 }
 
 // handleLogout clears the session cookie. State cookie is already cleared
@@ -463,22 +551,33 @@ func (c *oidcConfig) exchangeCode(ctx context.Context, code, redirectURI string)
 }
 
 // originLooksOK returns true if the request's Origin/Referer is empty
-// (no header sent — direct nav) or matches one of the allowed prefixes.
-// IAM is allowed because the callback is reached via top-level navigation
-// from iam.* after consent.
-func originLooksOK(r *http.Request, allowed ...string) bool {
+// (no header sent — direct nav) or its parsed Host equals one of the
+// allowed hosts (case-insensitive). Hosts only — no prefix matching — so
+// `iam.dev.satschel.com.evil.com` cannot impersonate `iam.dev.satschel.com`.
+// Schemes other than https are rejected.
+func originLooksOK(r *http.Request, allowedHosts ...string) bool {
 	for _, h := range []string{r.Header.Get("Origin"), r.Header.Get("Referer")} {
 		if h == "" {
 			continue
 		}
-		match := false
-		for _, prefix := range allowed {
-			if prefix != "" && strings.HasPrefix(h, prefix) {
-				match = true
+		u, err := url.Parse(h)
+		if err != nil || u.Host == "" {
+			return false
+		}
+		if u.Scheme != "https" {
+			return false
+		}
+		matched := false
+		for _, host := range allowedHosts {
+			if host == "" {
+				continue
+			}
+			if strings.EqualFold(u.Host, host) {
+				matched = true
 				break
 			}
 		}
-		if !match {
+		if !matched {
 			return false
 		}
 	}
@@ -496,4 +595,276 @@ func readBE64(b []byte) int64 {
 	_ = b[7]
 	return int64(b[0])<<56 | int64(b[1])<<48 | int64(b[2])<<40 | int64(b[3])<<32 |
 		int64(b[4])<<24 | int64(b[5])<<16 | int64(b[6])<<8 | int64(b[7])
+}
+
+// hasRole returns true if any element of roles equals want (case-sensitive,
+// matches Casdoor convention).
+func hasRole(roles []string, want string) bool {
+	for _, r := range roles {
+		if r == want {
+			return true
+		}
+	}
+	return false
+}
+
+// ---------------------------------------------------------------------------
+// JWKS-validated session JWTs.
+// ---------------------------------------------------------------------------
+
+// sessionClaims is the subset of IAM/Casdoor claims we authorize on.
+// `owner` scopes to the org slug; `roles` carries the role list the
+// kms-admin gate consumes.
+type sessionClaims struct {
+	jwt.Claims
+	Owner string   `json:"owner"`
+	Roles []string `json:"roles"`
+}
+
+// sessionJWTValidator verifies session JWTs against the IAM JWKS. TTL
+// cache for keys (5 min); fail-stale on refresh error so brief IAM blips
+// don't break the mint-credential gate.
+type sessionJWTValidator struct {
+	jwksURL  string
+	issuer   string
+	audience string
+	owner    string
+	cache    *jwksCache
+}
+
+func newSessionJWTValidator(iamEndpoint, audience, owner string) *sessionJWTValidator {
+	return &sessionJWTValidator{
+		jwksURL:  iamEndpoint + "/.well-known/jwks",
+		issuer:   iamEndpoint,
+		audience: audience,
+		owner:    owner,
+		cache: &jwksCache{
+			url:    iamEndpoint + "/.well-known/jwks",
+			ttl:    5 * time.Minute,
+			client: &http.Client{Timeout: 10 * time.Second},
+		},
+	}
+}
+
+func (v *sessionJWTValidator) validate(ctx context.Context, raw string) (*sessionClaims, error) {
+	if raw == "" {
+		return nil, errors.New("empty token")
+	}
+	tok, err := jwt.ParseSigned(raw, []gojose.SignatureAlgorithm{
+		gojose.RS256, gojose.RS384, gojose.RS512,
+		gojose.ES256, gojose.ES384, gojose.ES512,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("parse: %w", err)
+	}
+	keys, err := v.cache.get(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("jwks: %w", err)
+	}
+	var claims sessionClaims
+	verified := false
+	var lastErr error
+	for _, k := range keys.Keys {
+		if err := tok.Claims(k.Key, &claims); err == nil {
+			verified = true
+			break
+		} else {
+			lastErr = err
+		}
+	}
+	if !verified {
+		if lastErr == nil {
+			lastErr = errors.New("no key matched")
+		}
+		return nil, fmt.Errorf("verify: %w", lastErr)
+	}
+	exp := jwt.Expected{
+		Time:        time.Now(),
+		Issuer:      v.issuer,
+		AnyAudience: jwt.Audience{v.audience},
+	}
+	if err := claims.Claims.Validate(exp); err != nil {
+		return nil, fmt.Errorf("validate: %w", err)
+	}
+	if claims.Owner != v.owner {
+		return nil, fmt.Errorf("owner: got %q want %q", claims.Owner, v.owner)
+	}
+	return &claims, nil
+}
+
+// jwksCache holds a TTL-bounded copy of IAM's JWKS. fail-stale: if any
+// keys have been fetched and a refresh fails, the stale set is returned.
+type jwksCache struct {
+	mu        sync.RWMutex
+	keys      *gojose.JSONWebKeySet
+	fetchedAt time.Time
+	ttl       time.Duration
+	url       string
+	client    *http.Client
+}
+
+func (c *jwksCache) get(ctx context.Context) (*gojose.JSONWebKeySet, error) {
+	c.mu.RLock()
+	if c.keys != nil && time.Since(c.fetchedAt) < c.ttl {
+		k := c.keys
+		c.mu.RUnlock()
+		return k, nil
+	}
+	c.mu.RUnlock()
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.keys != nil && time.Since(c.fetchedAt) < c.ttl {
+		return c.keys, nil
+	}
+	keys, err := c.fetch(ctx)
+	if err != nil {
+		if c.keys != nil {
+			return c.keys, nil
+		}
+		return nil, err
+	}
+	c.keys = keys
+	c.fetchedAt = time.Now()
+	return keys, nil
+}
+
+func (c *jwksCache) fetch(ctx context.Context) (*gojose.JSONWebKeySet, error) {
+	rctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(rctx, http.MethodGet, c.url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("status %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil, err
+	}
+	var ks gojose.JSONWebKeySet
+	if err := json.Unmarshal(body, &ks); err != nil {
+		return nil, err
+	}
+	return &ks, nil
+}
+
+// ---------------------------------------------------------------------------
+// Server-side single-use nonce blacklist.
+// ---------------------------------------------------------------------------
+
+// nonceLRU is a fixed-size hash set with TTL eviction. Keys = 16-byte
+// state nonces. Provides at-most-once redemption inside the process; with
+// >1 replica behind ingress the request must hit the same replica twice
+// for the LRU to fire — sticky sessions or shared-state would fully close
+// the multi-replica gap, but for KMS (StatefulSet replicas=1 in prod) this
+// is sufficient and zero-dep.
+type nonceLRU struct {
+	mu      sync.Mutex
+	cap     int
+	ttl     time.Duration
+	entries map[[16]byte]time.Time
+}
+
+func newNonceLRU(cap int, ttl time.Duration) *nonceLRU {
+	if cap < 1 {
+		cap = 1
+	}
+	return &nonceLRU{
+		cap:     cap,
+		ttl:     ttl,
+		entries: make(map[[16]byte]time.Time, cap),
+	}
+}
+
+// consume returns true if nonce is unseen (and records it) or false if
+// already used. Expired entries are evicted on access.
+func (l *nonceLRU) consume(nonce []byte) bool {
+	if len(nonce) != 16 {
+		return false
+	}
+	var k [16]byte
+	copy(k[:], nonce)
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	now := time.Now()
+	if t, ok := l.entries[k]; ok {
+		if now.Sub(t) < l.ttl {
+			return false
+		}
+	}
+	// Evict if at capacity (drop expired first; if none, drop oldest).
+	if len(l.entries) >= l.cap {
+		var oldestKey [16]byte
+		var oldestT time.Time
+		first := true
+		for ek, et := range l.entries {
+			if now.Sub(et) >= l.ttl {
+				delete(l.entries, ek)
+				continue
+			}
+			if first || et.Before(oldestT) {
+				oldestKey = ek
+				oldestT = et
+				first = false
+			}
+		}
+		if len(l.entries) >= l.cap && !first {
+			delete(l.entries, oldestKey)
+		}
+	}
+	l.entries[k] = now
+	return true
+}
+
+// ---------------------------------------------------------------------------
+// Per-subject rate limiter (in-memory window count).
+// ---------------------------------------------------------------------------
+
+type rateLimiter struct {
+	mu      sync.Mutex
+	limit   int
+	window  time.Duration
+	buckets map[string][]time.Time
+}
+
+func newRateLimiter(limit int, window time.Duration) *rateLimiter {
+	return &rateLimiter{
+		limit:   limit,
+		window:  window,
+		buckets: make(map[string][]time.Time),
+	}
+}
+
+// allow returns true if the subject is under its window quota and
+// records the hit; false otherwise.
+func (rl *rateLimiter) allow(subject string) bool {
+	if subject == "" {
+		return false
+	}
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	now := time.Now()
+	cutoff := now.Add(-rl.window)
+	hits := rl.buckets[subject]
+	// Drop expired hits.
+	keep := hits[:0]
+	for _, t := range hits {
+		if t.After(cutoff) {
+			keep = append(keep, t)
+		}
+	}
+	if len(keep) >= rl.limit {
+		rl.buckets[subject] = keep
+		return false
+	}
+	rl.buckets[subject] = append(keep, now)
+	return true
 }
