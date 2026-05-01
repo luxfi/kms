@@ -110,6 +110,35 @@ func main() {
 	mux.HandleFunc("GET /v1/kms/healthz", healthOK)
 	mux.HandleFunc("GET /v1/kms/health", healthOK)
 
+	// SPA bootstrap config. The Infisical-derived React frontend in
+	// frontend/src/hooks/api/admin/queries.ts:fetchServerConfig fetches
+	// `/v1/admin/config` at first paint and refuses to render when the
+	// payload is missing — the user sees `["server-config"] data is
+	// undefined`. We don't run the full Infisical admin surface, so
+	// this returns a minimal-but-complete shape: signups via IAM, no
+	// invite-only gating, no SMTP, instance is initialized. Fields the
+	// SPA reads: initialized, allowSignUp, allowedSignUpDomain, etc.
+	mux.HandleFunc("GET /v1/admin/config", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"config": map[string]any{
+				"initialized":         true,
+				"allowSignUp":         true,
+				"allowedSignUpDomain": nil,
+				"trustSamlEmails":     false,
+				"trustLdapEmails":     false,
+				"trustOidcEmails":     true,
+				"defaultAuthOrgId":    "",
+				"isSecretScanningDisabled": false,
+				"isMigrationModeOn":   false,
+				"enabledLoginMethods": []string{"email", "google", "github", "saml", "oidc"},
+				"slackClientId":       "",
+				"isSmtpConfigured":    false,
+				"isSecretApprovalDisabled": false,
+				"identityRevocationEnabled": true,
+			},
+		})
+	})
+
 	// Machine identity auth via IAM.
 	mux.HandleFunc("POST /v1/kms/auth/login", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
