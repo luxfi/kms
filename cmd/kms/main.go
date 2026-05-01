@@ -28,9 +28,11 @@ package main
 
 import (
 	"context"
+	"embed"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log"
 	"log/slog"
 	"net/http"
@@ -51,6 +53,18 @@ import (
 	luxlog "github.com/luxfi/log"
 	"github.com/luxfi/zap"
 )
+
+// One binary, one image. The KMS admin UI ships inside this binary.
+// The `web/` directory at this package root is populated by `make build`
+// (it copies `frontend/dist/` from the repo root before `go build`); the
+// embed picks up the static Vite output and serves it at `/` with a SPA
+// fallback so React Router routes resolve. API routes (`/v1/*`,
+// `/healthz`, `/health`) take precedence and are registered before the
+// catch-all. If `web/` is empty (e.g. fresh clone, no UI build yet), the
+// fallback returns 404 cleanly — the API still works.
+//
+//go:embed all:web
+var frontendDist embed.FS
 
 func main() {
 	mpcAddr := envOr("MPC_ADDR", "")
@@ -286,6 +300,12 @@ func main() {
 	} else {
 		log.Printf("kms: ZAP secrets-server disabled (set KMS_MASTER_KEY_B64 and KMS_ZAP_PORT to enable)")
 	}
+
+	// Mount the embedded admin UI under the root catch-all. Registered last
+	// so explicit handlers (`/healthz`, `/health`, `/v1/*`) win the route
+	// match. SPA fallback: any GET that doesn't match a real file falls
+	// back to index.html so React Router can resolve the path client-side.
+	registerWebUI(mux)
 
 	// Start HTTP server.
 	srv := &http.Server{
@@ -603,4 +623,40 @@ func (zapdbLogger) Infof(format string, args ...interface{}) {
 }
 func (zapdbLogger) Debugf(format string, args ...interface{}) {
 	slog.Debug(fmt.Sprintf(format, args...))
+}
+
+// registerWebUI mounts the embedded Vite SPA at `/` with a SPA fallback.
+// API routes are registered earlier on the same mux and win the route
+// match (Go 1.22 ServeMux specificity rules); this only catches the
+// remainder. If `web/` is empty (not built yet), every fallthrough returns
+// 404 — the API still works, just no UI.
+func registerWebUI(mux *http.ServeMux) {
+	sub, err := fs.Sub(frontendDist, "web")
+	if err != nil {
+		log.Printf("kms: web UI disabled — embed sub: %v", err)
+		return
+	}
+	// If index.html is missing, treat the UI as not-built and return early.
+	// (`make build` populates `web/` from frontend/dist before `go build`.)
+	if _, err := fs.Stat(sub, "index.html"); err != nil {
+		log.Printf("kms: web UI not built — `make build` populates cmd/kms/web from frontend/dist")
+		return
+	}
+	fileSrv := http.FileServer(http.FS(sub))
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		// Trim leading "/" once for fs.Stat.
+		clean := strings.TrimPrefix(r.URL.Path, "/")
+		if clean == "" {
+			clean = "index.html"
+		}
+		if _, err := fs.Stat(sub, clean); err != nil {
+			// Not a real asset — serve index.html so React Router takes over.
+			r2 := r.Clone(r.Context())
+			r2.URL.Path = "/"
+			fileSrv.ServeHTTP(w, r2)
+			return
+		}
+		fileSrv.ServeHTTP(w, r)
+	})
+	log.Printf("kms: web UI mounted at /")
 }
