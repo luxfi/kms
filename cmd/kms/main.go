@@ -118,22 +118,28 @@ func main() {
 	// this returns a minimal-but-complete shape: signups via IAM, no
 	// invite-only gating, no SMTP, instance is initialized. Fields the
 	// SPA reads: initialized, allowSignUp, allowedSignUpDomain, etc.
+	// defaultAuthOrgSlug drives the "Login with Liquid ID" button in the
+	// SPA: when set, the SPA bypasses the org-picker and goes straight to
+	// /v1/sso/oidc/login?orgSlug=<this>. Read from env so the same image
+	// white-labels per-deployment (e.g. "liquidity" on satschel.com).
+	defaultOrgSlug := envOr("KMS_DEFAULT_ORG_SLUG", "")
 	mux.HandleFunc("GET /v1/admin/config", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{
 			"config": map[string]any{
-				"initialized":         true,
-				"allowSignUp":         true,
-				"allowedSignUpDomain": nil,
-				"trustSamlEmails":     false,
-				"trustLdapEmails":     false,
-				"trustOidcEmails":     true,
-				"defaultAuthOrgId":    "",
-				"isSecretScanningDisabled": false,
-				"isMigrationModeOn":   false,
-				"enabledLoginMethods": []string{"email", "google", "github", "saml", "oidc"},
-				"slackClientId":       "",
-				"isSmtpConfigured":    false,
-				"isSecretApprovalDisabled": false,
+				"initialized":               true,
+				"allowSignUp":               true,
+				"allowedSignUpDomain":       nil,
+				"trustSamlEmails":           false,
+				"trustLdapEmails":           false,
+				"trustOidcEmails":           true,
+				"defaultAuthOrgId":          "",
+				"defaultAuthOrgSlug":        defaultOrgSlug,
+				"isSecretScanningDisabled":  false,
+				"isMigrationModeOn":         false,
+				"enabledLoginMethods":       []string{"oidc"},
+				"slackClientId":             "",
+				"isSmtpConfigured":          false,
+				"isSecretApprovalDisabled":  false,
 				"identityRevocationEnabled": true,
 			},
 		})
@@ -329,6 +335,11 @@ func main() {
 	} else {
 		log.Printf("kms: ZAP secrets-server disabled (set KMS_MASTER_KEY_B64 and KMS_ZAP_PORT to enable)")
 	}
+
+	// IAM OIDC SSO — /v1/sso/oidc/{login,callback}, /v1/sso/whoami, /v1/sso/logout.
+	// Registered before the SPA catch-all; if OIDC isn't configured the
+	// handlers return 503 so misconfiguration is observable.
+	registerOIDCRoutes(mux)
 
 	// Mount the embedded admin UI under the root catch-all. Registered last
 	// so explicit handlers (`/healthz`, `/health`, `/v1/*`) win the route
