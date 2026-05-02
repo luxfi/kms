@@ -16,7 +16,7 @@ import (
 
 // ----------------------------------------------------------------------
 // Test fixture: a minimal IAM stub that handles
-// POST /v1/iam/token with grant_type=client_credentials.
+// POST /oauth/token with grant_type=client_credentials.
 // ----------------------------------------------------------------------
 
 type fakeIAM struct {
@@ -30,7 +30,7 @@ func newFakeIAM(t *testing.T) *fakeIAM {
 	t.Helper()
 	f := &fakeIAM{}
 	f.respond = func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/iam/token" {
+		if r.URL.Path != "/oauth/token" {
 			http.Error(w, "not found", http.StatusNotFound)
 			return
 		}

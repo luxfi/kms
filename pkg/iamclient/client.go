@@ -8,19 +8,24 @@
 // (e.g. "liquid-mpc"). Tokens are cached until 60 s before expiry
 // so callers always have a valid bearer to attach.
 //
-// Wire contract (Hanzo IAM):
+// Wire contract (Hanzo IAM, OIDC discovery `token_endpoint`):
 //
-//   POST {KMS_IAM_URL}/v1/iam/token
+//   POST {KMS_IAM_URL}/oauth/token
 //   Content-Type: application/x-www-form-urlencoded
 //   Authorization: Basic base64(client_id:client_secret)
 //
-//   grant_type=client_credentials&audience=<aud>
+//   grant_type=client_credentials&audience=<aud>&scope=zap
 //
 // Response body shape:
 //
 //   { "access_token": "...", "token_type": "Bearer", "expires_in": 3600 }
 //
 // Error responses follow RFC 6749 §5.2: { "error": "...", "error_description": "..." }.
+//
+// Note: Hanzo IAM (Casdoor-derived) does not currently honor the
+// `audience` request parameter — the issued JWT's `aud` claim equals
+// the client_id (e.g. `liquidity-kms`). Upstream MPC pkg/zapauth
+// configures `ZAP_EXPECTED_AUDIENCES` accordingly.
 package iamclient
 
 import (
@@ -53,7 +58,8 @@ type Config struct {
 	// "http://liquid-iam.liquidity.svc.cluster.local:8000". Required.
 	IAMBaseURL string
 	// TokenPath overrides the default token endpoint path. Default
-	// "/v1/iam/token". Reset for testing or alternate IAM forks.
+	// "/oauth/token" (matches Hanzo IAM OIDC discovery
+	// `token_endpoint`). Reset for testing or alternate IAM forks.
 	TokenPath string
 	// ClientID is the IAM application identifier, e.g. "liquid-kms".
 	ClientID string
@@ -107,7 +113,7 @@ func NewClient(cfg Config) (*Client, error) {
 		return nil, err
 	}
 	if cfg.TokenPath == "" {
-		cfg.TokenPath = "/v1/iam/token"
+		cfg.TokenPath = "/oauth/token"
 	}
 	if cfg.HTTPClient == nil {
 		cfg.HTTPClient = &http.Client{Timeout: 10 * time.Second}
