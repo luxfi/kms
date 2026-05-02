@@ -235,6 +235,64 @@ func TestRegisterKMSRoutes_RecoversAfterMPCComesUp(t *testing.T) {
 	}
 }
 
+// When NewZapClient itself fails at boot, no MPC client exists and
+// registerKMSRoutes is never called — the keys/* routes would otherwise
+// fall through to a 404 (not registered) or 405 (POST against an
+// implicit GET-only SPA catch-all). registerStubKMSRoutes exists so
+// callers see a uniform 503 signal across both degraded paths.
+func TestRegisterStubKMSRoutes_All503WithBootError(t *testing.T) {
+	mux := http.NewServeMux()
+	registerStubKMSRoutes(mux, errors.New("dial tcp: i/o timeout"))
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	cases := []struct {
+		method string
+		path   string
+		body   string
+	}{
+		{http.MethodPost, "/v1/kms/keys/generate", `{"validator_id":"x","threshold":2,"parties":3}`},
+		{http.MethodGet, "/v1/kms/keys", ""},
+		{http.MethodGet, "/v1/kms/keys/v-1", ""},
+		{http.MethodPost, "/v1/kms/keys/v-1/sign", `{"key_type":"bls","message":"aGVsbG8="}`},
+		{http.MethodPost, "/v1/kms/keys/v-1/rotate", `{"new_threshold":3}`},
+		{http.MethodGet, "/v1/kms/status", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.method+" "+c.path, func(t *testing.T) {
+			req, err := http.NewRequest(c.method, srv.URL+c.path, strings.NewReader(c.body))
+			if err != nil {
+				t.Fatalf("build req: %v", err)
+			}
+			if c.body != "" {
+				req.Header.Set("Content-Type", "application/json")
+			}
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("do: %v", err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusServiceUnavailable {
+				t.Fatalf("status: got %d want 503", resp.StatusCode)
+			}
+			var body map[string]string
+			if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+				t.Fatalf("decode: %v", err)
+			}
+			if body["error"] != "mpc unreachable" {
+				t.Errorf("error: got %q want mpc unreachable", body["error"])
+			}
+			if body["mode"] != "secrets-only" {
+				t.Errorf("mode: got %q want secrets-only", body["mode"])
+			}
+			if !strings.Contains(body["detail"], "i/o timeout") {
+				t.Errorf("detail: got %q; want underlying boot error", body["detail"])
+			}
+		})
+	}
+}
+
 // healthHandler must report status=ok when secrets-only mode is the
 // intended config (vaultID empty), and degrade to status=degraded when
 // MPC was wired in but is unreachable.

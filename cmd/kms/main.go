@@ -296,11 +296,18 @@ func main() {
 		switch {
 		case err != nil:
 			log.Printf("kms: WARNING: mpc zap client init failed: %v — degrading to secrets-only mode", err)
+			// Even though no client could be built, the key routes must
+			// still respond with a clear 503 — without this, callers see
+			// 405/404 and can't distinguish "MPC down" from "wrong path"
+			// or "wrong method". registerStubKMSRoutes installs handlers
+			// that always 503 with the same body shape as registerKMSRoutes.
+			registerStubKMSRoutes(mux, err)
 		default:
 			keyStore, ksErr := store.New(db)
 			if ksErr != nil {
 				log.Printf("kms: WARNING: mpc key store init failed: %v — degrading to secrets-only mode", ksErr)
 				zapClient.Close()
+				registerStubKMSRoutes(mux, ksErr)
 				break
 			}
 
@@ -400,6 +407,34 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
+}
+
+// registerStubKMSRoutes installs 503-only handlers for every /v1/kms/keys/*
+// route. Used when the boot-time MPC client could not be constructed at
+// all (e.g. dial timed out, ZAP node init failed). Without this, GET
+// /v1/kms/keys/{id} fell through to the SPA catch-all and returned the
+// admin UI HTML; POST returned 405 from the muxer's "no method match"
+// path. Both are useless to callers — they need a single, parseable
+// signal that MPC is down so retry / circuit-break logic kicks in.
+//
+// The body shape matches registerKMSRoutes' requireMPC 503 exactly so
+// callers don't need to branch on "stub vs gated" — they see one
+// `{"error":"mpc unreachable","mode":"secrets-only","detail":"..."}`
+// response across both code paths.
+func registerStubKMSRoutes(mux *http.ServeMux, bootErr error) {
+	stub := func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"error":  "mpc unreachable",
+			"detail": bootErr.Error(),
+			"mode":   "secrets-only",
+		})
+	}
+	mux.HandleFunc("POST /v1/kms/keys/generate", stub)
+	mux.HandleFunc("GET /v1/kms/keys", stub)
+	mux.HandleFunc("GET /v1/kms/keys/{id}", stub)
+	mux.HandleFunc("POST /v1/kms/keys/{id}/sign", stub)
+	mux.HandleFunc("POST /v1/kms/keys/{id}/rotate", stub)
+	mux.HandleFunc("GET /v1/kms/status", stub)
 }
 
 // healthHandler returns the /healthz handler.
