@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/luxfi/zap"
 )
@@ -19,12 +21,42 @@ const (
 	OpWallet  uint16 = 0x0020
 	OpEncrypt uint16 = 0x0030 // encrypt (aes-gcm default, tfhe for threshold reveal)
 	OpDecrypt uint16 = 0x0031 // decrypt (aes-gcm default, tfhe needs t-of-n)
+
+	// OpAuthHello mirrors luxfi/mpc pkg/zapauth.OpAuthHello (LP-103).
+	// Sent once per connection BEFORE any other opcode when the server
+	// runs ZAP_AUTH_REQUIRED=true. Body layout (LE):
+	//   uint8 version=1, uint16 token_len, [token_len]byte token.
+	OpAuthHello uint16 = 0x00EF
 )
+
+// authFrameVersion is the wire version of the auth hello payload.
+const authFrameVersion uint8 = 1
+
+// Authenticator mints a JWT for a given audience. Implementations cache
+// + refresh as needed (see github.com/luxfi/kms/pkg/iamclient.Client).
+type Authenticator interface {
+	Mint(ctx context.Context, audience string) (string, error)
+}
+
+// AuthConfig configures the optional bearer-token gate sent in
+// OpAuthHello immediately after ConnectDirect. Audience is the JWT aud
+// claim the upstream MPC will verify (e.g. "liquid-mpc"). Empty
+// Audience or nil Authenticator disables the gate.
+type AuthConfig struct {
+	Authenticator Authenticator
+	Audience      string
+	// Timeout bounds Mint+AuthHello together. Default 10 seconds.
+	Timeout time.Duration
+}
 
 // ZapClient communicates with the MPC daemon over ZAP.
 type ZapClient struct {
 	node   *zap.Node
 	peerID string
+
+	// auth is non-nil iff the client should attach a bearer JWT to
+	// every fresh connection via OpAuthHello.
+	auth *AuthConfig
 }
 
 // NewZapClient creates a ZAP client for MPC communication.
@@ -35,6 +67,13 @@ type ZapClient struct {
 // require it. Until then, deploy only on trusted networks (K8s pod network
 // with NetworkPolicy restricting traffic to the MPC namespace).
 func NewZapClient(nodeID, mpcAddr string) (*ZapClient, error) {
+	return NewZapClientWith(nodeID, mpcAddr, nil)
+}
+
+// NewZapClientWith builds a ZapClient and, when authCfg is non-nil and
+// configured, sends OpAuthHello right after ConnectDirect. A failure to
+// authenticate returns an error so callers can fail fast at boot.
+func NewZapClientWith(nodeID, mpcAddr string, authCfg *AuthConfig) (*ZapClient, error) {
 	useMDNS := mpcAddr == ""
 	if useMDNS {
 		slog.Warn("mpc: mDNS discovery enabled — this is unsafe outside development; set MPC_ADDR for production")
@@ -47,7 +86,7 @@ func NewZapClient(nodeID, mpcAddr string) (*ZapClient, error) {
 		Logger:      slog.Default(),
 	})
 
-	c := &ZapClient{node: node}
+	c := &ZapClient{node: node, auth: authCfg}
 
 	if !useMDNS {
 		if err := node.ConnectDirect(mpcAddr); err != nil {
@@ -57,9 +96,81 @@ func NewZapClient(nodeID, mpcAddr string) (*ZapClient, error) {
 		if len(peers) > 0 {
 			c.peerID = peers[0]
 		}
+		if c.auth != nil && c.auth.Authenticator != nil && c.auth.Audience != "" {
+			if err := c.authenticate(); err != nil {
+				return nil, fmt.Errorf("mpc: auth handshake: %w", err)
+			}
+		}
 	}
 
 	return c, nil
+}
+
+// authenticate runs the OpAuthHello round-trip against the connected
+// peer. Mints a fresh JWT via the configured Authenticator, frames it,
+// dials, and verifies the {"ok":true} reply. A non-2xx-like error from
+// the server returns an error so the caller can degrade or retry.
+func (c *ZapClient) authenticate() error {
+	timeout := c.auth.Timeout
+	if timeout == 0 {
+		timeout = 10 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	tok, err := c.auth.Authenticator.Mint(ctx, c.auth.Audience)
+	if err != nil {
+		return fmt.Errorf("mint: %w", err)
+	}
+
+	// Frame: opcode(2 LE) || version || tokenLen(2 LE) || token bytes.
+	if len(tok) > 64*1024 {
+		return fmt.Errorf("token too large: %d bytes", len(tok))
+	}
+	body := make([]byte, 2+1+2+len(tok))
+	binary.LittleEndian.PutUint16(body[0:2], OpAuthHello)
+	body[2] = authFrameVersion
+	binary.LittleEndian.PutUint16(body[3:5], uint16(len(tok)))
+	copy(body[5:], tok)
+
+	b := zap.NewBuilder(len(body) + 64)
+	b.WriteBytes(body)
+	msg, err := zap.Parse(b.Finish())
+	if err != nil {
+		return fmt.Errorf("frame: %w", err)
+	}
+
+	resp, err := c.node.Call(ctx, c.peerID, msg)
+	if err != nil {
+		return fmt.Errorf("call: %w", err)
+	}
+	raw := resp.Bytes()
+	if len(raw) < zap.HeaderSize+2 {
+		return fmt.Errorf("response too short: %d bytes", len(raw))
+	}
+	respOp := binary.LittleEndian.Uint16(raw[zap.HeaderSize : zap.HeaderSize+2])
+	if respOp != OpAuthHello {
+		return fmt.Errorf("response opcode mismatch: got 0x%04x want 0x%04x", respOp, OpAuthHello)
+	}
+	if len(raw) <= zap.HeaderSize+2 {
+		return errors.New("empty auth response body")
+	}
+	respBody := raw[zap.HeaderSize+2:]
+	var ack struct {
+		OK    bool   `json:"ok"`
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal(respBody, &ack); err != nil {
+		return fmt.Errorf("decode: %w body=%s", err, string(respBody))
+	}
+	if ack.Error != "" {
+		return fmt.Errorf("verifier rejected: %s", ack.Error)
+	}
+	if !ack.OK {
+		return fmt.Errorf("verifier returned ok=false body=%s", string(respBody))
+	}
+	slog.Info("mpc: zap auth ok", "audience", c.auth.Audience)
+	return nil
 }
 
 func (c *ZapClient) call(ctx context.Context, op uint16, payload any) ([]byte, error) {

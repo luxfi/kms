@@ -53,6 +53,7 @@ import (
 
 	badger "github.com/luxfi/zapdb"
 
+	"github.com/luxfi/kms/pkg/iamclient"
 	"github.com/luxfi/kms/pkg/keys"
 	"github.com/luxfi/kms/pkg/mpc"
 	"github.com/luxfi/kms/pkg/store"
@@ -292,7 +293,39 @@ func main() {
 	// must keep serving. Routes that require MPC return 503 via the
 	// mpcAvailable flag wired into healthOK / registerKMSRoutes.
 	if vaultID != "" {
-		zapClient, err := mpc.NewZapClient(nodeID, mpcAddr)
+		// Optional bearer-token gate (LP-103, KMS v1.9.0). When
+		// KMS_ZAP_AUTH_ENABLED=true and IAM endpoint + client creds
+		// are present, KMS mints a client_credentials JWT and attaches
+		// it via OpAuthHello before the existing X25519+ML-KEM-768
+		// handshake. Backwards compatible with luxfi/mpc < v1.14.0:
+		// servers that don't recognize OpAuthHello return an error
+		// and the client refuses to boot — operators set
+		// KMS_ZAP_AUTH_ENABLED=false on first roll, then flip to true
+		// once MPC is on v1.14.0+.
+		var authCfg *mpc.AuthConfig
+		if envBool("KMS_ZAP_AUTH_ENABLED", false) {
+			iamURL := envOr("KMS_IAM_URL", "")
+			iamClientID := envOr("KMS_IAM_CLIENT_ID", "liquid-kms")
+			iamSecret := envOr("KMS_IAM_CLIENT_SECRET", "")
+			audience := envOr("KMS_ZAP_AUDIENCE", "liquid-mpc")
+			if iamURL == "" || iamSecret == "" {
+				log.Printf("kms: KMS_ZAP_AUTH_ENABLED=true but KMS_IAM_URL or KMS_IAM_CLIENT_SECRET missing — disabling auth")
+			} else {
+				ic, ierr := iamclient.NewClient(iamclient.Config{
+					IAMBaseURL:   iamURL,
+					ClientID:     iamClientID,
+					ClientSecret: iamSecret,
+				})
+				if ierr != nil {
+					log.Printf("kms: WARNING: iamclient init failed: %v — disabling auth", ierr)
+				} else {
+					authCfg = &mpc.AuthConfig{Authenticator: ic, Audience: audience}
+					log.Printf("kms: ZAP auth enabled iamUrl=%s clientId=%s audience=%s",
+						iamURL, iamClientID, audience)
+				}
+			}
+		}
+		zapClient, err := mpc.NewZapClientWith(nodeID, mpcAddr, authCfg)
 		switch {
 		case err != nil:
 			log.Printf("kms: WARNING: mpc zap client init failed: %v — degrading to secrets-only mode", err)
@@ -727,6 +760,20 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func envBool(key string, fallback bool) bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	switch v {
+	case "":
+		return fallback
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return fallback
+	}
 }
 
 // firstNonEmpty returns the first argument with non-zero length, or "" if

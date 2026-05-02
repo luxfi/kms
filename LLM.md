@@ -1,8 +1,28 @@
 # KMS — AI Assistant Knowledge Base
 
-**Last Updated**: 2026-05-01
+**Last Updated**: 2026-05-02
 **Project**: Lux Key Management Service (KMS)
 **Organization**: Lux Network
+
+## v1.9.0 — pkg/iamclient + ZAP bearer-on-handshake (LP-103)
+
+Pairs with luxfi/mpc v1.14.0 pkg/zapauth. KMS mints an OAuth2
+client_credentials JWT against Hanzo IAM, caches per audience with
+60-second early refresh, attaches it via OpAuthHello (0x00EF) BEFORE
+the existing X25519+ML-KEM-768 handshake.
+
+Env vars (all optional; if KMS_ZAP_AUTH_ENABLED unset/false the
+client behaves exactly as v1.8.x):
+
+  KMS_ZAP_AUTH_ENABLED      true|false (default false)
+  KMS_IAM_URL               e.g. http://liquid-iam.liquidity.svc:8000
+  KMS_IAM_CLIENT_ID         default "liquid-kms"
+  KMS_IAM_CLIENT_SECRET     from KMS-projected universal-auth Secret
+  KMS_ZAP_AUDIENCE          default "liquid-mpc"
+
+When enabled, mpc.NewZapClientWith dials, then sends OpAuthHello;
+a non-2xx-shaped {"ok":true} reply fails NewZapClient — operators
+must roll MPC to v1.14.0+ before flipping the flag.
 
 ## Fail-open MPC boot (v1.8.2+)
 
