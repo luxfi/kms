@@ -1,8 +1,23 @@
 # KMS — AI Assistant Knowledge Base
 
-**Last Updated**: 2026-04-26
+**Last Updated**: 2026-05-01
 **Project**: Lux Key Management Service (KMS)
 **Organization**: Lux Network
+
+## Fail-open MPC boot (v1.8.2+)
+
+KMS no longer log.Fatalf's when MPC is unreachable at boot. If
+`MPC_VAULT_ID` is set but the ZAP probe fails, KMS:
+- logs a warning,
+- runs in secrets-only mode (secrets-server, IAM SSO, secret routes
+  fully functional),
+- responds 503 on `/v1/kms/keys/*` with body
+  `{"error":"mpc unreachable","mode":"secrets-only","detail":"..."}`,
+- reports `status=degraded` on `/healthz` (still HTTP 200 — readiness
+  must not flap a working secrets surface out of rotation).
+
+Each request to `/v1/kms/keys/*` re-probes MPC, so the same pod
+recovers transparently when MPC comes back; no restart needed.
 
 ## Project Overview
 

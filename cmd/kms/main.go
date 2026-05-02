@@ -2,6 +2,13 @@
 //
 // Configuration precedence: flags > env vars > defaults.
 //
+// Boot is fail-open: if MPC_VAULT_ID is set but the MPC daemon is
+// unreachable, KMS logs a warning and continues in secrets-only mode.
+// /healthz reports `status=degraded` and any /v1/kms/keys/* request
+// returns 503 with body `{"error":"mpc unreachable","mode":"secrets-only"}`.
+// Each request re-probes MPC, so the same pod recovers transparently
+// once MPC comes back up — no restart required.
+//
 //	Env vars:
 //	  MPC_ADDR           - ZAP address (host:port); empty = mDNS discovery
 //	  MPC_VAULT_ID       - MPC vault ID for validator keys (required for MPC)
@@ -98,13 +105,18 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	// MPC availability flag. Flips to true after a successful ZAP probe at
+	// boot. Read by /healthz to surface degraded mode and by the keys
+	// routes to short-circuit with 503 when MPC is unreachable. The
+	// pointer-to-bool is set once in main and read concurrently — atomic
+	// load isn't necessary because the value never changes after boot.
+	var mpcAvailable bool
+
 	// Health probes — wired in every shape callers might try:
 	//   /healthz / /health               — root, for direct/standalone probes
 	//   /v1/kms/healthz / /v1/kms/health — gateway-routed, no prefix strip
 	// All return the same shape so probes are interchangeable.
-	healthOK := func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "service": "kms"})
-	}
+	healthOK := healthHandler(vaultID, &mpcAvailable)
 	mux.HandleFunc("GET /healthz", healthOK)
 	mux.HandleFunc("GET /health", healthOK)
 	mux.HandleFunc("GET /v1/kms/healthz", healthOK)
@@ -272,29 +284,46 @@ func main() {
 	})
 
 	// MPC key management (only when MPC_VAULT_ID is set).
+	//
+	// Boot is fail-open: every error path here logs a warning and degrades
+	// to secrets-only mode instead of exiting. The previous behaviour
+	// (log.Fatalf on any ZAP init or status failure) meant a transient MPC
+	// outage took down KMS too — the secrets surface is independent and
+	// must keep serving. Routes that require MPC return 503 via the
+	// mpcAvailable flag wired into healthOK / registerKMSRoutes.
 	if vaultID != "" {
 		zapClient, err := mpc.NewZapClient(nodeID, mpcAddr)
-		if err != nil {
-			log.Fatalf("kms: zap client: %v", err)
-		}
+		switch {
+		case err != nil:
+			log.Printf("kms: WARNING: mpc zap client init failed: %v — degrading to secrets-only mode", err)
+		default:
+			keyStore, ksErr := store.New(db)
+			if ksErr != nil {
+				log.Printf("kms: WARNING: mpc key store init failed: %v — degrading to secrets-only mode", ksErr)
+				zapClient.Close()
+				break
+			}
 
-		keyStore, err := store.New(db)
-		if err != nil {
-			log.Fatalf("kms: key store: %v", err)
+			checkCtx, checkCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			status, statusErr := zapClient.Status(checkCtx)
+			checkCancel()
+			if statusErr != nil {
+				log.Printf("kms: WARNING: mpc unreachable via ZAP: %v — degrading to secrets-only mode", statusErr)
+				// Keep the client + key routes wired even though the probe
+				// failed: MPC may come up later in the same pod lifetime
+				// (e.g. NetworkPolicy applied after KMS started). Routes
+				// re-probe on every call; if MPC is up by then they
+				// succeed transparently.
+			} else {
+				log.Printf("kms: mpc ready=%v peers=%d/%d mode=%s",
+					status.Ready, status.ConnectedPeers, status.ExpectedPeers, status.Mode)
+				mpcAvailable = true
+			}
+			mgr := keys.NewManager(zapClient, keyStore, vaultID)
+			registerKMSRoutes(mux, mgr, zapClient, &mpcAvailable)
 		}
-
-		checkCtx, checkCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		if status, err := zapClient.Status(checkCtx); err != nil {
-			log.Printf("kms: WARNING: mpc unreachable via ZAP: %v", err)
-		} else {
-			log.Printf("kms: mpc ready=%v peers=%d/%d mode=%s",
-				status.Ready, status.ConnectedPeers, status.ExpectedPeers, status.Mode)
-		}
-		checkCancel()
-
-		mgr := keys.NewManager(zapClient, keyStore, vaultID)
-		registerKMSRoutes(mux, mgr, zapClient)
-	} else {
+	}
+	if vaultID == "" {
 		log.Printf("kms: MPC_VAULT_ID not set — running in secrets-only mode (no threshold signing)")
 	}
 
@@ -373,13 +402,66 @@ func main() {
 	srv.Shutdown(ctx)
 }
 
-func registerKMSRoutes(mux *http.ServeMux, mgr *keys.Manager, mpcBackend keys.MPCBackend) {
+// healthHandler returns the /healthz handler.
+//
+// Health is intentionally HTTP 200 even when MPC is unreachable: the
+// secrets surface (ZAP secrets-server, /v1/kms/orgs/.../secrets, IAM
+// SSO, /v1/kms/auth/login) is fully functional in secrets-only mode.
+// Routes that require MPC (/v1/kms/keys/*) self-report 503 instead.
+// K8s readiness gating off /healthz would otherwise pull a working
+// secrets-only KMS out of rotation purely because MPC is in upgrade.
+//
+// When MPC is enabled in spec but unreachable, the body switches to
+// `{"status":"degraded","mpc":"unreachable","detail":"..."}` so probes
+// that scrape the body still observe the degraded mode without
+// flapping the pod out of service.
+func healthHandler(vaultID string, mpcAvailable *bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body := map[string]string{"status": "ok", "service": "kms"}
+		if vaultID != "" && (mpcAvailable == nil || !*mpcAvailable) {
+			body["status"] = "degraded"
+			body["mpc"] = "unreachable"
+			body["detail"] = "secrets-only mode; signing routes return 503"
+		}
+		writeJSON(w, http.StatusOK, body)
+	}
+}
+
+func registerKMSRoutes(mux *http.ServeMux, mgr *keys.Manager, mpcBackend keys.MPCBackend, mpcAvailable *bool) {
 	// KMS key routes are unprotected at the HTTP layer — auth is enforced
 	// by the Gateway (JWT validation + X-IAM-Roles header injection).
 	// In-cluster callers (ATS, BD, TA) go through Gateway; direct access
 	// is blocked by K8s NetworkPolicy (only Gateway can reach port 8080).
+	//
+	// requireMPC short-circuits with 503 + a re-probe attempt when the
+	// boot-time MPC handshake failed. The re-probe lets KMS recover
+	// transparently if MPC came up after KMS did (common during rollout
+	// or NetworkPolicy reconcile races); a single 5s status call is
+	// cheap relative to keygen/sign latency.
+	requireMPC := func(w http.ResponseWriter, r *http.Request) bool {
+		if mpcAvailable != nil && *mpcAvailable {
+			return true
+		}
+		probeCtx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+		if _, err := mpcBackend.Status(probeCtx); err != nil {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+				"error":  "mpc unreachable",
+				"detail": err.Error(),
+				"mode":   "secrets-only",
+			})
+			return false
+		}
+		if mpcAvailable != nil {
+			*mpcAvailable = true
+		}
+		return true
+	}
 
 	mux.HandleFunc("POST /v1/kms/keys/generate", func(w http.ResponseWriter, r *http.Request) {
+		if !requireMPC(w, r) {
+			return
+		}
 		var req keys.GenerateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
@@ -436,6 +518,9 @@ func registerKMSRoutes(mux *http.ServeMux, mgr *keys.Manager, mpcBackend keys.MP
 	})
 
 	mux.HandleFunc("POST /v1/kms/keys/{id}/sign", func(w http.ResponseWriter, r *http.Request) {
+		if !requireMPC(w, r) {
+			return
+		}
 		id := r.PathValue("id")
 		var req keys.SignRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -472,6 +557,9 @@ func registerKMSRoutes(mux *http.ServeMux, mgr *keys.Manager, mpcBackend keys.MP
 	})
 
 	mux.HandleFunc("POST /v1/kms/keys/{id}/rotate", func(w http.ResponseWriter, r *http.Request) {
+		if !requireMPC(w, r) {
+			return
+		}
 		id := r.PathValue("id")
 		var req keys.RotateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
