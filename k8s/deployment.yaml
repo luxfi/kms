@@ -50,7 +50,7 @@ spec:
                   name: kms-secrets
                   key: mpc-token
             # ZAP secrets server.
-            - name: KMS_ZAP_PORT
+            - name: ZAP_PORT
               value: "9652"
             - name: KMS_MASTER_KEY_B64
               valueFrom:
