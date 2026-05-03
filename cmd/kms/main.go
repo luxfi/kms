@@ -13,7 +13,7 @@
 //	  MPC_ADDR           - ZAP address (host:port); empty = mDNS discovery
 //	  MPC_VAULT_ID       - MPC vault ID for validator keys (required for MPC)
 //	  KMS_NODE_ID        - ZAP node ID (default "kms-0")
-//	  KMS_ZAP_PORT       - ZAP secrets-server listen port (default 9999, 0 = disable)
+//	  ZAP_PORT           - ZAP secrets-server listen port (default 9999, 0 = disable)
 //	  KMS_MASTER_KEY_B64 - 32-byte master key (base64) for SecretStore envelope
 //	  KMS_DATA_DIR       - ZapDB data directory (default "/data/kms")
 //	  KMS_LISTEN         - HTTP listen address (default ":8080")
@@ -370,7 +370,7 @@ func main() {
 	// ZAP secrets server — exposes the SecretStore over luxfi/zap on its own
 	// port so in-cluster callers can fetch with zero REST round-trip.
 	masterKeyB64 := envOr("KMS_MASTER_KEY_B64", "")
-	zapPortStr := envOr("KMS_ZAP_PORT", "9999")
+	zapPortStr := envOr("ZAP_PORT", "9999")
 	zapPort, _ := strconv.Atoi(zapPortStr)
 	if masterKeyB64 != "" && zapPort > 0 {
 		masterKey, err := base64.StdEncoding.DecodeString(masterKeyB64)
@@ -402,7 +402,7 @@ func main() {
 			}
 		}
 	} else {
-		log.Printf("kms: ZAP secrets-server disabled (set KMS_MASTER_KEY_B64 and KMS_ZAP_PORT to enable)")
+		log.Printf("kms: ZAP secrets-server disabled (set KMS_MASTER_KEY_B64 and ZAP_PORT to enable)")
 	}
 
 	// IAM OIDC SSO — /v1/sso/oidc/{login,callback}, /v1/sso/whoami, /v1/sso/logout.
