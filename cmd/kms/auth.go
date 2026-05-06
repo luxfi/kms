@@ -31,12 +31,49 @@ import (
 )
 
 // orgClaims is the minimal JWT shape we authorize secrets reads/writes
-// against. `owner` scopes to the org slug; `roles` carries the IAM
-// role list (kms-admin override).
+// against. The org binding follows two flavors of IAM JWT:
+//
+//  1. User tokens (Google OAuth, password) — `owner` IS the org slug.
+//     Example: a user signs in to organization=liquidity, the JWT
+//     carries owner="liquidity", name="<username>".
+//  2. Application tokens (client_credentials) — `owner`="admin"
+//     (the parent record), and the application's `name` carries the
+//     org as a prefix per the documented `<org>-<service>` naming
+//     convention. Example: kms-app for liquidity is name="liquidity-kms",
+//     owner="admin", type="application".
+//
+// `roles` carries the IAM role list (kms-admin override).
 type orgClaims struct {
 	jwt.Claims
 	Owner string   `json:"owner"`
+	Name  string   `json:"name"`
+	Type  string   `json:"type"`
+	Tag   string   `json:"tag"`
 	Roles []string `json:"roles"`
+}
+
+// orgs returns the set of org slugs this token is allowed to act for.
+// Empty result = unauthenticated principal.
+//
+// Resolution order, first non-empty wins:
+//   - Tag (operators set this on cross-cutting service apps when they
+//     don't follow the <org>-<service> convention).
+//   - For application tokens: prefix of Name up to the first '-'.
+//   - Owner (the user-token case).
+func (c *orgClaims) orgs() []string {
+	out := []string{}
+	if c.Tag != "" {
+		out = append(out, c.Tag)
+	}
+	if c.Type == "application" && c.Name != "" {
+		if i := strings.Index(c.Name, "-"); i > 0 {
+			out = append(out, c.Name[:i])
+		}
+	}
+	if c.Owner != "" && c.Owner != "admin" && c.Owner != "built-in" {
+		out = append(out, c.Owner)
+	}
+	return out
 }
 
 // orgJWTAuth verifies tokens against the IAM JWKS. Issuer is checked
@@ -101,8 +138,8 @@ func (a *orgJWTAuth) validate(ctx context.Context, raw string) (*orgClaims, erro
 	if err := claims.Claims.Validate(exp); err != nil {
 		return nil, fmt.Errorf("validate: %w", err)
 	}
-	if claims.Owner == "" {
-		return nil, errors.New("missing owner claim")
+	if len(claims.orgs()) == 0 {
+		return nil, errors.New("token has no resolvable org")
 	}
 	return &claims, nil
 }
@@ -145,9 +182,16 @@ func (a *orgJWTAuth) requireOrgJWT(next http.HandlerFunc) http.HandlerFunc {
 			})
 			return
 		}
-		if claims.Owner != org && !hasRole(claims.Roles, "kms-admin") {
+		allowed := false
+		for _, o := range claims.orgs() {
+			if o == org {
+				allowed = true
+				break
+			}
+		}
+		if !allowed && !hasRole(claims.Roles, "kms-admin") {
 			writeJSON(w, http.StatusForbidden, map[string]any{
-				"statusCode": 403, "message": "token owner does not match org",
+				"statusCode": 403, "message": "token does not authorize this org",
 			})
 			return
 		}

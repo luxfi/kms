@@ -76,10 +76,10 @@ func TestRequireOrgJWT_validTokenForCorrectOrg(t *testing.T) {
 	tok := signOrgClaims(t, signer, orgClaims{
 		Claims: jwt.Claims{
 			Issuer:  iam.URL,
-			Subject: "kms-app",
+			Subject: "user-z",
 			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
-		Owner: "liquidity",
+		Owner: "liquidity", // user-token case: owner IS the org
 	})
 
 	called := false
@@ -146,7 +146,7 @@ func TestRequireOrgJWT_kmsAdminCrossesOrgs(t *testing.T) {
 			Subject: "ops",
 			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
-		Owner: "operator",
+		Owner: "operator-org",
 		Roles: []string{"kms-admin"},
 	})
 
@@ -225,6 +225,111 @@ func TestRequireOrgJWT_wrongIssuerRejected(t *testing.T) {
 	}
 }
 
+// Casdoor-style client_credentials JWT — owner="admin" (record parent),
+// type="application", name="<org>-<service>". The org is derived from
+// the name prefix per the documented IAM naming convention.
+func TestRequireOrgJWT_applicationToken_orgFromName(t *testing.T) {
+	signer, jwks := newTestSigner(t)
+	iam := httptest.NewServer(jwksHandler(jwks))
+	defer iam.Close()
+
+	auth := newOrgJWTAuth(iam.URL)
+
+	tok := signOrgClaims(t, signer, orgClaims{
+		Claims: jwt.Claims{
+			Issuer:  iam.URL,
+			Subject: "admin/liquidity-kms",
+			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+		Owner: "admin",
+		Name:  "liquidity-kms",
+		Type:  "application",
+	})
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/liquidity/secrets/iam/X", nil)
+	req.Header.Set("Authorization", "Bearer "+tok)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("got %d want 200 (app token, org from name); body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+// An application named "liquidity-kms" must NOT be able to read mlc's
+// secrets — the name prefix is the only org binding, no fall-through
+// to other orgs.
+func TestRequireOrgJWT_applicationToken_crossOrgRejected(t *testing.T) {
+	signer, jwks := newTestSigner(t)
+	iam := httptest.NewServer(jwksHandler(jwks))
+	defer iam.Close()
+
+	auth := newOrgJWTAuth(iam.URL)
+
+	tok := signOrgClaims(t, signer, orgClaims{
+		Claims: jwt.Claims{
+			Issuer:  iam.URL,
+			Subject: "admin/liquidity-kms",
+			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+		Owner: "admin",
+		Name:  "liquidity-kms",
+		Type:  "application",
+	})
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("must reject app token reaching across orgs")
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/mlc/secrets/iam/X", nil)
+	req.Header.Set("Authorization", "Bearer "+tok)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("got %d want 403 (cross-org app token); body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+// Operator-set Tag overrides org derivation — used for cross-cutting
+// service apps that don't follow <org>-<service>.
+func TestRequireOrgJWT_tagPicksOrg(t *testing.T) {
+	signer, jwks := newTestSigner(t)
+	iam := httptest.NewServer(jwksHandler(jwks))
+	defer iam.Close()
+
+	auth := newOrgJWTAuth(iam.URL)
+
+	tok := signOrgClaims(t, signer, orgClaims{
+		Claims: jwt.Claims{
+			Issuer:  iam.URL,
+			Subject: "admin/some-app",
+			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+		Owner: "admin",
+		Name:  "some-app",
+		Type:  "application",
+		Tag:   "liquidity",
+	})
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/liquidity/secrets/iam/X", nil)
+	req.Header.Set("Authorization", "Bearer "+tok)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("got %d want 200 (Tag override); body=%s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestRequireOrgJWT_missingOwnerClaimRejected(t *testing.T) {
 	signer, jwks := newTestSigner(t)
 	iam := httptest.NewServer(jwksHandler(jwks))
@@ -238,12 +343,13 @@ func TestRequireOrgJWT_missingOwnerClaimRejected(t *testing.T) {
 			Subject: "u",
 			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
-		// Owner deliberately empty.
+		// Owner deliberately empty AND no Tag/Name/Type — orgs() yields
+		// nothing, so the token is rejected.
 	})
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
-		t.Fatal("must reject token with no owner claim")
+		t.Fatal("must reject token with no resolvable org")
 	}))
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/liquidity/secrets/iam/X", nil)
