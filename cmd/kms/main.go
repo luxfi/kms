@@ -201,7 +201,14 @@ func main() {
 	// kms-admin). Public endpoints (health, /v1/kms/auth/login, OIDC
 	// SSO, the SPA) are NOT wrapped — they remain reachable without a
 	// token. See auth.go.
-	auth := newOrgJWTAuth(iamEndpoint)
+	//
+	// JWKS is fetched from KMS_IAM_URL (in-cluster) and the JWT `iss`
+	// claim is validated against KMS_EXPECTED_ISSUER (public hostname).
+	// When the deployment uses a single URL for both, fall through to
+	// IAM_ENDPOINT.
+	jwksFrom := envOr("KMS_IAM_URL", iamEndpoint)
+	expectedIss := envOr("KMS_EXPECTED_ISSUER", iamEndpoint)
+	auth := newOrgJWTAuth(jwksFrom, expectedIss)
 
 	// GET /v1/kms/orgs/{org}/secrets/{path...}/{name}
 	// Matches the ATS kmsclient.Get() URL pattern.

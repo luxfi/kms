@@ -77,22 +77,38 @@ func (c *orgClaims) orgs() []string {
 }
 
 // orgJWTAuth verifies tokens against the IAM JWKS. Issuer is checked
-// (must equal iamEndpoint). Audience is NOT enforced because IAM
+// (must equal expectedIssuer). Audience is NOT enforced because IAM
 // client_credentials grants don't pin an audience to the resource
 // server today — we rely on issuer + signature + owner-equals-org.
+//
+// jwksURL and expectedIssuer often differ in production: jwksURL is
+// the in-cluster IAM URL (`http://liquid-iam.liquidity.svc:8000/...`)
+// for cheap fetches, expectedIssuer is the public host the JWT `iss`
+// claim was minted with (`https://iam.dev.satschel.com`). Splitting
+// them is what keeps validation working when KMS sits behind a
+// gateway that rewrites Host.
 type orgJWTAuth struct {
-	jwksURL string
-	issuer  string
-	cache   *jwksCache
+	jwksURL  string
+	issuer   string
+	cache    *jwksCache
 }
 
-func newOrgJWTAuth(iamEndpoint string) *orgJWTAuth {
+// newOrgJWTAuth wires the validator from env. iamEndpoint is the URL
+// KMS will fetch JWKS from (in-cluster); expectedIssuer is the
+// `iss` claim value to enforce. If expectedIssuer is empty the
+// iamEndpoint is used (matches the simple single-URL deployment).
+func newOrgJWTAuth(iamEndpoint, expectedIssuer string) *orgJWTAuth {
 	iam := strings.TrimRight(iamEndpoint, "/")
+	iss := strings.TrimRight(expectedIssuer, "/")
+	if iss == "" {
+		iss = iam
+	}
+	jwksURL := iam + "/.well-known/jwks"
 	return &orgJWTAuth{
-		jwksURL: iam + "/.well-known/jwks",
-		issuer:  iam,
+		jwksURL: jwksURL,
+		issuer:  iss,
 		cache: &jwksCache{
-			url:    iam + "/.well-known/jwks",
+			url:    jwksURL,
 			ttl:    5 * time.Minute,
 			client: &http.Client{Timeout: 10 * time.Second},
 		},

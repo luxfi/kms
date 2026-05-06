@@ -36,7 +36,7 @@ func jwksHandler(jwks *gojose.JSONWebKeySet) http.Handler {
 }
 
 func TestRequireOrgJWT_missingBearer(t *testing.T) {
-	auth := newOrgJWTAuth("https://iam.example.com")
+	auth := newOrgJWTAuth("https://iam.example.com", "")
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -51,7 +51,7 @@ func TestRequireOrgJWT_missingBearer(t *testing.T) {
 }
 
 func TestRequireOrgJWT_invalidBearerShape(t *testing.T) {
-	auth := newOrgJWTAuth("https://iam.example.com")
+	auth := newOrgJWTAuth("https://iam.example.com", "")
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -71,7 +71,7 @@ func TestRequireOrgJWT_validTokenForCorrectOrg(t *testing.T) {
 	iam := httptest.NewServer(jwksHandler(jwks))
 	defer iam.Close()
 
-	auth := newOrgJWTAuth(iam.URL)
+	auth := newOrgJWTAuth(iam.URL, "")
 
 	tok := signOrgClaims(t, signer, orgClaims{
 		Claims: jwt.Claims{
@@ -106,7 +106,7 @@ func TestRequireOrgJWT_crossOrgRejected(t *testing.T) {
 	iam := httptest.NewServer(jwksHandler(jwks))
 	defer iam.Close()
 
-	auth := newOrgJWTAuth(iam.URL)
+	auth := newOrgJWTAuth(iam.URL, "")
 
 	// Token for org=mlc, request for org=liquidity → 403.
 	tok := signOrgClaims(t, signer, orgClaims{
@@ -137,7 +137,7 @@ func TestRequireOrgJWT_kmsAdminCrossesOrgs(t *testing.T) {
 	iam := httptest.NewServer(jwksHandler(jwks))
 	defer iam.Close()
 
-	auth := newOrgJWTAuth(iam.URL)
+	auth := newOrgJWTAuth(iam.URL, "")
 
 	// kms-admin role lets the holder reach across orgs.
 	tok := signOrgClaims(t, signer, orgClaims{
@@ -169,7 +169,7 @@ func TestRequireOrgJWT_expiredRejected(t *testing.T) {
 	iam := httptest.NewServer(jwksHandler(jwks))
 	defer iam.Close()
 
-	auth := newOrgJWTAuth(iam.URL)
+	auth := newOrgJWTAuth(iam.URL, "")
 
 	tok := signOrgClaims(t, signer, orgClaims{
 		Claims: jwt.Claims{
@@ -199,7 +199,7 @@ func TestRequireOrgJWT_wrongIssuerRejected(t *testing.T) {
 	iam := httptest.NewServer(jwksHandler(jwks))
 	defer iam.Close()
 
-	auth := newOrgJWTAuth(iam.URL)
+	auth := newOrgJWTAuth(iam.URL, "")
 
 	// Issuer mismatch — claim says some-other-iam, validator expects iam.URL.
 	tok := signOrgClaims(t, signer, orgClaims{
@@ -233,7 +233,7 @@ func TestRequireOrgJWT_applicationToken_orgFromName(t *testing.T) {
 	iam := httptest.NewServer(jwksHandler(jwks))
 	defer iam.Close()
 
-	auth := newOrgJWTAuth(iam.URL)
+	auth := newOrgJWTAuth(iam.URL, "")
 
 	tok := signOrgClaims(t, signer, orgClaims{
 		Claims: jwt.Claims{
@@ -268,7 +268,7 @@ func TestRequireOrgJWT_applicationToken_crossOrgRejected(t *testing.T) {
 	iam := httptest.NewServer(jwksHandler(jwks))
 	defer iam.Close()
 
-	auth := newOrgJWTAuth(iam.URL)
+	auth := newOrgJWTAuth(iam.URL, "")
 
 	tok := signOrgClaims(t, signer, orgClaims{
 		Claims: jwt.Claims{
@@ -302,7 +302,7 @@ func TestRequireOrgJWT_tagPicksOrg(t *testing.T) {
 	iam := httptest.NewServer(jwksHandler(jwks))
 	defer iam.Close()
 
-	auth := newOrgJWTAuth(iam.URL)
+	auth := newOrgJWTAuth(iam.URL, "")
 
 	tok := signOrgClaims(t, signer, orgClaims{
 		Claims: jwt.Claims{
@@ -335,7 +335,7 @@ func TestRequireOrgJWT_missingOwnerClaimRejected(t *testing.T) {
 	iam := httptest.NewServer(jwksHandler(jwks))
 	defer iam.Close()
 
-	auth := newOrgJWTAuth(iam.URL)
+	auth := newOrgJWTAuth(iam.URL, "")
 
 	tok := signOrgClaims(t, signer, orgClaims{
 		Claims: jwt.Claims{
@@ -358,6 +358,43 @@ func TestRequireOrgJWT_missingOwnerClaimRejected(t *testing.T) {
 	mux.ServeHTTP(rec, req)
 	if rec.Code != http.StatusUnauthorized {
 		t.Errorf("got %d want 401 (missing owner); body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+// In production KMS fetches JWKS from the in-cluster IAM URL but the
+// JWT `iss` claim was minted with the public hostname. The validator
+// must accept tokens whose `iss` matches the configured expectedIssuer
+// even when that string differs from the JWKS host.
+func TestRequireOrgJWT_splitJwksAndIssuer(t *testing.T) {
+	signer, jwks := newTestSigner(t)
+	jwksHost := httptest.NewServer(jwksHandler(jwks))
+	defer jwksHost.Close()
+
+	publicIssuer := "https://iam.dev.satschel.com"
+	auth := newOrgJWTAuth(jwksHost.URL, publicIssuer)
+
+	tok := signOrgClaims(t, signer, orgClaims{
+		Claims: jwt.Claims{
+			Issuer:  publicIssuer, // minted with public host
+			Subject: "admin/liquidity-kms",
+			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+		Owner: "admin",
+		Name:  "liquidity-kms",
+		Type:  "application",
+	})
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/liquidity/secrets/iam/X", nil)
+	req.Header.Set("Authorization", "Bearer "+tok)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("got %d want 200 (split jwksURL vs issuer); body=%s", rec.Code, rec.Body.String())
 	}
 }
 
