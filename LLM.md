@@ -1,6 +1,5 @@
 # KMS — AI Assistant Knowledge Base
 
-**Last Updated**: 2026-05-02
 **Project**: Lux Key Management Service (KMS)
 **Organization**: Lux Network
 
@@ -15,7 +14,7 @@ Env vars (all optional; if KMS_ZAP_AUTH_ENABLED unset/false the
 client behaves exactly as v1.8.x):
 
   KMS_ZAP_AUTH_ENABLED      true|false (default false)
-  KMS_IAM_URL               e.g. http://liquid-iam.liquidity.svc:8000
+  KMS_IAM_URL               e.g. http://liquid-iam.lux.svc:8000
   KMS_IAM_CLIENT_ID         default "liquid-kms"
   KMS_IAM_CLIENT_SECRET     from KMS-projected universal-auth Secret
   KMS_ZAP_AUDIENCE          default "liquid-mpc"

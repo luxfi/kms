@@ -29,10 +29,10 @@ func newTestCfg(t *testing.T, iamEndpoint string) *oidcConfig {
 	return &oidcConfig{
 		iamEndpoint:  strings.TrimRight(iamEndpoint, "/"),
 		iamHost:      u.Host,
-		clientID:     "liquidity-kms",
+		clientID:     "lux-kms",
 		clientSecret: "test-secret",
 		stateSecret:  []byte("test-secret-test-secret-test-32!"),
-		owner:        "liquidity",
+		owner:        "lux",
 		nonces:       newNonceLRU(1024, stateTTL),
 		mintLimiter:  newRateLimiter(mintRateLimit, mintRateWindow),
 	}
@@ -41,9 +41,9 @@ func newTestCfg(t *testing.T, iamEndpoint string) *oidcConfig {
 // TestSsoOidcLogin_redirectsToIAM asserts the login handler 302s to the
 // IAM authorize URL with all required OAuth2 params.
 func TestSsoOidcLogin_redirectsToIAM(t *testing.T) {
-	cfg := newTestCfg(t, "https://iam.dev.satschel.com")
-	req := httptest.NewRequest(http.MethodGet, "/v1/sso/oidc/login?orgSlug=liquidity", nil)
-	req.Host = "kms.dev.satschel.com"
+	cfg := newTestCfg(t, "https://iam.dev.example.com")
+	req := httptest.NewRequest(http.MethodGet, "/v1/sso/oidc/login?orgSlug=lux", nil)
+	req.Host = "kms.dev.example.com"
 	req.TLS = &tls.ConnectionState{}
 	rec := httptest.NewRecorder()
 	cfg.handleLogin(rec, req)
@@ -52,7 +52,7 @@ func TestSsoOidcLogin_redirectsToIAM(t *testing.T) {
 		t.Fatalf("status: got %d want 302", rec.Code)
 	}
 	loc := rec.Header().Get("Location")
-	if !strings.HasPrefix(loc, "https://iam.dev.satschel.com/login/oauth/authorize?") {
+	if !strings.HasPrefix(loc, "https://iam.dev.example.com/login/oauth/authorize?") {
 		t.Fatalf("Location: %q does not target IAM authorize", loc)
 	}
 	u, err := url.Parse(loc)
@@ -65,26 +65,26 @@ func TestSsoOidcLogin_redirectsToIAM(t *testing.T) {
 			t.Errorf("missing query param %q", k)
 		}
 	}
-	if q.Get("client_id") != "liquidity-kms" {
-		t.Errorf("client_id: got %q want liquidity-kms", q.Get("client_id"))
+	if q.Get("client_id") != "lux-kms" {
+		t.Errorf("client_id: got %q want lux-kms", q.Get("client_id"))
 	}
 	if q.Get("response_type") != "code" {
 		t.Errorf("response_type: got %q want code", q.Get("response_type"))
 	}
-	if q.Get("redirect_uri") != "https://kms.dev.satschel.com/v1/sso/oidc/callback" {
+	if q.Get("redirect_uri") != "https://kms.dev.example.com/v1/sso/oidc/callback" {
 		t.Errorf("redirect_uri: got %q", q.Get("redirect_uri"))
 	}
-	if q.Get("application") != "liquidity" {
-		t.Errorf("application: got %q want liquidity", q.Get("application"))
+	if q.Get("application") != "lux" {
+		t.Errorf("application: got %q want lux", q.Get("application"))
 	}
 }
 
 // TestSsoOidcLogin_includesStateNonce asserts a state cookie is set,
 // HttpOnly+Secure, and the value verifies under our HMAC.
 func TestSsoOidcLogin_includesStateNonce(t *testing.T) {
-	cfg := newTestCfg(t, "https://iam.dev.satschel.com")
-	req := httptest.NewRequest(http.MethodGet, "/v1/sso/oidc/login?orgSlug=liquidity", nil)
-	req.Host = "kms.dev.satschel.com"
+	cfg := newTestCfg(t, "https://iam.dev.example.com")
+	req := httptest.NewRequest(http.MethodGet, "/v1/sso/oidc/login?orgSlug=lux", nil)
+	req.Host = "kms.dev.example.com"
 	req.TLS = &tls.ConnectionState{}
 	rec := httptest.NewRecorder()
 	cfg.handleLogin(rec, req)
@@ -117,7 +117,7 @@ func TestSsoOidcLogin_includesStateNonce(t *testing.T) {
 	if u.Query().Get("state") != stateVal {
 		t.Error("state cookie value does not match state query param")
 	}
-	if _, err := cfg.verifyState(stateVal, "liquidity"); err != nil {
+	if _, err := cfg.verifyState(stateVal, "lux"); err != nil {
 		t.Errorf("state verify: %v", err)
 	}
 	if _, err := cfg.verifyState(stateVal, "evil"); err == nil {
@@ -149,15 +149,15 @@ func TestSsoOidcCallback_validatesState(t *testing.T) {
 
 	cfg := newTestCfg(t, iam.URL)
 
-	good, err := cfg.signState("liquidity")
+	good, err := cfg.signState("lux")
 	if err != nil {
 		t.Fatalf("signState: %v", err)
 	}
 
 	// 1) No state cookie.
 	req := httptest.NewRequest(http.MethodGet,
-		"/v1/sso/oidc/callback?state="+good+"&code=good-code&orgSlug=liquidity", nil)
-	req.Host = "kms.dev.satschel.com"
+		"/v1/sso/oidc/callback?state="+good+"&code=good-code&orgSlug=lux", nil)
+	req.Host = "kms.dev.example.com"
 	req.TLS = &tls.ConnectionState{}
 	rec := httptest.NewRecorder()
 	cfg.handleCallback(rec, req)
@@ -167,8 +167,8 @@ func TestSsoOidcCallback_validatesState(t *testing.T) {
 
 	// 2) Cookie mismatch.
 	req = httptest.NewRequest(http.MethodGet,
-		"/v1/sso/oidc/callback?state="+good+"&code=good-code&orgSlug=liquidity", nil)
-	req.Host = "kms.dev.satschel.com"
+		"/v1/sso/oidc/callback?state="+good+"&code=good-code&orgSlug=lux", nil)
+	req.Host = "kms.dev.example.com"
 	req.TLS = &tls.ConnectionState{}
 	req.AddCookie(&http.Cookie{Name: stateCookie, Value: "different-value"})
 	rec = httptest.NewRecorder()
@@ -178,10 +178,10 @@ func TestSsoOidcCallback_validatesState(t *testing.T) {
 	}
 
 	// 3) Expired.
-	stale := mintState(t, cfg.stateSecret, "liquidity", time.Now().Add(-1*time.Minute).Unix())
+	stale := mintState(t, cfg.stateSecret, "lux", time.Now().Add(-1*time.Minute).Unix())
 	req = httptest.NewRequest(http.MethodGet,
-		"/v1/sso/oidc/callback?state="+stale+"&code=good-code&orgSlug=liquidity", nil)
-	req.Host = "kms.dev.satschel.com"
+		"/v1/sso/oidc/callback?state="+stale+"&code=good-code&orgSlug=lux", nil)
+	req.Host = "kms.dev.example.com"
 	req.TLS = &tls.ConnectionState{}
 	req.AddCookie(&http.Cookie{Name: stateCookie, Value: stale})
 	rec = httptest.NewRecorder()
@@ -192,8 +192,8 @@ func TestSsoOidcCallback_validatesState(t *testing.T) {
 
 	// 4) Happy path.
 	req = httptest.NewRequest(http.MethodGet,
-		"/v1/sso/oidc/callback?state="+good+"&code=good-code&orgSlug=liquidity", nil)
-	req.Host = "kms.dev.satschel.com"
+		"/v1/sso/oidc/callback?state="+good+"&code=good-code&orgSlug=lux", nil)
+	req.Host = "kms.dev.example.com"
 	req.TLS = &tls.ConnectionState{}
 	req.AddCookie(&http.Cookie{Name: stateCookie, Value: good})
 	rec = httptest.NewRecorder()
@@ -224,12 +224,12 @@ func TestSsoOidcCallback_validatesState(t *testing.T) {
 // TestSsoOidcCallback_csrfProtection asserts a callback whose
 // Origin/Referer points elsewhere is rejected with 403.
 func TestSsoOidcCallback_csrfProtection(t *testing.T) {
-	cfg := newTestCfg(t, "https://iam.dev.satschel.com")
-	good, _ := cfg.signState("liquidity")
+	cfg := newTestCfg(t, "https://iam.dev.example.com")
+	good, _ := cfg.signState("lux")
 
 	req := httptest.NewRequest(http.MethodGet,
-		"/v1/sso/oidc/callback?state="+good+"&code=c&orgSlug=liquidity", nil)
-	req.Host = "kms.dev.satschel.com"
+		"/v1/sso/oidc/callback?state="+good+"&code=c&orgSlug=lux", nil)
+	req.Host = "kms.dev.example.com"
 	req.TLS = &tls.ConnectionState{}
 	req.AddCookie(&http.Cookie{Name: stateCookie, Value: good})
 	req.Header.Set("Origin", "https://evil.example")
@@ -242,19 +242,19 @@ func TestSsoOidcCallback_csrfProtection(t *testing.T) {
 
 // TestOriginGuard_rejectsPrefixExtension confirms the parsed-Host
 // equality check rejects suffix-based smuggling like
-// `iam.dev.satschel.com.evil.com` — the previous prefix-match accepted it.
+// `iam.dev.example.com.evil.com` — the previous prefix-match accepted it.
 func TestOriginGuard_rejectsPrefixExtension(t *testing.T) {
-	cfg := newTestCfg(t, "https://iam.dev.satschel.com")
-	good, _ := cfg.signState("liquidity")
+	cfg := newTestCfg(t, "https://iam.dev.example.com")
+	good, _ := cfg.signState("lux")
 
 	req := httptest.NewRequest(http.MethodGet,
-		"/v1/sso/oidc/callback?state="+good+"&code=c&orgSlug=liquidity", nil)
-	req.Host = "kms.dev.satschel.com"
+		"/v1/sso/oidc/callback?state="+good+"&code=c&orgSlug=lux", nil)
+	req.Host = "kms.dev.example.com"
 	req.TLS = &tls.ConnectionState{}
 	req.AddCookie(&http.Cookie{Name: stateCookie, Value: good})
-	// Smuggled host: `iam.dev.satschel.com` is the prefix but the actual
+	// Smuggled host: `iam.dev.example.com` is the prefix but the actual
 	// host is attacker-controlled.
-	req.Header.Set("Origin", "https://iam.dev.satschel.com.evil.com")
+	req.Header.Set("Origin", "https://iam.dev.example.com.evil.com")
 	rec := httptest.NewRecorder()
 	cfg.handleCallback(rec, req)
 	if rec.Code != http.StatusForbidden {
@@ -266,8 +266,8 @@ func TestOriginGuard_rejectsPrefixExtension(t *testing.T) {
 // if the host matches.
 func TestOriginGuard_rejectsHTTP(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.Header.Set("Origin", "http://iam.dev.satschel.com")
-	if originLooksOK(r, "iam.dev.satschel.com", "kms.dev.satschel.com") {
+	r.Header.Set("Origin", "http://iam.dev.example.com")
+	if originLooksOK(r, "iam.dev.example.com", "kms.dev.example.com") {
 		t.Error("http:// origin accepted; want rejected")
 	}
 }
@@ -282,12 +282,12 @@ func TestStateNonce_singleUseAcrossReplicas(t *testing.T) {
 	defer iam.Close()
 	cfg := newTestCfg(t, iam.URL)
 
-	good, _ := cfg.signState("liquidity")
+	good, _ := cfg.signState("lux")
 
 	// First redemption — should succeed (302 /).
 	req := httptest.NewRequest(http.MethodGet,
-		"/v1/sso/oidc/callback?state="+good+"&code=c&orgSlug=liquidity", nil)
-	req.Host = "kms.dev.satschel.com"
+		"/v1/sso/oidc/callback?state="+good+"&code=c&orgSlug=lux", nil)
+	req.Host = "kms.dev.example.com"
 	req.TLS = &tls.ConnectionState{}
 	req.AddCookie(&http.Cookie{Name: stateCookie, Value: good})
 	rec := httptest.NewRecorder()
@@ -298,8 +298,8 @@ func TestStateNonce_singleUseAcrossReplicas(t *testing.T) {
 
 	// Replay — same state, same cookie still attached. LRU must reject.
 	req = httptest.NewRequest(http.MethodGet,
-		"/v1/sso/oidc/callback?state="+good+"&code=c&orgSlug=liquidity", nil)
-	req.Host = "kms.dev.satschel.com"
+		"/v1/sso/oidc/callback?state="+good+"&code=c&orgSlug=lux", nil)
+	req.Host = "kms.dev.example.com"
 	req.TLS = &tls.ConnectionState{}
 	req.AddCookie(&http.Cookie{Name: stateCookie, Value: good})
 	rec = httptest.NewRecorder()
@@ -314,7 +314,7 @@ func TestStateNonce_singleUseAcrossReplicas(t *testing.T) {
 
 // TestSsoOidcLogout clears the session cookie.
 func TestSsoOidcLogout(t *testing.T) {
-	cfg := newTestCfg(t, "https://iam.dev.satschel.com")
+	cfg := newTestCfg(t, "https://iam.dev.example.com")
 	req := httptest.NewRequest(http.MethodPost, "/v1/sso/logout", nil)
 	rec := httptest.NewRecorder()
 	cfg.handleLogout(rec, req)
@@ -335,7 +335,7 @@ func TestSsoOidcLogout(t *testing.T) {
 // TestMintClientCredential_requiresSession asserts the endpoint refuses
 // unauthenticated callers.
 func TestMintClientCredential_requiresSession(t *testing.T) {
-	cfg := newTestCfg(t, "https://iam.dev.satschel.com")
+	cfg := newTestCfg(t, "https://iam.dev.example.com")
 	req := httptest.NewRequest(http.MethodPost, "/v1/kms/credentials", strings.NewReader(`{}`))
 	rec := httptest.NewRecorder()
 	cfg.handleMintClientCredential(rec, req)
@@ -591,18 +591,18 @@ func TestMintClientCredential_auditLogs(t *testing.T) {
 // TestCookieDomain_rejectsLeadingDot asserts loadOIDCConfig refuses to
 // boot when KMS_COOKIE_DOMAIN is a wildcard subdomain (leading dot).
 func TestCookieDomain_rejectsLeadingDot(t *testing.T) {
-	t.Setenv("IAM_ENDPOINT", "https://iam.dev.satschel.com")
-	t.Setenv("KMS_OIDC_CLIENT_ID", "liquidity-kms")
+	t.Setenv("IAM_ENDPOINT", "https://iam.dev.example.com")
+	t.Setenv("KMS_OIDC_CLIENT_ID", "lux-kms")
 	t.Setenv("KMS_OIDC_CLIENT_SECRET", "test-secret")
 	t.Setenv("KMS_STATE_SECRET", "test-secret-test-secret-test-32!")
-	t.Setenv("KMS_COOKIE_DOMAIN", ".satschel.com")
+	t.Setenv("KMS_COOKIE_DOMAIN", ".example.com")
 
 	if cfg := loadOIDCConfig(); cfg != nil {
 		t.Fatal("loadOIDCConfig accepted leading-dot KMS_COOKIE_DOMAIN; want nil")
 	}
 
 	// Sanity: removing the dot succeeds.
-	t.Setenv("KMS_COOKIE_DOMAIN", "kms.dev.satschel.com")
+	t.Setenv("KMS_COOKIE_DOMAIN", "kms.dev.example.com")
 	if cfg := loadOIDCConfig(); cfg == nil {
 		t.Error("loadOIDCConfig rejected exact host KMS_COOKIE_DOMAIN; want accepted")
 	}
@@ -652,8 +652,8 @@ func TestCasdoorErrorEnvelope_non2xxFails(t *testing.T) {
 // http:// would produce a redirect_uri IAM rejects.
 func TestCallbackURL_alwaysHTTPS(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/v1/sso/oidc/login", nil)
-	r.Host = "kms.dev.satschel.com"
-	if got := callbackURL(r); got != "https://kms.dev.satschel.com/v1/sso/oidc/callback" {
+	r.Host = "kms.dev.example.com"
+	if got := callbackURL(r); got != "https://kms.dev.example.com/v1/sso/oidc/callback" {
 		t.Errorf("callbackURL = %q; want https://...", got)
 	}
 }

@@ -24,7 +24,7 @@
 //
 // Note: Hanzo IAM (Casdoor-derived) does not currently honor the
 // `audience` request parameter — the issued JWT's `aud` claim equals
-// the client_id (e.g. `liquidity-kms`). Upstream MPC pkg/zapauth
+// the client_id (e.g. `lux-kms`). Upstream MPC pkg/zapauth
 // configures `ZAP_EXPECTED_AUDIENCES` accordingly.
 package iamclient
 
@@ -51,11 +51,11 @@ var (
 )
 
 // Config wires a Client to a Hanzo IAM tenant. ClientID + ClientSecret
-// are issued when the Liquidity operator registers the service identity
+// are issued when the cluster operator registers the service identity
 // (universe/k8s/platforms/{env}.yaml LiquidIAM tenants[]).
 type Config struct {
 	// IAMBaseURL is the IAM origin without trailing slash, e.g.
-	// "http://liquid-iam.liquidity.svc.cluster.local:8000". Required.
+	// "http://liquid-iam.lux.svc.cluster.local:8000". Required.
 	IAMBaseURL string
 	// TokenPath overrides the default token endpoint path. Default
 	// "/oauth/token" (matches Hanzo IAM OIDC discovery

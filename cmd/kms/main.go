@@ -131,10 +131,10 @@ func main() {
 	// this returns a minimal-but-complete shape: signups via IAM, no
 	// invite-only gating, no SMTP, instance is initialized. Fields the
 	// SPA reads: initialized, allowSignUp, allowedSignUpDomain, etc.
-	// defaultAuthOrgSlug drives the "Login with Liquid ID" button in the
-	// SPA: when set, the SPA bypasses the org-picker and goes straight to
-	// /v1/sso/oidc/login?orgSlug=<this>. Read from env so the same image
-	// white-labels per-deployment (e.g. "liquidity" on satschel.com).
+	// defaultAuthOrgSlug drives the OIDC "Login with <Brand>" button in
+	// the SPA: when set, the SPA bypasses the org-picker and goes straight
+	// to /v1/sso/oidc/login?orgSlug=<this>. Read from env so the same image
+	// white-labels per-deployment via KMS_DEFAULT_ORG_SLUG.
 	defaultOrgSlug := envOr("KMS_DEFAULT_ORG_SLUG", "")
 	mux.HandleFunc("GET /v1/admin/config", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{

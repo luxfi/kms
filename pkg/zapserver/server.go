@@ -29,7 +29,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 
+	kmszap "github.com/luxfi/kms/pkg/zap"
 	"github.com/luxfi/kms/pkg/store"
 	"github.com/luxfi/log"
 	"github.com/luxfi/zap"
@@ -57,6 +59,17 @@ type Server struct {
 	masterKey []byte
 	acl       *ACL
 	log       log.Logger
+
+	// Per-peer hybrid handshake sessions. Keyed by ZAP NodeID. A peer
+	// with no entry has not run the application-layer hybrid handshake
+	// — its requests still flow in the clear (forward-only fallback for
+	// peers that don't speak the new opcodes). A peer with an entry
+	// gets every payload AEAD-sealed under the derived session key.
+	sessions   map[string]*kmszap.Session
+	sessionsMu sync.RWMutex
+	// localCaps controls what the server advertises in ServerHello.
+	// Bit 0 = ML-KEM-768 supported. Defaults to CapMLKEM768 in New().
+	localCaps uint16
 }
 
 // Config wires a Server with the required dependencies.
@@ -89,6 +102,8 @@ func New(cfg Config) *Server {
 		masterKey: cfg.MasterKey,
 		acl:       cfg.ACL,
 		log:       cfg.Logger,
+		sessions:  make(map[string]*kmszap.Session),
+		localCaps: kmszap.CapMLKEM768,
 	}
 	if cfg.ACL == nil {
 		s.log.Warn("kms.zap acl=open — every peer permitted (set KMS_ZAP_ACL to enable)")
@@ -111,6 +126,9 @@ func (s *Server) Register(n *zap.Node) {
 	n.Handle(OpSecretPut, s.wrap(s.handlePut))
 	n.Handle(OpSecretList, s.wrap(s.handleList))
 	n.Handle(OpSecretDelete, s.wrap(s.handleDelete))
+	// Application-layer hybrid handshake. Distinct from the secret
+	// opcodes so a session is established before any get/put runs.
+	n.Handle(kmszap.OpClientHello, s.handleHandshake)
 
 	// Universal handler at type 0: reads opcode from body, dispatches.
 	handlers := map[uint16]handlerFn{
@@ -134,24 +152,119 @@ func (s *Server) Register(n *zap.Node) {
 		}
 		op := binary.LittleEndian.Uint16(raw[:2])
 		payload := raw[2:]
+		// Hybrid handshake on the universal mux path too.
+		if op == kmszap.OpClientHello {
+			return s.respondHandshake(from, payload), nil
+		}
 		h, ok := handlers[op]
 		if !ok {
 			return respond(statusError, errJSON("unknown opcode")), nil
 		}
+		// If this peer already negotiated a session, the payload is
+		// expected to be AEAD-sealed; open it before dispatch and seal
+		// the response.
+		sess := s.session(from)
+		if sess != nil {
+			pt, err := sess.Open(kmszap.DirClientToServer, payload)
+			if err != nil {
+				s.log.Warn("kms.zap session open failed", "from", from, "op", op, "err", err)
+				return respond(statusError, errJSON("session decrypt failed")), nil
+			}
+			payload = pt
+		}
 		status, body, err := h(ctx, from, payload)
 		if err != nil {
 			s.log.Warn("kms.zap handler error (mux)", "from", from, "op", op, "err", err)
-			return respond(statusError, errJSON(err.Error())), nil
+			return s.respondMaybeSealed(from, statusError, errJSON(err.Error())), nil
 		}
-		return respond(status, body), nil
+		return s.respondMaybeSealed(from, status, body), nil
 	})
+}
+
+// session returns the active hybrid session for a peer, or nil if the
+// peer has not run OpClientHello yet (forward-compat fallback).
+func (s *Server) session(peerID string) *kmszap.Session {
+	s.sessionsMu.RLock()
+	defer s.sessionsMu.RUnlock()
+	return s.sessions[peerID]
+}
+
+// setSession stores a freshly negotiated session, replacing any prior
+// entry for the same peer. Replacing is the sane behaviour: a new
+// ClientHello means the client wants to rotate.
+func (s *Server) setSession(peerID string, sess *kmszap.Session) {
+	s.sessionsMu.Lock()
+	s.sessions[peerID] = sess
+	s.sessionsMu.Unlock()
+}
+
+// respondMaybeSealed builds a status||body reply, sealing the body bytes
+// under the peer's session key if one exists. Plaintext fallback is a
+// design property for peers that never ran the handshake.
+func (s *Server) respondMaybeSealed(peerID string, status byte, body []byte) *zap.Message {
+	if sess := s.session(peerID); sess != nil {
+		sealed, err := sess.Seal(kmszap.DirServerToClient, body)
+		if err != nil {
+			s.log.Error("kms.zap seal failed", "from", peerID, "err", err)
+			return respond(statusError, errJSON("session seal failed"))
+		}
+		return respond(status, sealed)
+	}
+	return respond(status, body)
+}
+
+// handleHandshake is the per-opcode handler entry for OpClientHello.
+func (s *Server) handleHandshake(_ context.Context, from string, msg *zap.Message) (*zap.Message, error) {
+	raw := msg.Root().Bytes(0)
+	if raw == nil {
+		b := msg.Bytes()
+		if len(b) > zap.HeaderSize {
+			raw = b[zap.HeaderSize:]
+		}
+	}
+	if len(raw) < 2 {
+		return respond(statusError, errJSON("empty handshake payload")), nil
+	}
+	// Strip the 2-byte opcode prefix written by the client mux.
+	return s.respondHandshake(from, raw[2:]), nil
+}
+
+// respondHandshake runs the server side of the hybrid PQ handshake,
+// installs the resulting session, and frames the ServerHello bytes as
+// the response payload (status=OK).
+//
+// On capability fallback (peer cleared bit 0), we emit a one-line WARN
+// so operators can spot stragglers, and we still install the session
+// (X25519-only — combined-secret length is still 32 bytes).
+func (s *Server) respondHandshake(from string, helloBytes []byte) *zap.Message {
+	replyWire, result, err := kmszap.ServerRespond(s.localCaps, helloBytes)
+	if err != nil {
+		s.log.Warn("kms.zap handshake failed", "from", from, "err", err)
+		return respond(statusError, errJSON(err.Error()))
+	}
+	sess, err := kmszap.NewSession(result.SessionKey, result.Hybrid)
+	if err != nil {
+		s.log.Error("kms.zap session init failed", "from", from, "err", err)
+		return respond(statusError, errJSON(err.Error()))
+	}
+	s.setSession(from, sess)
+	if !result.Hybrid {
+		s.log.Warn("kms.zap handshake classical-only — peer cleared ML-KEM-768 cap bit",
+			"from", from, "peerCaps", result.PeerCaps)
+	} else {
+		s.log.Info("kms.zap handshake hybrid", "from", from, "alg", "X25519+ML-KEM-768")
+	}
+	// ServerHello rides as the body — never AEAD-wrapped, since the key
+	// only exists after this exchange completes.
+	return respond(statusOK, replyWire)
 }
 
 // handlerFn is the shape of our op handlers before wrapping with framing.
 type handlerFn func(ctx context.Context, from string, payload []byte) (byte, []byte, error)
 
 // wrap marshals the {status || body} response and logs errors with the
-// caller's principal ID.
+// caller's principal ID. When the peer has an active hybrid session,
+// the inbound payload is AEAD-opened and the response body is sealed.
 func (s *Server) wrap(h handlerFn) zap.Handler {
 	return func(ctx context.Context, from string, msg *zap.Message) (*zap.Message, error) {
 		// Access body via Root Object. Builder writes the payload at field 0.
@@ -170,12 +283,20 @@ func (s *Server) wrap(h handlerFn) zap.Handler {
 			return respond(statusError, errJSON("empty payload")), nil
 		}
 		payload := raw[2:]
+		if sess := s.session(from); sess != nil {
+			pt, err := sess.Open(kmszap.DirClientToServer, payload)
+			if err != nil {
+				s.log.Warn("kms.zap session open failed", "from", from, "err", err)
+				return respond(statusError, errJSON("session decrypt failed")), nil
+			}
+			payload = pt
+		}
 		status, body, err := h(ctx, from, payload)
 		if err != nil {
 			s.log.Warn("kms.zap handler error", "from", from, "err", err)
-			return respond(statusError, errJSON(err.Error())), nil
+			return s.respondMaybeSealed(from, statusError, errJSON(err.Error())), nil
 		}
-		return respond(status, body), nil
+		return s.respondMaybeSealed(from, status, body), nil
 	}
 }
 

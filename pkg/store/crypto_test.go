@@ -13,7 +13,7 @@ func TestSealOpenRoundTrip(t *testing.T) {
 	}
 	plaintext := []byte("CKIEWZCK3V3ADW6AL55UVSD2KP")
 
-	secret, err := Seal(mk, "/liquidity/ats", "ALPACA_API_KEY", "dev", plaintext)
+	secret, err := Seal(mk, "/example/svc", "ALPACA_API_KEY", "dev", plaintext)
 	if err != nil {
 		t.Fatalf("seal: %v", err)
 	}

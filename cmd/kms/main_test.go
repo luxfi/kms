@@ -20,7 +20,7 @@ func TestNormalizeS3Endpoint(t *testing.T) {
 		{"path stripped after http", "http://s3.example:9000/somebucket", "s3.example:9000", false},
 		{"path stripped after https", "https://s3.example:9000/x/y/z", "s3.example:9000", true},
 		{"trailing slash trimmed", "s3.example:9000/", "s3.example:9000", true},
-		{"k8s svc DNS http", "http://s3.liquidity.svc.cluster.local:9000", "s3.liquidity.svc.cluster.local:9000", false},
+		{"k8s svc DNS http", "http://s3.lux.svc.cluster.local:9000", "s3.lux.svc.cluster.local:9000", false},
 		{"query stripped", "https://s3.example:9000/?versioning=on", "s3.example:9000", true},
 		// Defensive: malformed input — return as-is so the operator sees
 		// the original error from minio rather than a silently-mangled

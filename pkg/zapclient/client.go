@@ -29,6 +29,7 @@ import (
 	"io"
 	"log/slog"
 
+	kmszap "github.com/luxfi/kms/pkg/zap"
 	"github.com/luxfi/zap"
 )
 
@@ -55,10 +56,19 @@ var ErrForbidden = errors.New("zapclient: forbidden (admin role required)")
 
 // Client is a thin wrapper over a zap.Node plus a resolved KMS peer ID.
 type Client struct {
-	node      *zap.Node
-	peerID    string
+	node        *zap.Node
+	peerID      string
 	defaultPath string
-	log       *slog.Logger
+	log         *slog.Logger
+
+	// Hybrid handshake session. Populated by handshake() after Dial.
+	// nil means handshake skipped (peer didn't speak the new opcode set
+	// or LocalCaps disabled the bit) — request bodies remain plaintext.
+	session *kmszap.Session
+	// Capability bitmap the client offers in ClientHello. Defaults to
+	// CapMLKEM768 in DialWithConfig; set to 0 in Config.LocalCaps to
+	// force a classical-only path for testing the fallback.
+	localCaps uint16
 }
 
 // Config controls client construction.
@@ -76,6 +86,17 @@ type Config struct {
 	DefaultPath string
 	// Logger (optional).
 	Logger *slog.Logger
+	// LocalCaps overrides the capability bitmap the client advertises in
+	// ClientHello. Zero value means "use the default" (CapMLKEM768).
+	// Set to a non-zero value WITHOUT bit 0 to force classical-only.
+	LocalCaps uint16
+	// CapsExplicit, when true, means LocalCaps was set deliberately and
+	// the zero-value default should not be applied. Use to send caps=0.
+	CapsExplicit bool
+	// SkipHandshake disables the application-layer hybrid handshake
+	// entirely. Reserved for talking to legacy peers that don't speak
+	// OpClientHello. The connection then falls back to plaintext payloads.
+	SkipHandshake bool
 }
 
 // Dial brings up a ZAP node, connects to the KMS peer, and returns a ready
@@ -109,7 +130,11 @@ func DialWithConfig(ctx context.Context, cfg Config) (*Client, error) {
 		return nil, fmt.Errorf("zapclient: start node: %w", err)
 	}
 
-	c := &Client{node: n, defaultPath: cfg.DefaultPath, log: cfg.Logger}
+	caps := cfg.LocalCaps
+	if !cfg.CapsExplicit {
+		caps = kmszap.CapMLKEM768
+	}
+	c := &Client{node: n, defaultPath: cfg.DefaultPath, log: cfg.Logger, localCaps: caps}
 
 	if cfg.PeerAddr != "" {
 		if err := n.ConnectDirect(cfg.PeerAddr); err != nil {
@@ -145,7 +170,76 @@ func DialWithConfig(ctx context.Context, cfg Config) (*Client, error) {
 		n.Stop()
 		return nil, fmt.Errorf("zapclient: peer not resolved")
 	}
+
+	// Application-layer hybrid handshake. Per LP-022, every ZAP
+	// connection runs an X25519 + ML-KEM-768 hybrid key agreement
+	// before any secret opcode flows. A peer that doesn't speak
+	// OpClientHello returns a ZAP error and we fall back to plaintext.
+	if !cfg.SkipHandshake {
+		if err := c.handshake(ctx); err != nil {
+			c.log.Warn("zapclient: handshake skipped — proceeding plaintext",
+				"peer", c.peerID, "err", err)
+			// Forward-compat: don't tear down the client; some legacy
+			// peers may not speak OpClientHello yet. The connection still
+			// works for opcodes that don't expect AEAD-sealed bodies.
+			c.session = nil
+		}
+	}
 	return c, nil
+}
+
+// handshake runs the client side of the hybrid PQ handshake against the
+// resolved peer and stores the derived session on the client. A non-nil
+// error means the peer rejected or could not complete; the caller may
+// log and proceed in classical-only/plaintext mode.
+func (c *Client) handshake(ctx context.Context) error {
+	state, helloWire, err := kmszap.NewClient(c.localCaps)
+	if err != nil {
+		return fmt.Errorf("zapclient: build ClientHello: %w", err)
+	}
+	// ClientHello rides as op=OpClientHello with payload=helloWire.
+	reqPayload := make([]byte, 2+len(helloWire))
+	binary.LittleEndian.PutUint16(reqPayload[:2], kmszap.OpClientHello)
+	copy(reqPayload[2:], helloWire)
+	reqMsg := buildMessageWithType(kmszap.OpClientHello, reqPayload)
+	if reqMsg == nil {
+		return errors.New("zapclient: failed to build ClientHello message")
+	}
+	resp, err := c.node.Call(ctx, c.peerID, reqMsg)
+	if err != nil {
+		return fmt.Errorf("zapclient: handshake call: %w", err)
+	}
+	root := resp.Root()
+	raw := root.Bytes(0)
+	if len(raw) < 1 {
+		b := resp.Bytes()
+		if len(b) <= zap.HeaderSize {
+			return io.ErrUnexpectedEOF
+		}
+		raw = b[zap.HeaderSize:]
+	}
+	if len(raw) < 1 {
+		return io.ErrUnexpectedEOF
+	}
+	if raw[0] != statusOK {
+		return fmt.Errorf("zapclient: handshake rejected: status=0x%02X body=%s", raw[0], string(raw[1:]))
+	}
+	result, err := state.ClientFinish(raw[1:])
+	if err != nil {
+		return fmt.Errorf("zapclient: ClientFinish: %w", err)
+	}
+	sess, err := kmszap.NewSession(result.SessionKey, result.Hybrid)
+	if err != nil {
+		return fmt.Errorf("zapclient: session init: %w", err)
+	}
+	c.session = sess
+	if !result.Hybrid {
+		c.log.Warn("zapclient: handshake classical-only — peer cleared ML-KEM-768 cap bit",
+			"peer", c.peerID, "peerCaps", result.PeerCaps)
+	} else {
+		c.log.Info("zapclient: handshake hybrid", "peer", c.peerID, "alg", "X25519+ML-KEM-768")
+	}
+	return nil
 }
 
 // Close tears down the underlying ZAP node.
@@ -226,13 +320,22 @@ func (c *Client) DeleteAt(ctx context.Context, path, name, env string) error {
 //
 // Wire format on both directions: opcode(2 LE) || body for the request,
 // status(1 byte) || json for the response, all packed in a ZAP Message via
-// the Builder.
+// the Builder. When the client has a hybrid session, body is sealed before
+// the opcode prefix is added and the response payload is opened on receipt.
 func (c *Client) call(ctx context.Context, op uint16, body []byte) ([]byte, error) {
+	wireBody := body
+	if c.session != nil {
+		sealed, err := c.session.Seal(kmszap.DirClientToServer, body)
+		if err != nil {
+			return nil, fmt.Errorf("zapclient: seal: %w", err)
+		}
+		wireBody = sealed
+	}
 	// Request: opcode in flags field (handler dispatch) + body in payload.
 	// Body still carries the op prefix for the universal handler fallback.
-	reqPayload := make([]byte, 2+len(body))
+	reqPayload := make([]byte, 2+len(wireBody))
 	binary.LittleEndian.PutUint16(reqPayload[:2], op)
-	copy(reqPayload[2:], body)
+	copy(reqPayload[2:], wireBody)
 	reqMsg := buildMessageWithType(op, reqPayload)
 	if reqMsg == nil {
 		return nil, errors.New("zapclient: failed to build request message")
@@ -258,6 +361,13 @@ func (c *Client) call(ctx context.Context, op uint16, body []byte) ([]byte, erro
 		return nil, io.ErrUnexpectedEOF
 	}
 	status, payload := raw[0], raw[1:]
+	if c.session != nil {
+		pt, err := c.session.Open(kmszap.DirServerToClient, payload)
+		if err != nil {
+			return nil, fmt.Errorf("zapclient: open: %w", err)
+		}
+		payload = pt
+	}
 	switch status {
 	case statusOK:
 		return payload, nil

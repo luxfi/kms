@@ -75,9 +75,9 @@ const (
 // safe to bake into env (it's public per OAuth2 spec); clientSecret stays
 // in env-only and is supplied via KMS_OIDC_CLIENT_SECRET (KMSSecret CRD).
 type oidcConfig struct {
-	iamEndpoint  string // e.g. https://iam.dev.satschel.com
+	iamEndpoint  string // e.g. https://iam.dev.example.com
 	iamHost      string // parsed Host of iamEndpoint (for origin comparisons)
-	clientID     string // e.g. liquidity-kms
+	clientID     string // e.g. lux-kms
 	clientSecret string // KMSSecret-injected
 	stateSecret  []byte // HMAC key for state-nonce signing (>=32 bytes)
 	owner        string // KMS_IAM_OWNER — required JWT `owner` claim value
@@ -103,7 +103,7 @@ func loadOIDCConfig() *oidcConfig {
 	cid := envOr("KMS_OIDC_CLIENT_ID", "")
 	cs := envOr("KMS_OIDC_CLIENT_SECRET", "")
 	ss := envOr("KMS_STATE_SECRET", "")
-	owner := envOr("KMS_IAM_OWNER", "liquidity")
+	owner := envOr("KMS_IAM_OWNER", "lux")
 	if iam == "" || cid == "" || cs == "" || ss == "" {
 		return nil
 	}
@@ -266,8 +266,8 @@ func (c *oidcConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 func (c *oidcConfig) handleCallback(w http.ResponseWriter, r *http.Request) {
 	// CSRF: if the browser sent Origin or Referer, it must match this host
 	// or IAM. Comparison is parsed-URL.Host equality (case-insensitive),
-	// not prefix — `iam.dev.satschel.com.evil.com` does not match
-	// `iam.dev.satschel.com`.
+	// not prefix — `iam.dev.example.com.evil.com` does not match
+	// `iam.dev.example.com`.
 	if !originLooksOK(r, c.iamHost, r.Host) {
 		log.Printf("kms: oidc callback rejected — bad origin/referer")
 		http.Error(w, "forbidden", http.StatusForbidden)
@@ -553,7 +553,7 @@ func (c *oidcConfig) exchangeCode(ctx context.Context, code, redirectURI string)
 // originLooksOK returns true if the request's Origin/Referer is empty
 // (no header sent — direct nav) or its parsed Host equals one of the
 // allowed hosts (case-insensitive). Hosts only — no prefix matching — so
-// `iam.dev.satschel.com.evil.com` cannot impersonate `iam.dev.satschel.com`.
+// `iam.dev.example.com.evil.com` cannot impersonate `iam.dev.example.com`.
 // Schemes other than https are rejected.
 func originLooksOK(r *http.Request, allowedHosts ...string) bool {
 	for _, h := range []string{r.Header.Get("Origin"), r.Header.Get("Referer")} {
