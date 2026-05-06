@@ -195,9 +195,17 @@ func main() {
 	// Secret store — ZapDB-backed, encrypted at rest.
 	secStore := store.NewSecretStore(db)
 
+	// JWT-backed authorization for the secrets surface. Every request to
+	// /v1/kms/orgs/{org}/secrets/* must carry an IAM-signed bearer token
+	// whose `owner` claim equals {org} (or whose roles include
+	// kms-admin). Public endpoints (health, /v1/kms/auth/login, OIDC
+	// SSO, the SPA) are NOT wrapped — they remain reachable without a
+	// token. See auth.go.
+	auth := newOrgJWTAuth(iamEndpoint)
+
 	// GET /v1/kms/orgs/{org}/secrets/{path...}/{name}
 	// Matches the ATS kmsclient.Get() URL pattern.
-	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
 		rest := r.PathValue("rest")
 		idx := strings.LastIndex(rest, "/")
 		if idx < 0 {
@@ -217,10 +225,10 @@ func main() {
 		writeJSON(w, http.StatusOK, map[string]any{
 			"secret": map[string]any{"value": string(sec.Ciphertext)},
 		})
-	})
+	}))
 
 	// POST /v1/kms/orgs/{org}/secrets — create a secret.
-	mux.HandleFunc("POST /v1/kms/orgs/{org}/secrets", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /v1/kms/orgs/{org}/secrets", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Path  string `json:"path"`
 			Name  string `json:"name"`
@@ -245,10 +253,10 @@ func main() {
 			return
 		}
 		writeJSON(w, http.StatusCreated, map[string]any{"ok": true})
-	})
+	}))
 
 	// DELETE /v1/kms/orgs/{org}/secrets/{rest...}/{name}
-	mux.HandleFunc("DELETE /v1/kms/orgs/{org}/secrets/{rest...}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("DELETE /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
 		rest := r.PathValue("rest")
 		idx := strings.LastIndex(rest, "/")
 		if idx < 0 {
@@ -265,7 +273,7 @@ func main() {
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
-	})
+	}))
 
 	// Legacy: env-backed secret fetch.
 	mux.HandleFunc("GET /v1/kms/secrets/{name}", func(w http.ResponseWriter, r *http.Request) {
