@@ -719,6 +719,18 @@ func startReplicator(db *badger.DB, nodeID string) *badger.Replicator {
 		os.Getenv("REPLICATE_S3_SECRET_KEY"),
 	)
 
+	// Backup interval. Default 60s — every-second backups generated
+	// continuous allocation pressure (~3 KiB streamed per cycle plus
+	// the encrypter's working buffers, ~150 MiB sustained heap on
+	// quiet KMS pods). 60s catches up to mainnet write rate (~10
+	// secret rotations/day) with plenty of headroom; operators can
+	// tune via REPLICATE_INTERVAL=<go-duration>.
+	intv := time.Minute
+	if v := os.Getenv("REPLICATE_INTERVAL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			intv = d
+		}
+	}
 	cfg := badger.ReplicatorConfig{
 		Endpoint:  endpoint,
 		Bucket:    envOr("REPLICATE_S3_BUCKET", "lux-kms-backups"),
@@ -727,7 +739,7 @@ func startReplicator(db *badger.DB, nodeID string) *badger.Replicator {
 		SecretKey: secret,
 		UseSSL:    useSSL,
 		Path:      envOr("REPLICATE_S3_PATH", envOr("REPLICATE_PATH", fmt.Sprintf("kms/%s", nodeID))),
-		Interval:  time.Second,
+		Interval:  intv,
 	}
 
 	// Age encryption for backups.
