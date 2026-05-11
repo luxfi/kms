@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/luxfi/zap"
@@ -62,6 +63,12 @@ type ZapClient struct {
 // NewZapClient creates a ZAP client for MPC communication.
 // If mpcAddr is empty, uses mDNS discovery. Otherwise connects directly.
 //
+// mpcAddr may be a single `host:port` or a comma-separated list. The
+// client tries each address in order and binds to the first one that
+// accepts a connection — the rest are fall-overs for the case where one
+// MPC pod is restarting. Once connected, ZAP-level peer-set logic owns
+// further selection inside the cluster.
+//
 // SECURITY: ZAP does not yet support mutual TLS. Before production launch,
 // the ZAP library must add mTLS support and this client must be updated to
 // require it. Until then, deploy only on trusted networks (K8s pod network
@@ -70,11 +77,30 @@ func NewZapClient(nodeID, mpcAddr string) (*ZapClient, error) {
 	return NewZapClientWith(nodeID, mpcAddr, nil)
 }
 
+// splitAddrs parses a CSV of host:port (with optional whitespace) into a
+// non-empty slice of trimmed entries. Empty input → empty slice. Empty
+// entries inside the CSV are dropped.
+func splitAddrs(mpcAddr string) []string {
+	if mpcAddr == "" {
+		return nil
+	}
+	parts := strings.Split(mpcAddr, ",")
+	var out []string
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 // NewZapClientWith builds a ZapClient and, when authCfg is non-nil and
 // configured, sends OpAuthHello right after ConnectDirect. A failure to
 // authenticate returns an error so callers can fail fast at boot.
 func NewZapClientWith(nodeID, mpcAddr string, authCfg *AuthConfig) (*ZapClient, error) {
-	useMDNS := mpcAddr == ""
+	addrs := splitAddrs(mpcAddr)
+	useMDNS := len(addrs) == 0
 	if useMDNS {
 		slog.Warn("mpc: mDNS discovery enabled — this is unsafe outside development; set MPC_ADDR for production")
 	}
@@ -89,9 +115,21 @@ func NewZapClientWith(nodeID, mpcAddr string, authCfg *AuthConfig) (*ZapClient, 
 	c := &ZapClient{node: node, auth: authCfg}
 
 	if !useMDNS {
-		if err := node.ConnectDirect(mpcAddr); err != nil {
-			return nil, fmt.Errorf("mpc: connect %s: %w", mpcAddr, err)
+		var dialErrs []error
+		var connected string
+		for _, addr := range addrs {
+			if err := node.ConnectDirect(addr); err != nil {
+				dialErrs = append(dialErrs, fmt.Errorf("%s: %w", addr, err))
+				slog.Warn("mpc: ConnectDirect failed; trying next", "addr", addr, "err", err)
+				continue
+			}
+			connected = addr
+			break
 		}
+		if connected == "" {
+			return nil, fmt.Errorf("mpc: connect %s: %w", mpcAddr, errors.Join(dialErrs...))
+		}
+		slog.Info("mpc: connected", "addr", connected, "candidates", len(addrs))
 		peers := node.Peers()
 		if len(peers) > 0 {
 			c.peerID = peers[0]
