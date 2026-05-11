@@ -3,6 +3,7 @@
   "description": "Hanzo KMS Frontend Dashboard",
   "private": true,
   "version": "1.0.0",
+  "packageManager": "pnpm@10.33.4+sha512.1c67b3b359b2d408119ba1ed289f34b8fc3c6873412bec6fd264fbdc82489e510fcbecb9ce9d22dae7f3b76269d8441046014bdca53b9979cd7a561ad631b800",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/hanzoai/kms.git",
@@ -11,6 +12,15 @@
   "author": "Hanzo AI",
   "homepage": "https://kms.hanzo.ai",
   "type": "module",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "core-js",
+      "esbuild",
+      "protobufjs",
+      "unrs-resolver"
+    ]
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
