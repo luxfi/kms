@@ -225,7 +225,7 @@ func TestRequireOrgJWT_wrongIssuerRejected(t *testing.T) {
 	}
 }
 
-// Casdoor-style client_credentials JWT — owner="admin" (record parent),
+// IAM client_credentials JWT — owner="admin" (record parent),
 // type="application", name="<org>-<service>". The org is derived from
 // the name prefix per the documented IAM naming convention.
 func TestRequireOrgJWT_applicationToken_orgFromName(t *testing.T) {

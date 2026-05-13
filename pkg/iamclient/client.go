@@ -22,7 +22,7 @@
 //
 // Error responses follow RFC 6749 §5.2: { "error": "...", "error_description": "..." }.
 //
-// Note: Hanzo IAM (Casdoor-derived) does not currently honor the
+// Note: Hanzo IAM does not currently honor the
 // `audience` request parameter — the issued JWT's `aud` claim equals
 // the client_id (e.g. `lux-kms`). Upstream MPC pkg/zapauth
 // configures `ZAP_EXPECTED_AUDIENCES` accordingly.

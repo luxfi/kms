@@ -608,9 +608,9 @@ func TestCookieDomain_rejectsLeadingDot(t *testing.T) {
 	}
 }
 
-// TestCasdoorErrorEnvelope_returnsError — IAM returns 200 + status:error
+// TestIAMErrorEnvelope_returnsError — IAM returns 200 + status:error
 // envelope. callIAMAddApplication must convert to error with Msg.
-func TestCasdoorErrorEnvelope_returnsError(t *testing.T) {
+func TestIAMErrorEnvelope_returnsError(t *testing.T) {
 	iam := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]any{
 			"status": "error",
@@ -629,9 +629,9 @@ func TestCasdoorErrorEnvelope_returnsError(t *testing.T) {
 	}
 }
 
-// TestCasdoorErrorEnvelope_non2xxFails — non-2xx HTTP must fail without
+// TestIAMErrorEnvelope_non2xxFails — non-2xx HTTP must fail without
 // trying to parse the body envelope.
-func TestCasdoorErrorEnvelope_non2xxFails(t *testing.T) {
+func TestIAMErrorEnvelope_non2xxFails(t *testing.T) {
 	iam := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "down", http.StatusServiceUnavailable)
 	}))

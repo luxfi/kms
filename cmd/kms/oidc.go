@@ -1,4 +1,4 @@
-// OIDC SSO handlers — IAM (Casdoor) authorization-code flow.
+// OIDC SSO handlers — Hanzo IAM authorization-code flow.
 //
 // Flow:
 //
@@ -256,7 +256,7 @@ func (c *oidcConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		"state":         {state},
 	}
 	if orgSlug != "" {
-		// Casdoor honours `application` as the org-app scoping hint.
+		// Hanzo IAM honours `application` as the org-app scoping hint.
 		q.Set("application", orgSlug)
 	}
 	http.Redirect(w, r, c.iamEndpoint+"/login/oauth/authorize?"+q.Encode(), http.StatusFound)
@@ -351,7 +351,7 @@ func (c *oidcConfig) handleWhoami(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleMintClientCredential creates a new KMS service application
-// (clientId/clientSecret pair) via Casdoor admin API and returns the
+// (clientId/clientSecret pair) via Hanzo IAM admin API and returns the
 // secret to the caller exactly once.
 //
 // Authz chain (every check fail-closed):
@@ -424,7 +424,7 @@ func (c *oidcConfig) handleMintClientCredential(w http.ResponseWriter, r *http.R
 	})
 }
 
-// callIAMAddApplication posts the create request to Casdoor and parses
+// callIAMAddApplication posts the create request to Hanzo IAM and parses
 // the response. Validates HTTP status AND the IAM envelope `status` so a
 // 200-with-error body is treated as the failure it is.
 func (c *oidcConfig) callIAMAddApplication(ctx context.Context, adminID, adminSecret, name, description string) (string, string, error) {
@@ -434,7 +434,7 @@ func (c *oidcConfig) callIAMAddApplication(ctx context.Context, adminID, adminSe
 		"displayName":  name,
 		"description":  description,
 		"organization": c.owner,
-		// Mark as M2M (Casdoor "Service" type) so it doesn't appear in
+		// Mark as M2M (IAM "Service" type) so it doesn't appear in
 		// the user-facing app picker.
 		"clientId":     "", // server-generated
 		"clientSecret": "", // server-generated
@@ -461,7 +461,7 @@ func (c *oidcConfig) callIAMAddApplication(ctx context.Context, adminID, adminSe
 		return "", "", fmt.Errorf("iam status=%d", resp.StatusCode)
 	}
 
-	// Casdoor returns the generated app under either `data` or `data2`
+	// Hanzo IAM returns the generated app under either `data` or `data2`
 	// depending on version — try both shapes.
 	var iam struct {
 		Status string          `json:"status"`
@@ -508,7 +508,7 @@ func (c *oidcConfig) handleLogout(w http.ResponseWriter, _ *http.Request) {
 }
 
 // exchangeCode posts the auth code to IAM's token endpoint and returns
-// the access_token. The IAM endpoint is canonical Casdoor at
+// the access_token. The IAM endpoint is canonical Hanzo IAM at
 // /login/oauth/access_token (no /api/ prefix — killed in iam v2.381).
 func (c *oidcConfig) exchangeCode(ctx context.Context, code, redirectURI string) (string, error) {
 	form := url.Values{
@@ -598,7 +598,7 @@ func readBE64(b []byte) int64 {
 }
 
 // hasRole returns true if any element of roles equals want (case-sensitive,
-// matches Casdoor convention).
+// matches IAM convention).
 func hasRole(roles []string, want string) bool {
 	for _, r := range roles {
 		if r == want {
@@ -612,7 +612,7 @@ func hasRole(roles []string, want string) bool {
 // JWKS-validated session JWTs.
 // ---------------------------------------------------------------------------
 
-// sessionClaims is the subset of IAM/Casdoor claims we authorize on.
+// sessionClaims is the subset of IAM claims we authorize on.
 // `owner` scopes to the org slug; `roles` carries the role list the
 // kms-admin gate consumes.
 type sessionClaims struct {
