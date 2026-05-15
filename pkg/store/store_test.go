@@ -28,9 +28,9 @@ func TestPutAndGet(t *testing.T) {
 	ks := &keys.ValidatorKeySet{
 		ValidatorID:       "val-1",
 		BLSWalletID:       "bls-w-1",
-		RingtailWalletID:  "rt-w-1",
+		CoronaWalletID:  "rt-w-1",
 		BLSPublicKey:      "04aabb",
-		RingtailPublicKey: "edpub1",
+		CoronaPublicKey: "edpub1",
 		Threshold:         3,
 		Parties:           5,
 		Status:            "active",
@@ -49,8 +49,8 @@ func TestPutAndGet(t *testing.T) {
 	if got.BLSWalletID != "bls-w-1" {
 		t.Errorf("expected bls-w-1, got %s", got.BLSWalletID)
 	}
-	if got.RingtailPublicKey != "edpub1" {
-		t.Errorf("expected edpub1, got %s", got.RingtailPublicKey)
+	if got.CoronaPublicKey != "edpub1" {
+		t.Errorf("expected edpub1, got %s", got.CoronaPublicKey)
 	}
 }
 

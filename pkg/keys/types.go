@@ -3,13 +3,13 @@ package keys
 
 import "time"
 
-// ValidatorKeySet holds MPC wallet references for a validator's BLS and Ringtail keys.
+// ValidatorKeySet holds MPC wallet references for a validator's BLS and Corona keys.
 type ValidatorKeySet struct {
 	ValidatorID       string    `json:"validator_id"`
 	BLSWalletID       string    `json:"bls_wallet_id"`
-	RingtailWalletID  string    `json:"ringtail_wallet_id"`
+	CoronaWalletID  string    `json:"ringtail_wallet_id"`
 	BLSPublicKey      string    `json:"bls_public_key"`
-	RingtailPublicKey string    `json:"ringtail_public_key"`
+	CoronaPublicKey string    `json:"ringtail_public_key"`
 	Threshold         int       `json:"threshold"`
 	Parties           int       `json:"parties"`
 	Status            string    `json:"status"`
@@ -32,7 +32,7 @@ type RotateRequest struct {
 
 // SignRequest is the input for signing with a validator key.
 type SignRequest struct {
-	KeyType string `json:"key_type"` // "bls" or "ringtail"
+	KeyType string `json:"key_type"` // "bls" or "corona"
 	Message []byte `json:"message"`
 }
 

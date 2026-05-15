@@ -77,7 +77,7 @@ func NewManagerSplit(signer Signer, encryptor Encryptor, store Store, vaultID st
 
 // GenerateValidatorKeys creates a new validator key set via MPC DKG.
 // It generates two MPC wallets: one for BLS (secp256k1/CGGMP21) and one for
-// Ringtail (ed25519/FROST), then stores the mapping.
+// Corona (ed25519/FROST), then stores the mapping.
 func (m *Manager) GenerateValidatorKeys(ctx context.Context, req GenerateRequest) (*ValidatorKeySet, error) {
 	if req.ValidatorID == "" {
 		return nil, fmt.Errorf("keys: validator_id is required")
@@ -104,36 +104,36 @@ func (m *Manager) GenerateValidatorKeys(ctx context.Context, req GenerateRequest
 		return nil, fmt.Errorf("keys: bls keygen failed: %w", err)
 	}
 
-	// Generate Ringtail key (ed25519 via FROST protocol).
-	ringtailResult, err := m.signer.Keygen(ctx, m.vaultID, mpc.KeygenRequest{
-		Name:     fmt.Sprintf("validator-%s-ringtail", req.ValidatorID),
+	// Generate Corona key (ed25519 via FROST protocol).
+	coronaResult, err := m.signer.Keygen(ctx, m.vaultID, mpc.KeygenRequest{
+		Name:     fmt.Sprintf("validator-%s-corona", req.ValidatorID),
 		KeyType:  "ed25519",
 		Protocol: "frost",
 	})
 	if err != nil {
-		// BLS keygen succeeded but Ringtail failed. DKG cannot be rolled back —
+		// BLS keygen succeeded but Corona failed. DKG cannot be rolled back —
 		// the BLS wallet is now orphaned in the MPC cluster. Log for manual cleanup.
-		log.Printf("keys: CRITICAL: ringtail keygen failed after BLS keygen succeeded; orphaned BLS wallet_id=%s for validator=%s — manual cleanup required: %v",
+		log.Printf("keys: CRITICAL: corona keygen failed after BLS keygen succeeded; orphaned BLS wallet_id=%s for validator=%s — manual cleanup required: %v",
 			blsResult.WalletID, req.ValidatorID, err)
-		return nil, fmt.Errorf("keys: ringtail keygen failed (orphaned bls wallet %s): %w", blsResult.WalletID, err)
+		return nil, fmt.Errorf("keys: corona keygen failed (orphaned bls wallet %s): %w", blsResult.WalletID, err)
 	}
 
 	blsPub := ""
 	if blsResult.ECDSAPubkey != nil {
 		blsPub = *blsResult.ECDSAPubkey
 	}
-	ringtailPub := ""
-	if ringtailResult.EDDSAPubkey != nil {
-		ringtailPub = *ringtailResult.EDDSAPubkey
+	coronaPub := ""
+	if coronaResult.EDDSAPubkey != nil {
+		coronaPub = *coronaResult.EDDSAPubkey
 	}
 
 	now := time.Now().UTC()
 	ks := &ValidatorKeySet{
 		ValidatorID:       req.ValidatorID,
 		BLSWalletID:       blsResult.WalletID,
-		RingtailWalletID:  ringtailResult.WalletID,
+		CoronaWalletID:  coronaResult.WalletID,
 		BLSPublicKey:      blsPub,
-		RingtailPublicKey: ringtailPub,
+		CoronaPublicKey: coronaPub,
 		Threshold:         blsResult.Threshold,
 		Parties:           len(blsResult.Participants),
 		Status:            "active",
@@ -171,7 +171,7 @@ func (m *Manager) SignWithBLS(ctx context.Context, validatorID string, message [
 	}, nil
 }
 
-// SignWithRingtail signs a message using the validator's Ringtail key via MPC threshold signing.
+// SignWithRingtail signs a message using the validator's Corona key via MPC threshold signing.
 func (m *Manager) SignWithRingtail(ctx context.Context, validatorID string, message []byte) (*SignResponse, error) {
 	ks, err := m.store.Get(validatorID)
 	if err != nil {
@@ -179,12 +179,12 @@ func (m *Manager) SignWithRingtail(ctx context.Context, validatorID string, mess
 	}
 
 	result, err := m.signer.Sign(ctx, mpc.SignRequest{
-		WalletID: ks.RingtailWalletID,
+		WalletID: ks.CoronaWalletID,
 		KeyType:  "ed25519",
 		Message:  message,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("keys: ringtail sign: %w", err)
+		return nil, fmt.Errorf("keys: corona sign: %w", err)
 	}
 
 	return &SignResponse{
@@ -217,19 +217,19 @@ func (m *Manager) Rotate(ctx context.Context, validatorID string, req RotateRequ
 		return nil, fmt.Errorf("keys: bls reshare: %w", err)
 	}
 
-	// Reshare Ringtail key.
-	if err := m.signer.Reshare(ctx, ks.RingtailWalletID, reshareReq); err != nil {
-		// BLS was reshared but Ringtail failed — keys are now inconsistent.
+	// Reshare Corona key.
+	if err := m.signer.Reshare(ctx, ks.CoronaWalletID, reshareReq); err != nil {
+		// BLS was reshared but Corona failed — keys are now inconsistent.
 		// Attempt to roll BLS back to previous threshold/participants.
-		log.Printf("keys: WARNING: ringtail reshare failed after BLS reshare succeeded for validator=%s, attempting BLS rollback: %v",
+		log.Printf("keys: WARNING: corona reshare failed after BLS reshare succeeded for validator=%s, attempting BLS rollback: %v",
 			validatorID, err)
 		if rbErr := m.signer.Reshare(ctx, ks.BLSWalletID, rollbackReq); rbErr != nil {
 			log.Printf("keys: CRITICAL: BLS rollback also failed for validator=%s — keys are in inconsistent state, manual intervention required: %v",
 				validatorID, rbErr)
-			return nil, fmt.Errorf("keys: ringtail reshare failed AND bls rollback failed (inconsistent state): ringtail=%w, bls_rollback=%v", err, rbErr)
+			return nil, fmt.Errorf("keys: corona reshare failed AND bls rollback failed (inconsistent state): corona=%w, bls_rollback=%v", err, rbErr)
 		}
-		log.Printf("keys: BLS rollback succeeded for validator=%s after ringtail reshare failure", validatorID)
-		return nil, fmt.Errorf("keys: ringtail reshare failed (bls rolled back): %w", err)
+		log.Printf("keys: BLS rollback succeeded for validator=%s after corona reshare failure", validatorID)
+		return nil, fmt.Errorf("keys: corona reshare failed (bls rolled back): %w", err)
 	}
 
 	if req.NewThreshold > 0 {

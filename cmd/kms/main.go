@@ -578,7 +578,7 @@ func registerKMSRoutes(mux *http.ServeMux, mgr *keys.Manager, mpcBackend keys.MP
 			return
 		}
 		log.Printf("kms: audit: keygen OK validator_id=%s bls_wallet=%s ringtail_wallet=%s threshold=%d parties=%d",
-			ks.ValidatorID, ks.BLSWalletID, ks.RingtailWalletID, ks.Threshold, ks.Parties)
+			ks.ValidatorID, ks.BLSWalletID, ks.CoronaWalletID, ks.Threshold, ks.Parties)
 		writeJSON(w, http.StatusCreated, ks)
 	})
 
@@ -620,10 +620,10 @@ func registerKMSRoutes(mux *http.ServeMux, mgr *keys.Manager, mpcBackend keys.MP
 		switch req.KeyType {
 		case "bls":
 			resp, err = mgr.SignWithBLS(r.Context(), id, req.Message)
-		case "ringtail":
+		case "corona":
 			resp, err = mgr.SignWithRingtail(r.Context(), id, req.Message)
 		default:
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "key_type must be 'bls' or 'ringtail'"})
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "key_type must be 'bls' or 'corona'"})
 			return
 		}
 		if err != nil {

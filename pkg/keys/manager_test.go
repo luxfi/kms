@@ -141,14 +141,14 @@ func TestGenerateValidatorKeys(t *testing.T) {
 	if ks.BLSWalletID == "" {
 		t.Error("expected bls wallet id")
 	}
-	if ks.RingtailWalletID == "" {
-		t.Error("expected ringtail wallet id")
+	if ks.CoronaWalletID == "" {
+		t.Error("expected corona wallet id")
 	}
 	if ks.BLSPublicKey == "" {
 		t.Error("expected bls public key")
 	}
-	if ks.RingtailPublicKey == "" {
-		t.Error("expected ringtail public key")
+	if ks.CoronaPublicKey == "" {
+		t.Error("expected corona public key")
 	}
 	if ks.Status != "active" {
 		t.Errorf("expected active, got %s", ks.Status)

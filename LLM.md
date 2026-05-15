@@ -3,6 +3,99 @@
 **Project**: Lux Key Management Service (KMS)
 **Organization**: Lux Network
 
+## 2026-05-15 — STOP: master-key split-brain on do-sfo3-hanzo-k8s
+
+Cluster-wide KMS rewrite (Casibase → lux-kms-go) is BLOCKED on cryptographic
+discontinuity. Do not seed lux-kms-go from harvested cluster Secrets without
+the explicit human-reviewed plan below.
+
+Observed state on do-sfo3-hanzo-k8s:
+
+- `hanzo/kms` (Casibase Node-Fastify, `ghcr.io/hanzoai/kms:1.0.7` and
+  `:latest`) holds the canonical at-rest seeds for ~50 KMSSecrets. Envelope
+  scheme is Casibase's, master = env `ROOT_ENCRYPTION_KEY` on the pod.
+  Old replicaset `kms-867696d677` (`:latest`, 43h) is Running; new replicaset
+  `kms-6bb749795d` (`:1.0.7`) is CrashLoopBackOff with
+  `"kms.Embed: IAM_URL is required (no default) — point at the IAM you want
+  this KMS to trust"` — i.e. 1.0.7 wires in `kms.Embed()` from our Go client
+  but the deployment Secret lacks IAM_URL.
+- `lux-kms-go/kms-0` (Go, `ghcr.io/luxfi/kms:server`, 19d uptime) holds a
+  near-empty ZapDB; envelope scheme is `pkg/store/crypto.go` AES-256-GCM
+  with master = `KMS_MASTER_KEY_B64` from `lux-kms-go/kms-secrets`. The
+  master-key Secret AND PVC were both created 2026-04-26 within 35 s of
+  each other; data has been written to `00001.mem` as recently as
+  2026-05-14, but every operator `OpSecretGet` returns
+  `crypto: unwrap dek: crypto: invalid envelope`. With master key length
+  44 (= base64 of 32 bytes) and Secret unchanged since first create, the
+  most likely cause is that what's in the store was written by some
+  pre-canonical envelope shape (legacy seeding) and is not recoverable
+  with the current key. The store is effectively empty for our purposes.
+- `kms-operator-system/kms-operator-controller-manager`
+  (`ghcr.io/luxfi/kms-operator:latest`) is ZAP-only and dials
+  `<host>:9999`. Currently fails most reconciles with `i/o timeout` on
+  `kms.hanzo.svc.cluster.local:9999` — that service has no listener,
+  Casibase serves HTTP on `:8080`. 53 of 73 KMSSecrets have this stale
+  hostAPI baked in.
+- Of the 8 KMSSecrets that DO point at `kms.lux-kms-go.svc`, the operator
+  handshake succeeds but every `OpSecretGet` returns "invalid envelope"
+  because the store has no seeded values for those keys.
+
+The split-brain is not a key rotation. It is two independently-managed
+key domains for two independently-running KMS implementations:
+
+- Casibase: `ROOT_ENCRYPTION_KEY` on `hanzo/kms-secrets`,
+  Fastify/`/api/v3/secrets/raw`. Holds real data.
+- lux-kms-go: `KMS_MASTER_KEY_B64` + `KMS_ENCRYPTION_KEY_B64` on
+  `lux-kms-go/kms-secrets`. Empty store.
+
+The deployed `ghcr.io/luxfi/kms:server` predates the canonical
+`/v1/kms/orgs/{org}/secrets/*` routes documented in
+`~/work/hanzo/kms/CLAUDE.md`. Confirmed via direct port-forward:
+- `GET /healthz`  → 200 `{"service":"kms","status":"ok"}`
+- `GET /v1/kms/status` → 404 page not found
+- `GET /v1/kms/orgs/hanzo/secrets/postgres-credentials` → 404
+- `GET /v1/kms/secrets/<name>` → 400 `path and name required` (route exists)
+
+`cmd/kms/main.go` line 215 in main today registers the org-scoped routes,
+so a fresh tag + image push gets us there, but it's a two-image rolling
+upgrade (kms server + operator) not a single-image one.
+
+Path forward (requires human review BEFORE execution):
+
+1. Spin a one-shot pod or job that:
+   - mounts `hanzo/kms-secrets` with read access to `ROOT_ENCRYPTION_KEY`,
+   - hits the running Casibase pod's REST surface
+     (`/api/v3/secrets/raw?workspaceSlug=…&environment=prod&secretPath=/`)
+     for each of the ~50 paths consumers expect, dumping plaintext
+     into an in-memory map.
+   - This is the only authority for those values. The cluster-projected
+     `corev1.Secret` mirrors are stale-but-working snapshots, not the
+     ground truth; using them as the seed source pins us to the
+     last-good rotation, which is fine only if nobody intends to rotate
+     anything before the cutover.
+2. Tag `luxfi/kms v1.10.0` of the current main (cmd/kms with the org
+   routes). Tag `luxfi/kms-operator v1.10.0` with an `HTTP` transport
+   that dials `/v1/kms/orgs/{org}/secrets/{path...}` and a
+   `KMS_OPERATOR_TRANSPORT=zap|http` flag, default `http`.
+3. Roll lux-kms-go to v1.10.0 server. Delete `data-kms-0` PVC at the
+   same time (the existing ZapDB is uninvertible cruft).
+4. Seed lux-kms-go via the new HTTP API using the harvest from (1).
+   Use a path scheme that mirrors what the operator reads: `/<workspace>`
+   per consumer.
+5. Roll operator to v1.10.0 (HTTP). Migrate the 53 stale-hostAPI
+   KMSSecrets in a single `kubectl get -A -o json | jq | apply` pass.
+   Verify Synced count rises to 73/73.
+6. Only THEN: `kubectl scale deploy/kms -n hanzo --replicas=0`. Do not
+   delete its manifest until 1 week of clean reconciles confirms.
+
+Do NOT:
+- Rebuild images locally (CI/CD only, per CLAUDE.md).
+- Delete projected k8s Secrets — patch via apply.
+- Regenerate the lux-kms-go master key. It's correct for its store;
+  the store just has nothing useful in it.
+- Use cluster-projected Secrets as the seed source when Casibase is
+  still running and can be queried for the authoritative values.
+
 ## v1.9.0 — pkg/iamclient + ZAP bearer-on-handshake (LP-103)
 
 Pairs with luxfi/mpc v1.14.0 pkg/zapauth. KMS mints an OAuth2
