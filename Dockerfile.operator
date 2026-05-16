@@ -1,7 +1,7 @@
 # luxfi/kms-operator — minimal KMSSecret reconciler.
 # Single static Go binary, no CGO, distroless runtime.
 
-FROM golang:1.26-bookworm AS builder
+FROM golang:1.26.3-bookworm AS builder
 ENV GOTOOLCHAIN=auto
 ARG GITHUB_TOKEN
 RUN git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
