@@ -9,7 +9,7 @@ RUN corepack enable pnpm && pnpm install --frozen-lockfile
 COPY frontend/ .
 RUN pnpm vite build
 
-FROM golang:1.26-bookworm AS builder
+FROM golang:1.26.3-bookworm AS builder
 # Auto-fetch the toolchain pinned in go.mod (avoids synctest panic with stale local toolchain)
 ENV GOTOOLCHAIN=auto
 RUN apt-get update && apt-get install -y --no-install-recommends \
