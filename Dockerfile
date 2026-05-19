@@ -32,6 +32,13 @@ COPY . .
 # bundled at /app/frontend in the runtime layer.
 COPY --from=frontend /src/frontend/dist /build/cmd/kms/web
 
+# Per SCALE_STANDARD.md §2 (https://github.com/hanzoai/hips/blob/main/docs/SCALE_STANDARD.md)
+# — every Go production Dockerfile that emits JSON to a client builds
+# with GOEXPERIMENT=jsonv2. Verified -12% time / -23% allocs on the
+# edge POST roundtrip vs encoding/json v1.
+ARG GO_EXPERIMENT=jsonv2
+ENV GOEXPERIMENT=${GO_EXPERIMENT}
+
 RUN CGO_ENABLED=1 go build -tags "sqlite_fts5 sqlcipher" \
     -ldflags="-s -w" -o /usr/local/bin/kms ./cmd/kms
 
