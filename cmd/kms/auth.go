@@ -82,11 +82,11 @@ func (c *orgClaims) orgs() []string {
 // server today — we rely on issuer + signature + owner-equals-org.
 //
 // jwksURL and expectedIssuer often differ in production: jwksURL is
-// the in-cluster IAM URL (`http://liquid-iam.liquidity.svc:8000/...`)
+// the in-cluster IAM URL (e.g. `http://iam.<namespace>.svc:8000/...`)
 // for cheap fetches, expectedIssuer is the public host the JWT `iss`
-// claim was minted with (`https://iam.dev.satschel.com`). Splitting
-// them is what keeps validation working when KMS sits behind a
-// gateway that rewrites Host.
+// claim was minted with (e.g. `https://iam.<env>.<tenant>.example.com`).
+// Splitting them is what keeps validation working when KMS sits behind
+// a gateway that rewrites Host.
 type orgJWTAuth struct {
 	jwksURL  string
 	issuer   string

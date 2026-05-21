@@ -370,7 +370,7 @@ func TestRequireOrgJWT_splitJwksAndIssuer(t *testing.T) {
 	jwksHost := httptest.NewServer(jwksHandler(jwks))
 	defer jwksHost.Close()
 
-	publicIssuer := "https://iam.dev.satschel.com"
+	publicIssuer := "https://iam.dev.example.com"
 	auth := newOrgJWTAuth(jwksHost.URL, publicIssuer)
 
 	tok := signOrgClaims(t, signer, orgClaims{
