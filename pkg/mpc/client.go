@@ -42,65 +42,27 @@ type KeygenRequest struct {
 
 // KeygenResult is the wallet object returned after keygen.
 //
-// KeccakAddress is the canonical JSON field for the 20-byte
-// Keccak-derived address (the EVM-runtime address format consumed by
-// any EVM-compatible chain). EthAddress is the deprecated alias
-// retained so downstream callers (mpc HTTP responders, KMS clients,
-// dashboards) keep working until they migrate. Both fields carry
-// the same value on the wire; see MarshalJSON / UnmarshalJSON.
+// EVMAddress is the canonical 20-byte EVM-runtime account address —
+// the format consumed by every EVM-compatible chain (Lux C-Chain,
+// Liquid EVM, Hanzo EVM, etc.). The derivation hashes the secp256k1
+// pubkey with Keccak256 — that's HOW. The value IS "EVM-runtime
+// account address" — that's WHAT.
 type KeygenResult struct {
-	ID            string   `json:"id"`
-	WalletID      string   `json:"walletId"`
-	VaultID       string   `json:"vaultId"`
-	Name          *string  `json:"name"`
-	KeyType       string   `json:"keyType"`
-	Protocol      string   `json:"protocol"`
-	ECDSAPubkey   *string  `json:"ecdsaPubkey"`
-	EDDSAPubkey   *string  `json:"eddsaPubkey"`
-	KeccakAddress *string  `json:"keccakAddress,omitempty"`
-	EthAddress    *string  `json:"ethAddress,omitempty"` // Deprecated: use KeccakAddress
-	BtcAddress    *string  `json:"btcAddress"`
-	SolAddress    *string  `json:"solAddress"`
-	Threshold     int      `json:"threshold"`
-	Participants  []string `json:"participants"`
-	Version       int      `json:"version"`
-	Status        string   `json:"status"`
-}
-
-// MarshalJSON emits both keccakAddress (canonical) and ethAddress
-// (deprecated alias) with the same value so downstream readers using
-// either field see consistent data during the migration window.
-func (k KeygenResult) MarshalJSON() ([]byte, error) {
-	type alias KeygenResult
-	a := alias(k)
-	mirrorKeccakEthString(&a.KeccakAddress, &a.EthAddress)
-	return json.Marshal(a)
-}
-
-// UnmarshalJSON accepts either keccakAddress or ethAddress (or both)
-// from the source JSON and populates both fields on the struct.
-func (k *KeygenResult) UnmarshalJSON(data []byte) error {
-	type alias KeygenResult
-	a := alias{}
-	if err := json.Unmarshal(data, &a); err != nil {
-		return err
-	}
-	mirrorKeccakEthString(&a.KeccakAddress, &a.EthAddress)
-	*k = KeygenResult(a)
-	return nil
-}
-
-// mirrorKeccakEthString fills whichever side is nil from the other
-// side. Pointer-to-pointer-string used so we can leave both nil when
-// neither was set (the no-address case stays absent on the wire).
-func mirrorKeccakEthString(keccak, eth **string) {
-	if *keccak == nil && *eth != nil {
-		v := **eth
-		*keccak = &v
-	} else if *eth == nil && *keccak != nil {
-		v := **keccak
-		*eth = &v
-	}
+	ID           string   `json:"id"`
+	WalletID     string   `json:"walletId"`
+	VaultID      string   `json:"vaultId"`
+	Name         *string  `json:"name"`
+	KeyType      string   `json:"keyType"`
+	Protocol     string   `json:"protocol"`
+	ECDSAPubkey  *string  `json:"ecdsaPubkey"`
+	EDDSAPubkey  *string  `json:"eddsaPubkey"`
+	EVMAddress   *string  `json:"evmAddress,omitempty"`
+	BtcAddress   *string  `json:"btcAddress"`
+	SolAddress   *string  `json:"solAddress"`
+	Threshold    int      `json:"threshold"`
+	Participants []string `json:"participants"`
+	Version      int      `json:"version"`
+	Status       string   `json:"status"`
 }
 
 // SignRequest is the body sent to POST /v1/generate_mpc_sig or through
@@ -164,48 +126,25 @@ const (
 
 // Wallet is the response from GET /v1/wallets/{id}.
 //
-// KeccakAddress is the canonical JSON field; EthAddress is the
-// deprecated alias retained for downstream compat. Both fields carry
-// the same value via MarshalJSON / UnmarshalJSON.
+// EVMAddress is the canonical 20-byte EVM-runtime account address —
+// the format consumed by every EVM-compatible chain. See KeygenResult
+// for the naming rationale.
 type Wallet struct {
-	ID            string   `json:"id"`
-	WalletID      string   `json:"walletId"`
-	VaultID       string   `json:"vaultId"`
-	Name          *string  `json:"name"`
-	KeyType       string   `json:"keyType"`
-	Protocol      string   `json:"protocol"`
-	ECDSAPubkey   *string  `json:"ecdsaPubkey"`
-	EDDSAPubkey   *string  `json:"eddsaPubkey"`
-	KeccakAddress *string  `json:"keccakAddress,omitempty"`
-	EthAddress    *string  `json:"ethAddress,omitempty"` // Deprecated: use KeccakAddress
-	BtcAddress    *string  `json:"btcAddress"`
-	SolAddress    *string  `json:"solAddress"`
-	Threshold     int      `json:"threshold"`
-	Participants  []string `json:"participants"`
-	Version       int      `json:"version"`
-	Status        string   `json:"status"`
-}
-
-// MarshalJSON mirrors KeygenResult.MarshalJSON — emits both
-// keccakAddress and ethAddress with the same value.
-func (w Wallet) MarshalJSON() ([]byte, error) {
-	type alias Wallet
-	a := alias(w)
-	mirrorKeccakEthString(&a.KeccakAddress, &a.EthAddress)
-	return json.Marshal(a)
-}
-
-// UnmarshalJSON accepts either keccakAddress or ethAddress and
-// populates both fields.
-func (w *Wallet) UnmarshalJSON(data []byte) error {
-	type alias Wallet
-	a := alias{}
-	if err := json.Unmarshal(data, &a); err != nil {
-		return err
-	}
-	mirrorKeccakEthString(&a.KeccakAddress, &a.EthAddress)
-	*w = Wallet(a)
-	return nil
+	ID           string   `json:"id"`
+	WalletID     string   `json:"walletId"`
+	VaultID      string   `json:"vaultId"`
+	Name         *string  `json:"name"`
+	KeyType      string   `json:"keyType"`
+	Protocol     string   `json:"protocol"`
+	ECDSAPubkey  *string  `json:"ecdsaPubkey"`
+	EDDSAPubkey  *string  `json:"eddsaPubkey"`
+	EVMAddress   *string  `json:"evmAddress,omitempty"`
+	BtcAddress   *string  `json:"btcAddress"`
+	SolAddress   *string  `json:"solAddress"`
+	Threshold    int      `json:"threshold"`
+	Participants []string `json:"participants"`
+	Version      int      `json:"version"`
+	Status       string   `json:"status"`
 }
 
 // APIError represents an error response from the MPC API.
