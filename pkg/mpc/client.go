@@ -44,7 +44,7 @@ type KeygenRequest struct {
 //
 // EVMAddress is the canonical 20-byte EVM-runtime account address —
 // the format consumed by every EVM-compatible chain (Lux C-Chain,
-// Liquid EVM, Hanzo EVM, etc.). The derivation hashes the secp256k1
+// downstream EVM L1s, Hanzo EVM, etc.). The derivation hashes the secp256k1
 // pubkey with Keccak256 — that's HOW. The value IS "EVM-runtime
 // account address" — that's WHAT.
 type KeygenResult struct {
