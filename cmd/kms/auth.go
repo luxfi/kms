@@ -131,6 +131,16 @@ func (a *orgJWTAuth) validate(ctx context.Context, raw string) (*orgClaims, erro
 	if err != nil {
 		return nil, fmt.Errorf("jwks: %w", err)
 	}
+	// DEBUG: log JWKS state + token kid for diagnosis
+	tokKid := ""
+	if len(tok.Headers) > 0 {
+		tokKid = tok.Headers[0].KeyID
+	}
+	kidList := make([]string, 0, len(keys.Keys))
+	for _, k := range keys.Keys {
+		kidList = append(kidList, k.KeyID)
+	}
+	log.Printf("kms: validate: tok kid=%s jwks kids=%v", tokKid, kidList)
 	var claims orgClaims
 	verified := false
 	var lastErr error
@@ -139,6 +149,7 @@ func (a *orgJWTAuth) validate(ctx context.Context, raw string) (*orgClaims, erro
 			verified = true
 			break
 		} else {
+			log.Printf("kms: validate: kid=%s err=%v", k.KeyID, err)
 			lastErr = err
 		}
 	}
