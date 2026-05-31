@@ -738,20 +738,30 @@ func (c *jwksCache) fetch(ctx context.Context) (*gojose.JSONWebKeySet, error) {
 	}
 	resp, err := c.client.Do(req)
 	if err != nil {
+		log.Printf("kms: jwks fetch: req err: %v (url=%s)", err, c.url)
 		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		log.Printf("kms: jwks fetch: status %d (url=%s)", resp.StatusCode, c.url)
 		return nil, fmt.Errorf("status %d", resp.StatusCode)
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
+		log.Printf("kms: jwks fetch: read err: %v", err)
 		return nil, err
 	}
+	log.Printf("kms: jwks fetch: %d bytes from %s", len(body), c.url)
 	var ks gojose.JSONWebKeySet
 	if err := json.Unmarshal(body, &ks); err != nil {
+		log.Printf("kms: jwks fetch: unmarshal err: %v body=%.200q", err, string(body))
 		return nil, err
 	}
+	kids := make([]string, 0, len(ks.Keys))
+	for _, k := range ks.Keys {
+		kids = append(kids, k.KeyID)
+	}
+	log.Printf("kms: jwks fetch: parsed %d keys: %v", len(ks.Keys), kids)
 	return &ks, nil
 }
 
