@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -185,6 +186,10 @@ func (a *orgJWTAuth) requireOrgJWT(next http.HandlerFunc) http.HandlerFunc {
 		}
 		claims, err := a.validate(r.Context(), raw)
 		if err != nil {
+			// Log the actual reason so operators can see *why* a token
+			// was rejected (signature mismatch vs issuer mismatch vs
+			// expiry vs etc.). Body stays opaque to clients.
+			log.Printf("kms: auth reject: %v (path=%s)", err, r.URL.Path)
 			writeJSON(w, http.StatusUnauthorized, map[string]any{
 				"statusCode": 401, "message": "invalid token",
 			})
