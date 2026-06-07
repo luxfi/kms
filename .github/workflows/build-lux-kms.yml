@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: lux-build
+    runs-on: evo
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -49,9 +49,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-          runner-amd64: luxfi-amd64
-          runner-arm64: luxfi-arm64
-          runner-deploy: lux-deploy-linux-amd64
+          runner-amd64: evo
+          runner-arm64: spark
+          runner-deploy: evo
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -68,9 +68,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-          runner-amd64: luxfi-amd64
-          runner-arm64: luxfi-arm64
-          runner-deploy: lux-deploy-linux-amd64
+          runner-amd64: evo
+          runner-arm64: spark
+          runner-deploy: evo
       - name: Summary
         run: |
           echo "### Build complete" >> "$GITHUB_STEP_SUMMARY"
