@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kms
+  namespace: lux-system
+  labels:
+    app: kms
+spec:
+  serviceName: kms
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kms
+  template:
+    metadata:
+      labels:
+        app: kms
+    spec:
+      containers:
+        - name: kms
+          image: ghcr.io/luxfi/kms:latest
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: zap
+              containerPort: 9652
+              protocol: TCP
+          env:
+            # ZapDB storage.
+            - name: KMS_DATA_DIR
+              value: /data/kms
+            - name: KMS_LISTEN
+              value: ":8080"
+            # MPC integration — signing backend.
+            - name: MPC_ADDR
+              valueFrom:
+                secretKeyRef:
+                  name: kms-secrets
+                  key: mpc-addr
+                  optional: true
+            - name: MPC_VAULT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: kms-secrets
+                  key: mpc-vault-id
+            - name: MPC_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: kms-secrets
+                  key: mpc-token
+            # ZAP secrets server.
+            - name: ZAP_PORT
+              value: "9652"
+            - name: KMS_MASTER_KEY_B64
+              valueFrom:
+                secretKeyRef:
+                  name: kms-secrets
+                  key: master-key-b64
+                  optional: true
+            # ZapDB at-rest encryption.
+            - name: KMS_ENCRYPTION_KEY_B64
+              valueFrom:
+                secretKeyRef:
+                  name: kms-secrets
+                  key: encryption-key-b64
+                  optional: true
+            # ZapDB S3 replication (replaces replicate sidecar).
+            - name: REPLICATE_S3_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: kms-backup
+                  key: S3_ENDPOINT
+                  optional: true
+            - name: REPLICATE_S3_BUCKET
+              value: lux-kms-backups
+            - name: REPLICATE_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: kms-backup
+                  key: S3_ACCESS_KEY
+                  optional: true
+            - name: REPLICATE_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: kms-backup
+                  key: S3_SECRET_KEY
+                  optional: true
+            - name: REPLICATE_AGE_RECIPIENT
+              valueFrom:
+                secretKeyRef:
+                  name: kms-backup
+                  key: AGE_RECIPIENT
+                  optional: true
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data/kms
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi

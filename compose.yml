@@ -1,0 +1,25 @@
+services:
+  kms:
+    image: ghcr.io/luxfi/kms:latest
+    ports:
+      - "8080:8080"
+    environment:
+      MPC_ADDR: "mpc:9000"
+      MPC_VAULT_ID: "${MPC_VAULT_ID}"
+    volumes:
+      - kms-data:/data/kms
+    depends_on:
+      - mpc
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  mpc:
+    image: ghcr.io/luxfi/mpc:latest
+    ports:
+      - "8081:8081"
+
+volumes:
+  kms-data:

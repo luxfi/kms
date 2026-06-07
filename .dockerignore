@@ -1,0 +1,13 @@
+.git
+.github
+k8s
+k8-operator
+data
+*.md
+LICENSE
+Makefile
+frontend/node_modules
+**/node_modules
+**/.next
+docs
+img
