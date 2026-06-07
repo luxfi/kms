@@ -1,0 +1,33 @@
+# luxfi/kms-operator — minimal KMSSecret reconciler.
+# Single static Go binary, no CGO, scratch runtime.
+
+FROM golang:1.26.4-bookworm AS builder
+ENV GOTOOLCHAIN=auto
+ARG GITHUB_TOKEN
+RUN git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+ENV GOPRIVATE=github.com/luxfi/*,github.com/hanzoai/*
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates tzdata \
+    && rm -rf /var/lib/apt/lists/* \
+    && echo 'nonroot:x:65532:65532:nonroot:/home/nonroot:/sbin/nologin' >> /etc/passwd \
+    && echo 'nonroot:x:65532:' >> /etc/group
+
+WORKDIR /build
+COPY go.mod go.sum ./
+COPY vendor ./vendor
+COPY cmd/kms-operator ./cmd/kms-operator
+COPY pkg/zapclient ./pkg/zapclient
+
+RUN CGO_ENABLED=0 go build -mod=vendor \
+    -ldflags="-s -w" -o /usr/local/bin/kms-operator ./cmd/kms-operator
+
+FROM scratch
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/group /etc/group
+COPY --from=builder /usr/local/bin/kms-operator /usr/local/bin/kms-operator
+USER 65532:65532
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/kms-operator"]

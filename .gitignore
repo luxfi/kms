@@ -1,0 +1,21 @@
+# Binary
+/kms
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+*~
+*.swp
+*.swo
+
+# Editor
+.vscode/
+.idea/
+
+# Data
+/data/
+*.json.bak
