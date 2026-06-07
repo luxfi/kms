@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+    default-src 'self';
+    connect-src 'self' http://127.0.0.1:* https://checkout.stripe.com https://api.stripe.com https://api.pwnedpasswords.com https://hcaptcha.com https://*.hcaptcha.com;
+    script-src 'self' https://js.stripe.com https://api.stripe.com https://hcaptcha.com https://*.hcaptcha.com 'unsafe-inline' 'unsafe-eval';
+    style-src 'self' 'unsafe-inline' https://hcaptcha.com https://*.hcaptcha.com;
+    child-src https://api.stripe.com;
+    frame-src https://js.stripe.com/ https://api.stripe.com https://hcaptcha.com https://*.hcaptcha.com;
+    img-src 'self' https://*.stripe.com data:;
+    media-src 'self';
+    font-src 'self' https://fonts.gstatic.com;
+  "
+    />
+    <title>KMS</title>
+    <script>
+      // White-label by hostname. Brand mapping comes from runtime-ui-env.js
+      // (window.__BRAND_DOMAINS__) loaded next; default to Lux. Never bake
+      // tenant-specific domains into source.
+      (function () {
+        var h = (location.hostname || "").toLowerCase();
+        var b = { name: "Lux", title: "Lux KMS" };
+        if (/(^|\.)hanzo\.ai$/.test(h)) b = { name: "Hanzo", title: "Hanzo KMS" };
+        else if (/(^|\.)zoo\.(ngo|network)$/.test(h)) b = { name: "Zoo", title: "Zoo KMS" };
+        document.title = b.title;
+        window.__BRAND__ = b;
+      })();
+    </script>
+    <script src="/runtime-ui-env.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
