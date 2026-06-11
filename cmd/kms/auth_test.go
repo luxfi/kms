@@ -42,7 +42,7 @@ func TestRequireOrgJWT_missingBearer(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/liquidity/secrets/iam/X", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/org1/secrets/iam/X", nil)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 	if rec.Code != http.StatusUnauthorized {
@@ -57,7 +57,7 @@ func TestRequireOrgJWT_invalidBearerShape(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/liquidity/secrets/iam/X", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/org1/secrets/iam/X", nil)
 	req.Header.Set("Authorization", "Token abc")
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -79,7 +79,7 @@ func TestRequireOrgJWT_validTokenForCorrectOrg(t *testing.T) {
 			Subject: "user-z",
 			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
-		Owner: "liquidity", // user-token case: owner IS the org
+		Owner: "org1", // user-token case: owner IS the org
 	})
 
 	called := false
@@ -89,7 +89,7 @@ func TestRequireOrgJWT_validTokenForCorrectOrg(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/liquidity/secrets/iam/X", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/org1/secrets/iam/X", nil)
 	req.Header.Set("Authorization", "Bearer "+tok)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -108,14 +108,14 @@ func TestRequireOrgJWT_crossOrgRejected(t *testing.T) {
 
 	auth := newOrgJWTAuth(iam.URL, "")
 
-	// Token for org=mlc, request for org=liquidity → 403.
+	// Token for org=org2, request for org=org1 → 403.
 	tok := signOrgClaims(t, signer, orgClaims{
 		Claims: jwt.Claims{
 			Issuer:  iam.URL,
-			Subject: "mlc-app",
+			Subject: "org2-app",
 			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
-		Owner: "mlc",
+		Owner: "org2",
 	})
 
 	mux := http.NewServeMux()
@@ -123,7 +123,7 @@ func TestRequireOrgJWT_crossOrgRejected(t *testing.T) {
 		t.Fatal("inner handler must NOT be called for cross-org token")
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/liquidity/secrets/iam/X", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/org1/secrets/iam/X", nil)
 	req.Header.Set("Authorization", "Bearer "+tok)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -155,7 +155,7 @@ func TestRequireOrgJWT_kmsAdminCrossesOrgs(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/liquidity/secrets/iam/X", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/org1/secrets/iam/X", nil)
 	req.Header.Set("Authorization", "Bearer "+tok)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -177,7 +177,7 @@ func TestRequireOrgJWT_expiredRejected(t *testing.T) {
 			Subject: "old",
 			Expiry:  jwt.NewNumericDate(time.Now().Add(-time.Hour)),
 		},
-		Owner: "liquidity",
+		Owner: "org1",
 	})
 
 	mux := http.NewServeMux()
@@ -185,7 +185,7 @@ func TestRequireOrgJWT_expiredRejected(t *testing.T) {
 		t.Fatal("must reject expired token")
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/liquidity/secrets/iam/X", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/org1/secrets/iam/X", nil)
 	req.Header.Set("Authorization", "Bearer "+tok)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -208,7 +208,7 @@ func TestRequireOrgJWT_wrongIssuerRejected(t *testing.T) {
 			Subject: "u",
 			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
-		Owner: "liquidity",
+		Owner: "org1",
 	})
 
 	mux := http.NewServeMux()
@@ -216,7 +216,7 @@ func TestRequireOrgJWT_wrongIssuerRejected(t *testing.T) {
 		t.Fatal("must reject wrong issuer")
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/liquidity/secrets/iam/X", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/org1/secrets/iam/X", nil)
 	req.Header.Set("Authorization", "Bearer "+tok)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -238,11 +238,11 @@ func TestRequireOrgJWT_applicationToken_orgFromName(t *testing.T) {
 	tok := signOrgClaims(t, signer, orgClaims{
 		Claims: jwt.Claims{
 			Issuer:  iam.URL,
-			Subject: "admin/kms",
+			Subject: "admin/org1-kms",
 			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
 		Owner: "admin",
-		Name:  "kms",
+		Name:  "org1-kms",
 		Type:  "application",
 	})
 
@@ -251,7 +251,7 @@ func TestRequireOrgJWT_applicationToken_orgFromName(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/liquidity/secrets/iam/X", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/org1/secrets/iam/X", nil)
 	req.Header.Set("Authorization", "Bearer "+tok)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -260,7 +260,7 @@ func TestRequireOrgJWT_applicationToken_orgFromName(t *testing.T) {
 	}
 }
 
-// An application named "kms" must NOT be able to read mlc's
+// An application named "org1-kms" must NOT be able to read org2's
 // secrets — the name prefix is the only org binding, no fall-through
 // to other orgs.
 func TestRequireOrgJWT_applicationToken_crossOrgRejected(t *testing.T) {
@@ -273,11 +273,11 @@ func TestRequireOrgJWT_applicationToken_crossOrgRejected(t *testing.T) {
 	tok := signOrgClaims(t, signer, orgClaims{
 		Claims: jwt.Claims{
 			Issuer:  iam.URL,
-			Subject: "admin/kms",
+			Subject: "admin/org1-kms",
 			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
 		Owner: "admin",
-		Name:  "kms",
+		Name:  "org1-kms",
 		Type:  "application",
 	})
 
@@ -286,7 +286,7 @@ func TestRequireOrgJWT_applicationToken_crossOrgRejected(t *testing.T) {
 		t.Fatal("must reject app token reaching across orgs")
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/mlc/secrets/iam/X", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/org2/secrets/iam/X", nil)
 	req.Header.Set("Authorization", "Bearer "+tok)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -313,7 +313,7 @@ func TestRequireOrgJWT_tagPicksOrg(t *testing.T) {
 		Owner: "admin",
 		Name:  "some-app",
 		Type:  "application",
-		Tag:   "liquidity",
+		Tag:   "org1",
 	})
 
 	mux := http.NewServeMux()
@@ -321,7 +321,7 @@ func TestRequireOrgJWT_tagPicksOrg(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/liquidity/secrets/iam/X", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/org1/secrets/iam/X", nil)
 	req.Header.Set("Authorization", "Bearer "+tok)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -352,7 +352,7 @@ func TestRequireOrgJWT_missingOwnerClaimRejected(t *testing.T) {
 		t.Fatal("must reject token with no resolvable org")
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/liquidity/secrets/iam/X", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/org1/secrets/iam/X", nil)
 	req.Header.Set("Authorization", "Bearer "+tok)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -376,11 +376,11 @@ func TestRequireOrgJWT_splitJwksAndIssuer(t *testing.T) {
 	tok := signOrgClaims(t, signer, orgClaims{
 		Claims: jwt.Claims{
 			Issuer:  publicIssuer, // minted with public host
-			Subject: "admin/kms",
+			Subject: "admin/org1-kms",
 			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
 		Owner: "admin",
-		Name:  "kms",
+		Name:  "org1-kms",
 		Type:  "application",
 	})
 
@@ -389,7 +389,7 @@ func TestRequireOrgJWT_splitJwksAndIssuer(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/liquidity/secrets/iam/X", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/org1/secrets/iam/X", nil)
 	req.Header.Set("Authorization", "Bearer "+tok)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
