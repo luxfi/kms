@@ -18,7 +18,7 @@ One BIP39 mnemonic is shared across all Lux-derived L1s (Lux, Hanzo,
 Zoo, Pars). Each chain reads it from `providers/<org>/deploy-mnemonic`
 under its own org-scoped JWT — same bytes, different KMS paths, N
 independent auth boundaries. Each tenant is jurisdictionally separate
-and holds its own mnemonic in `providers/liquidity/*`. See
+and holds its own mnemonic in `providers/<org>/*`. See
 `~/work/lux/CLAUDE.md` §"Mnemonic + Key Derivation" for the
 canonical reference (paths, derivation formula, IAM apps required).
 
