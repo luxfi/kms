@@ -35,12 +35,12 @@ import (
 // against. The org binding follows two flavors of IAM JWT:
 //
 //  1. User tokens (Google OAuth, password) — `owner` IS the org slug.
-//     Example: a user signs in to organization=liquidity, the JWT
-//     carries owner="liquidity", name="<username>".
+//     Example: a user signs in to organization=org1, the JWT
+//     carries owner="org1", name="<username>".
 //  2. Application tokens (client_credentials) — `owner`="admin"
 //     (the parent record), and the application's `name` carries the
 //     org as a prefix per the documented `<org>-<service>` naming
-//     convention. Example: kms-app for liquidity is name="kms",
+//     convention. Example: kms-app for org1 is name="org1-kms",
 //     owner="admin", type="application".
 //
 // `roles` carries the IAM role list (kms-admin override).
