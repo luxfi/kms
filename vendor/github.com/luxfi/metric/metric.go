@@ -56,6 +56,7 @@ type Counter interface {
 // Gauge is a metric that can increase or decrease.
 type Gauge interface {
 	Set(float64)
+	SetToCurrentTime()
 	Inc()
 	Dec()
 	Add(float64)
@@ -105,24 +106,28 @@ type Factory interface {
 type CounterVec interface {
 	With(Labels) Counter
 	WithLabelValues(...string) Counter
+	Reset()
 }
 
 // GaugeVec is a labeled gauge collection.
 type GaugeVec interface {
 	With(Labels) Gauge
 	WithLabelValues(...string) Gauge
+	Reset()
 }
 
 // HistogramVec is a labeled histogram collection.
 type HistogramVec interface {
 	With(Labels) Histogram
 	WithLabelValues(...string) Histogram
+	Reset()
 }
 
 // SummaryVec is a labeled summary collection.
 type SummaryVec interface {
 	With(Labels) Summary
 	WithLabelValues(...string) Summary
+	Reset()
 }
 
 // MetricsHTTPHandler handles HTTP requests for metrics.
@@ -211,4 +216,39 @@ func NewHistogramVec(opts HistogramOpts, labelNames []string) HistogramVec {
 func NewSummaryVec(opts SummaryOpts, labelNames []string) SummaryVec {
 	prefix := AppendNamespace(opts.Namespace, opts.Subsystem)
 	return DefaultRegistry.NewSummaryVec(prefixedName(prefix, opts.Name), opts.Help, labelNames, opts.Objectives)
+}
+
+// ExponentialBuckets returns count buckets whose upper bounds are
+// start*factor^i for i in [0, count). Mirrors prometheus/client_golang's
+// ExponentialBuckets so call sites can migrate without recomputing
+// bucket arrays. Panics if start <= 0, factor <= 1, or count < 1.
+func ExponentialBuckets(start, factor float64, count int) []float64 {
+	if count < 1 {
+		panic("metric: ExponentialBuckets needs a positive count")
+	}
+	if start <= 0 {
+		panic("metric: ExponentialBuckets needs a positive start")
+	}
+	if factor <= 1 {
+		panic("metric: ExponentialBuckets needs a factor greater than 1")
+	}
+	buckets := make([]float64, count)
+	buckets[0] = start
+	for i := 1; i < count; i++ {
+		buckets[i] = buckets[i-1] * factor
+	}
+	return buckets
+}
+
+// LinearBuckets returns count buckets each width apart, starting at
+// start. Mirrors prometheus/client_golang's LinearBuckets.
+func LinearBuckets(start, width float64, count int) []float64 {
+	if count < 1 {
+		panic("metric: LinearBuckets needs a positive count")
+	}
+	buckets := make([]float64, count)
+	for i := range buckets {
+		buckets[i] = start + float64(i)*width
+	}
+	return buckets
 }
