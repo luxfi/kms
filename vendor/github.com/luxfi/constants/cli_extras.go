@@ -82,7 +82,7 @@ const (
 	StakerCertFileName         = "staker.crt"
 	StakerKeyFileName          = "staker.key"
 	BLSKeyFileName             = "bls.key"
-	RingtailKeyFileName        = "ringtail.key"
+	RingSigKeyFileName         = "ringsig.key"
 	MLDSAKeyFileName           = "mldsa.key"
 	ValidatorUptimeDeductible  = 5 * time.Minute
 

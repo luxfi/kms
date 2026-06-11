@@ -20,3 +20,13 @@ test-results/
 *.log
 tmp/
 .DS_Store
+
+# mlkem dudect build artifacts
+mlkem/ct/dudect/dudect/
+mlkem/ct/dudect/dudect_decaps
+mlkem/ct/dudect/dudect_encaps
+mlkem/ct/dudect/dudect_keygen
+mlkem/ct/dudect/libmlkem_*.dylib
+mlkem/ct/dudect/libmlkem_*.so
+mlkem/ct/dudect/libmlkem_*.h
+mlkem/ct/dudect/results/
