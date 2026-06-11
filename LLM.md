@@ -142,10 +142,10 @@ Env vars (all optional; if KMS_ZAP_AUTH_ENABLED unset/false the
 client behaves exactly as v1.8.x):
 
   KMS_ZAP_AUTH_ENABLED      true|false (default false)
-  KMS_IAM_URL               e.g. http://.lux.svc:8000
-  KMS_IAM_CLIENT_ID         default ""
+  KMS_IAM_URL               e.g. http://iam.lux.svc:8000
+  KMS_IAM_CLIENT_ID         default "lux-kms"
   KMS_IAM_CLIENT_SECRET     from KMS-projected universal-auth Secret
-  KMS_ZAP_AUDIENCE          default ""
+  KMS_ZAP_AUDIENCE          default "lux-mpc"
 
 When enabled, mpc.NewZapClientWith dials, then sends OpAuthHello;
 a non-2xx-shaped {"ok":true} reply fails NewZapClient — operators
