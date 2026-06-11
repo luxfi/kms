@@ -1,7 +1,7 @@
 // Copyright (C) 2019-2025, Lux Industries Inc. All rights reserved.
 // See the file LICENSE for licensing terms.
 
-// zap.go — load a BIP-39 mnemonic from  over native ZAP.
+// zap.go — load a BIP-39 mnemonic from KMS over native ZAP.
 //
 // This file is the one canonical path every Lux-derived service uses
 // to resolve the bootstrap mnemonic: luxd, netrunner, lux/cli, and any
@@ -21,7 +21,7 @@
 // Precedence (env wins; KMS is the production fallback):
 //
 //   1. MNEMONIC env var               local dev + CI test seam
-//   2. KMS at (addr, env, path)       native ZAP from 
+//   2. KMS at (addr, env, path)       native ZAP from KMS
 
 package keys
 
