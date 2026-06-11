@@ -3,7 +3,12 @@
 
 package constants
 
-import "github.com/luxfi/ids"
+import (
+	"encoding/binary"
+
+	"github.com/luxfi/crypto/hash"
+	"github.com/luxfi/ids"
+)
 
 const (
 	PlatformVMName  = "platformvm"  // P-Chain: Platform/Validators
@@ -47,7 +52,42 @@ var (
 	RVMID           = RelayVMID                                                // Alias for RelayVMID
 	IdentityVMID    = ids.ID{'i', 'd', 'e', 'n', 't', 'i', 't', 'y', 'v', 'm'} // I-Chain: Identity
 	IVMID           = IdentityVMID                                             // Alias for IdentityVMID
+
+	// UTXO_ASSET_ID is the MAINNET (networkID=1) materialization of the
+	// primary UTXO asset ID. Kept as a stable literal for tooling/docs;
+	// runtime code MUST use UTXOAssetIDFor(networkID) to get the correct
+	// per-network ID and avoid cross-network UTXO collapse (mainnet+testnet
+	// would otherwise share an asset ID, breaking any wallet/indexer that
+	// keys balance by AssetID alone).
+	UTXO_ASSET_ID = ids.ID{'l', 'u', 'x', ' ', 'a', 's', 's', 'e', 't', ' ', 'i', 'd'}
 )
+
+// UTXOAssetIDFor returns the network-scoped primary UTXO asset ID used by
+// P-Chain and X-Chain. Domain-separates by networkID so the same address
+// bytes on two networks own UTXOs with distinct asset IDs (prevents
+// cross-network UTXO accounting collapse for naive indexers/wallets that
+// key balance on AssetID alone).
+//
+// Mainnet (networkID=1) returns the legacy literal UTXO_ASSET_ID so existing
+// mainnet state remains valid; all other networks get a hash-derived ID.
+//
+// Layout of the preimage: 12-byte ASCII "lux asset id" || 4-byte big-endian
+// networkID. Hashed with SHA-256 (luxfi/crypto/hash) for a uniform 32-byte ID.
+//
+// The name uses "UTXO" (the technical category) not "LUX" (the brand) so
+// the API stays consistent with UTXO_ASSET_ID and stays brand-neutral —
+// downstream chains (e.g. Hanzo, Zoo, regulated EVM L1s) using this primitive
+// keep their own brand identity.
+func UTXOAssetIDFor(networkID uint32) ids.ID {
+	if networkID == 1 {
+		// Preserve mainnet's existing on-chain state and tooling references.
+		return UTXO_ASSET_ID
+	}
+	var preimage [16]byte
+	copy(preimage[:12], "lux asset id")
+	binary.BigEndian.PutUint32(preimage[12:], networkID)
+	return hash.ComputeHash256Array(preimage[:])
+}
 
 // VMName returns the name of the VM with the provided ID. If a human readable
 // name isn't known, then the formatted ID is returned.
