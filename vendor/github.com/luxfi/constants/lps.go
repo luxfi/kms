@@ -22,7 +22,7 @@ var (
 		41, // https://github.com/luxfi/ACPs/blob/main/ACPs/41-remove-pending-stakers/README.md
 		62, // https://github.com/luxfi/ACPs/blob/main/ACPs/62-disable-addvalidatortx-and-adddelegatortx/README.md
 
-		// Etna:
+		// Quasar Edition:
 		77,  // https://github.com/luxfi/ACPs/blob/main/ACPs/77-reinventing-chains/README.md
 		103, // https://github.com/luxfi/ACPs/blob/main/ACPs/103-dynamic-fees/README.md
 		118, // https://github.com/luxfi/ACPs/blob/main/ACPs/118-warp-signature-request/README.md

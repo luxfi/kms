@@ -324,11 +324,11 @@ func decryptHdr(hdr *format.Header, identities ...Identity) ([]byte, error) {
 	slices.SortStableFunc(identities, func(a, b Identity) int {
 		var aIsNative, bIsNative bool
 		switch a.(type) {
-		case *X25519Identity, *HybridIdentity, *ScryptIdentity:
+		case *X25519Identity, *HybridIdentity, *XWingIdentity, *ScryptIdentity:
 			aIsNative = true
 		}
 		switch b.(type) {
-		case *X25519Identity, *HybridIdentity, *ScryptIdentity:
+		case *X25519Identity, *HybridIdentity, *XWingIdentity, *ScryptIdentity:
 			bIsNative = true
 		}
 		if aIsNative && !bIsNative {

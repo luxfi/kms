@@ -1664,18 +1664,19 @@ gpuCalls, cpuCalls := ctx.Stats()
 
 ### Build Tags
 
-| Build | Tags | GPU Support |
-|-------|------|-------------|
-| Default | (none) | CPU only (gnark-crypto) |
-| Metal | `darwin,arm64,cgo,gpu` | Apple Silicon GPU |
-| CUDA | `linux,cgo,gpu` | NVIDIA GPU (future) |
+CGO is the only gate. There is no `gpu` build tag.
+
+| Build | GPU Support |
+|-------|-------------|
+| `CGO_ENABLED=0` | Pure Go fallback (gnark-crypto). |
+| `CGO_ENABLED=1` | Runtime probe via `luxfi/accel`: Metal on darwin, CUDA on linux/NVIDIA, CPU oracle otherwise. |
 
 ```bash
 # CPU-only build
-go build ./...
+CGO_ENABLED=0 go build ./...
 
-# Metal GPU build
-CGO_ENABLED=1 go build -tags "gpu" ./...
+# GPU-capable build (runtime decides)
+go build ./...
 ```
 
 ### Files
@@ -1720,5 +1721,38 @@ CGO_ENABLED=1 go test ./gpu/...
 - `luxfi/accel` - C++ GPU acceleration library (Metal/CUDA/CPU)
 
 ---
+
+## Backend Selector
+
+One-and-one-way runtime substrate selection in `github.com/luxfi/crypto/backend`:
+
+| Surface | Purpose |
+|---------|---------|
+| `Default() / SetDefault(b)` | Active selection (Auto/Vanilla/CGo/GPU). Env `CRYPTO_BACKEND` overrides at init. |
+| `CGoAvailable()` | Compile-time constant: true iff built with `CGO_ENABLED=1`. |
+| `GPUAvailable()` | Lazy probe via `internal/gpuhost` → `luxfi/accel.Init()`. |
+| `Available(b)` | Per-backend availability. |
+| `Resolved()` | `Resolve(GPUAvailable(), CGoAvailable())` — one-call shortcut. |
+| `IsGPU() / IsCGo() / IsVanilla()` | Dispatcher gates. |
+| `Probe() → Snapshot` | Diagnostic line: `backend{default=auto resolved=cgo cgo=true gpu=false accel=...}`. |
+
+### Dispatcher pattern
+
+```go
+func batchGPU(...) (bool, error) {
+    if !backend.IsGPU() { return false, nil }
+    sess := gpuhost.Session()
+    // pack tensors, call sess.Crypto().Keccak256(...), copy out
+}
+```
+
+Wired in: `keccak256 sha256 blake3 bls ed25519 secp256k1 mldsa mlkem slhdsa hqc`.
+`hqc` uses `!backend.IsVanilla()` (accel batch beats per-item PQClean for any
+non-Vanilla selection).
+
+### `gpu/` package
+
+Public diagnostic surface — delegates entirely to `backend`. `Available()`,
+`Backend()`, `Devices()`, `Version()` are thin wrappers. No separate session.
 
 **Single source of truth for AI assistants on this project.**

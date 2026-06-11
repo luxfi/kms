@@ -56,10 +56,10 @@ const (
 
 // Environment variables for binary paths
 const (
-	EnvNodePath      = "LUX_NODE_PATH"
-	EnvNetrunnerPath = "LUX_NETRUNNER_PATH"
-	EnvEVMPath       = "LUX_EVM_PATH"
-	EnvPluginsDir    = "LUX_PLUGINS_DIR"
+	EnvNodePath      = "NODE_PATH"
+	EnvNetrunnerPath = "NETRUNNER_PATH"
+	EnvEVMPath       = "EVM_PATH"
+	EnvPluginsDir    = "PLUGINS_DIR"
 )
 
 // Config keys for binary paths (viper/config file keys)
