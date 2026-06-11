@@ -19,8 +19,9 @@ import (
 // the CLI also accepts SSH private keys, which are not recommended for the
 // average application, and plugins, which involve invoking external programs.
 //
-// Currently, all returned values are of type *[X25519Identity] or
-// *[HybridIdentity], but different types might be returned in the future.
+// Currently, all returned values are of type *[X25519Identity],
+// *[HybridIdentity], or *[XWingIdentity], but different types might be
+// returned in the future.
 func ParseIdentities(f io.Reader) ([]Identity, error) {
 	const privateKeySizeLimit = 1 << 24 // 16 MiB
 	var ids []Identity
@@ -52,10 +53,12 @@ func ParseIdentities(f io.Reader) ([]Identity, error) {
 
 func parseIdentity(arg string) (Identity, error) {
 	switch {
-	case strings.HasPrefix(arg, "AGE-SECRET-KEY-1"):
-		return ParseX25519Identity(arg)
+	case strings.HasPrefix(arg, "AGE-SECRET-KEY-XW-1"):
+		return ParseXWingIdentity(arg)
 	case strings.HasPrefix(arg, "AGE-SECRET-KEY-PQ-1"):
 		return ParseHybridIdentity(arg)
+	case strings.HasPrefix(arg, "AGE-SECRET-KEY-1"):
+		return ParseX25519Identity(arg)
 	default:
 		return nil, fmt.Errorf("unknown identity type: %q", arg)
 	}
@@ -69,8 +72,9 @@ func parseIdentity(arg string) (Identity, error) {
 // average application, tagged recipients, which have different privacy
 // properties, and plugins, which involve invoking external programs.
 //
-// Currently, all returned values are of type *[X25519Recipient] or
-// *[HybridRecipient] but different types might be returned in the future.
+// Currently, all returned values are of type *[X25519Recipient],
+// *[HybridRecipient], or *[XWingRecipient], but different types might be
+// returned in the future.
 func ParseRecipients(f io.Reader) ([]Recipient, error) {
 	const recipientFileSizeLimit = 1 << 24 // 16 MiB
 	var recs []Recipient
@@ -102,6 +106,8 @@ func ParseRecipients(f io.Reader) ([]Recipient, error) {
 
 func parseRecipient(arg string) (Recipient, error) {
 	switch {
+	case strings.HasPrefix(arg, "age1xw1"):
+		return ParseXWingRecipient(arg)
 	case strings.HasPrefix(arg, "age1pq1"):
 		return ParseHybridRecipient(arg)
 	case strings.HasPrefix(arg, "age1"):
