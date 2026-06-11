@@ -10,7 +10,7 @@ import (
 )
 
 func batchVerifyGPU(pks []*PublicKey, msgs [][]byte, sigs []*Signature, out []bool) (bool, error) {
-	if backend.Resolve(gpuhost.Available(), false) != backend.GPU {
+	if !backend.IsGPU() {
 		return false, nil
 	}
 	sess := gpuhost.Session()
