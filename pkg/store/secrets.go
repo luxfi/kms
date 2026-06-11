@@ -45,7 +45,7 @@ var secretPrefix = []byte("kms/secrets/")
 //	Decrypt requires T-Chain quorum (t-of-n E2S shares)
 type Secret struct {
 	Name       string    `json:"name"`
-	Path       string    `json:"path"`        // e.g. "/ci", "//local"
+	Path       string    `json:"path"`        // e.g. "/ci", "/myservice/local"
 	Env        string    `json:"env"`         // dev, test, main
 	Ciphertext []byte    `json:"ciphertext"`  // AES-GCM ciphertext or TFHE ciphertext
 	WrappedDEK []byte    `json:"wrapped_dek"` // ML-KEM encapsulated DEK (standard mode only)
