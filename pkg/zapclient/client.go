@@ -11,7 +11,7 @@
 //
 // Example:
 //
-//	c, _ := zapclient.Dial(ctx, "kms:9652", "secret/data//dev")
+//	c, _ := zapclient.Dial(ctx, "kms:9652", "secret/data/myorg/dev")
 //	defer c.Close()
 //	v, _ := c.Get(ctx, "SIGNING_KEY_PEM", "dev")
 //
