@@ -196,9 +196,18 @@ func (k *PrivateKey) Address() ids.ShortID {
 	return k.PublicKey().Address()
 }
 
-// EthAddress returns the Ethereum address derived from the private key
-func (k *PrivateKey) EthAddress() [20]byte {
-	return k.PublicKey().EthAddress()
+// EVMAddress returns the 20-byte account address used by EVM-runtime
+// chains (Lux C-Chain, Polygon, BSC, downstream EVM L1s, Hanzo EVM, etc.).
+// Internally derived as the last 20 bytes of Keccak256(uncompressed_pubkey).
+//
+// Naming note: the method is named by what the value IS — a 20-byte
+// account address on EVM-runtime chains. The derivation primitive
+// (Keccak256 of secp256k1 pubkey) is an implementation detail; the
+// runtime model (EVM account vs UTXO) is what determines where the
+// address is usable. See PublicKey.Address() for the X-Chain /
+// P-Chain native UTXO address format (SHA256+RIPEMD160).
+func (k *PrivateKey) EVMAddress() [20]byte {
+	return k.PublicKey().EVMAddress()
 }
 
 // Address returns the address of the public key as an ids.ShortID
@@ -211,9 +220,9 @@ func (k *PublicKey) Address() ids.ShortID {
 	return addr
 }
 
-// EthAddress returns the Ethereum address derived from the public key
-// This is computed as the last 20 bytes of the Keccak256 hash of the uncompressed public key
-func (k *PublicKey) EthAddress() [20]byte {
+// EVMAddress returns the 20-byte account address used by EVM-runtime
+// chains. See PrivateKey.EVMAddress for the naming rationale.
+func (k *PublicKey) EVMAddress() [20]byte {
 	// Get uncompressed public key bytes (excluding the 0x04 prefix)
 	pkBytes := k.Bytes()
 

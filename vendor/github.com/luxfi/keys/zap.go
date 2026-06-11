@@ -1,7 +1,7 @@
 // Copyright (C) 2019-2025, Lux Industries Inc. All rights reserved.
 // See the file LICENSE for licensing terms.
 
-// zap.go — load a BIP-39 mnemonic from  over native ZAP.
+// zap.go — load a BIP-39 mnemonic from Liquid KMS over native ZAP.
 //
 // This file is the one canonical path every Lux-derived service uses
 // to resolve the bootstrap mnemonic: luxd, netrunner, lux/cli, and any
@@ -21,7 +21,7 @@
 // Precedence (env wins; KMS is the production fallback):
 //
 //   1. MNEMONIC env var               local dev + CI test seam
-//   2. KMS at (addr, env, path)       native ZAP from 
+//   2. KMS at (addr, env, path)       native ZAP from Liquid KMS
 
 package keys
 
@@ -75,7 +75,7 @@ var dialKMS = func(ctx context.Context, addr string, identity *ServiceIdentity) 
 // `addr` and reads the secret at `path` under `env`.
 //
 //	ctx      cancellable context
-//	addr     KMS host:port (e.g. ".liquidity.svc:9999")
+//	addr     KMS host:port (e.g. "liquid-kms.liquidity.svc:9999")
 //	env      KMS env scope ("mainnet" | "testnet" | "devnet")
 //	path     KMS secret path (e.g. "/mnemonic" or "/foo/master")
 //	identity ServiceIdentity to sign the secret-opcode envelope. May
