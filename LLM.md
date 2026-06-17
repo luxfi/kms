@@ -1,4 +1,4 @@
-# KMS — AI Assistant Knowledge Base
+# KMS
 
 **Project**: Lux Key Management Service (KMS)
 **Organization**: Lux Network
