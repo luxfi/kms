@@ -17,7 +17,11 @@ WORKDIR /build
 COPY go.mod go.sum ./
 COPY vendor ./vendor
 COPY cmd/kms-operator ./cmd/kms-operator
+# zapclient and its in-module deps (envelope, zap) — vendor only carries
+# external deps, so the module's own packages must be in the build context.
 COPY pkg/zapclient ./pkg/zapclient
+COPY pkg/envelope ./pkg/envelope
+COPY pkg/zap ./pkg/zap
 
 RUN CGO_ENABLED=0 go build -mod=vendor \
     -ldflags="-s -w" -o /usr/local/bin/kms-operator ./cmd/kms-operator
