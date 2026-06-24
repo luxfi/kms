@@ -5,9 +5,8 @@
 //
 // This file is the one canonical path every Lux-derived service uses
 // to resolve the bootstrap mnemonic: luxd, netrunner, lux/cli, and any
-// descending L1's bootstrap (liquidity/network-bootstrap, hanzo-bootstrap,
-// zoo-bootstrap, …). No file mount, no projected volume, no per-consumer
-// copy of the env-vs-KMS precedence chain.
+// descending L1's bootstrap. No file mount, no projected volume, no
+// per-consumer copy of the env-vs-KMS precedence chain.
 //
 // Separation of concerns:
 //
@@ -75,7 +74,7 @@ var dialKMS = func(ctx context.Context, addr string, identity *ServiceIdentity) 
 // `addr` and reads the secret at `path` under `env`.
 //
 //	ctx      cancellable context
-//	addr     KMS host:port (e.g. "kms.kms.svc:9999")
+//	addr     KMS host:port (e.g. "kms.default.svc:9999")
 //	env      KMS env scope ("mainnet" | "testnet" | "devnet")
 //	path     KMS secret path (e.g. "/mnemonic" or "/foo/master")
 //	identity ServiceIdentity to sign the secret-opcode envelope. May
