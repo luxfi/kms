@@ -77,6 +77,24 @@ func (c *orgClaims) orgs() []string {
 	return out
 }
 
+// orgAuthorizes reports whether a token org slug authorizes access to a
+// requested path org. The IAM `owner`/`name` claim carries the parent
+// org (e.g. "lux"), but operators address project-scoped vaults under
+// that org via a longer slug (e.g. the lux-operator queries KMS with
+// org="lux-infra", its Infisical projectSlug). A token for org "lux"
+// must reach "lux-infra", "lux-mainnet", … — every project under it —
+// without minting per-project tokens.
+//
+// Match rule (boundary-safe): the requested org is authorized when it
+// equals the token org, OR the requested org is a sub-scope, i.e. it
+// begins with `tokenOrg + "-"`. The '-' separator prevents a token for
+// "lux" from leaking into an unrelated org like "luxx" — only true
+// hyphen-delimited sub-scopes match.
+func orgAuthorizes(tokenOrg, requested string) bool {
+	return requested == tokenOrg ||
+		strings.HasPrefix(requested, tokenOrg+"-")
+}
+
 // orgJWTAuth verifies tokens against the IAM JWKS. Issuer is checked
 // (must equal expectedIssuer). Audience is NOT enforced because IAM
 // client_credentials grants don't pin an audience to the resource
@@ -216,7 +234,7 @@ func (a *orgJWTAuth) requireOrgJWT(next http.HandlerFunc) http.HandlerFunc {
 		}
 		allowed := false
 		for _, o := range claims.orgs() {
-			if o == org {
+			if orgAuthorizes(o, org) {
 				allowed = true
 				break
 			}
