@@ -132,6 +132,77 @@ func TestRequireOrgJWT_crossOrgRejected(t *testing.T) {
 	}
 }
 
+func TestRequireOrgJWT_subScopeAuthorized(t *testing.T) {
+	signer, jwks := newTestSigner(t)
+	iam := httptest.NewServer(jwksHandler(jwks))
+	defer iam.Close()
+
+	auth := newOrgJWTAuth(iam.URL, "")
+
+	// Token for parent org "lux"; request for the project sub-scope
+	// "lux-infra" (the lux-operator's projectSlug) → 200. A token for
+	// the parent org reaches every hyphen-delimited project under it.
+	tok := signOrgClaims(t, signer, orgClaims{
+		Claims: jwt.Claims{
+			Issuer:  iam.URL,
+			Subject: "lux-kms",
+			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+		Owner: "lux",
+	})
+
+	called := false
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/lux-infra/secrets/lux/devnet/staking", nil)
+	req.Header.Set("Authorization", "Bearer "+tok)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("got %d want 200 (lux authorizes lux-infra); body=%s", rec.Code, rec.Body.String())
+	}
+	if !called {
+		t.Error("inner handler not called for authorized sub-scope")
+	}
+}
+
+func TestRequireOrgJWT_subScopeBoundaryRejected(t *testing.T) {
+	signer, jwks := newTestSigner(t)
+	iam := httptest.NewServer(jwksHandler(jwks))
+	defer iam.Close()
+
+	auth := newOrgJWTAuth(iam.URL, "")
+
+	// Token for org "lux"; request for "luxx-infra" → 403. The '-'
+	// boundary in the prefix rule prevents a token for "lux" from
+	// leaking into an unrelated org whose slug merely shares a prefix.
+	tok := signOrgClaims(t, signer, orgClaims{
+		Claims: jwt.Claims{
+			Issuer:  iam.URL,
+			Subject: "lux-kms",
+			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+		Owner: "lux",
+	})
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("inner handler must NOT be called: lux must not authorize luxx-infra")
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/luxx-infra/secrets/X", nil)
+	req.Header.Set("Authorization", "Bearer "+tok)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("got %d want 403 (boundary); body=%s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestRequireOrgJWT_kmsAdminCrossesOrgs(t *testing.T) {
 	signer, jwks := newTestSigner(t)
 	iam := httptest.NewServer(jwksHandler(jwks))
