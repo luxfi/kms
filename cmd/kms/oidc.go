@@ -77,6 +77,7 @@ const (
 type oidcConfig struct {
 	iamEndpoint  string // e.g. https://iam.dev.example.com
 	iamHost      string // parsed Host of iamEndpoint (for origin comparisons)
+	tokenPath    string // OAuth2 token endpoint path (IAM_TOKEN_PATH)
 	clientID     string // e.g. lux-kms
 	clientSecret string // KMSSecret-injected
 	stateSecret  []byte // HMAC key for state-nonce signing (>=32 bytes)
@@ -130,6 +131,7 @@ func loadOIDCConfig() *oidcConfig {
 	return &oidcConfig{
 		iamEndpoint:  strings.TrimRight(iam, "/"),
 		iamHost:      iamURL.Host,
+		tokenPath:    envOr("IAM_TOKEN_PATH", "/v1/iam/oauth/token"),
 		clientID:     cid,
 		clientSecret: cs,
 		stateSecret:  []byte(ss),
@@ -508,8 +510,8 @@ func (c *oidcConfig) handleLogout(w http.ResponseWriter, _ *http.Request) {
 }
 
 // exchangeCode posts the auth code to IAM's token endpoint and returns
-// the access_token. The IAM endpoint is canonical Hanzo IAM at
-// /login/oauth/access_token (no /api/ prefix — killed in iam v2.381).
+// the access_token. The canonical Hanzo IAM token endpoint lives under
+// the /v1/iam API prefix (c.tokenPath, default /v1/iam/oauth/token).
 func (c *oidcConfig) exchangeCode(ctx context.Context, code, redirectURI string) (string, error) {
 	form := url.Values{
 		"grant_type":    {"authorization_code"},
@@ -519,7 +521,7 @@ func (c *oidcConfig) exchangeCode(ctx context.Context, code, redirectURI string)
 		"redirect_uri":  {redirectURI},
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		c.iamEndpoint+"/login/oauth/access_token",
+		c.iamEndpoint+c.tokenPath,
 		strings.NewReader(form.Encode()))
 	if err != nil {
 		return "", err
