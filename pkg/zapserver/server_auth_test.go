@@ -194,7 +194,7 @@ func TestAuthz_OperatorWrite_Allowed(t *testing.T) {
 	now := time.Unix(1_717_200_000, 0)
 
 	putRaw := signedEnvelopeBytes(t, ident, OpSecretPut, buildInner(t, putReq{
-		Path: "hanzo/commerce", Name: "stripe-key", Env: "prod",
+		Path: "hanzo/commerce", Name: "api-key", Env: "prod",
 		Value: base64.StdEncoding.EncodeToString([]byte("sk_live_xxx")),
 	}), now, "nonce-1")
 	verifiedIdent, payload, err := s.verifyAndAuthorize(context.Background(), putRaw, OpSecretPut)
