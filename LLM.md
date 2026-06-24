@@ -170,7 +170,7 @@ recovers transparently when MPC comes back; no restart needed.
 
 KMS is an MPC-backed key management service for the Lux Network. It manages validator keys, threshold signing, secret storage, and key rotation using distributed Multi-Party Computation.
 
-**No Infisical. No PostgreSQL. No Node.js.** The active server is a pure Go binary in `cmd/kms/` backed by `luxfi/mpc` for threshold cryptography and `luxfi/zapdb` for storage.
+**No legacy fork. No PostgreSQL. No Node.js.** The active server is a pure Go binary in `cmd/kms/` backed by `luxfi/mpc` for threshold cryptography and `luxfi/zapdb` for storage.
 
 ## Architecture
 
@@ -278,7 +278,7 @@ Transport is always native ZAP — there is no HTTP fallback in the Go client.
 
 | Path | Status | Notes |
 |------|--------|-------|
-| `backend/` | Legacy | Old Node.js/Fastify backend (from Infisical fork) |
+| `backend/` | Legacy | Old Node.js/Fastify backend (legacy fork) |
 | `frontend/` | Legacy | Old React dashboard |
 
 ## Key concepts

@@ -2,7 +2,7 @@
 
 MPC-backed key management service for the Lux Network. Manages validator keys, threshold signing, and key rotation using distributed MPC (Multi-Party Computation).
 
-**No Infisical. No PostgreSQL.** Pure Go server backed by [MPC](https://github.com/luxfi/mpc) for threshold cryptography and a JSON file store for metadata.
+**No legacy fork. No PostgreSQL.** Pure Go server backed by [MPC](https://github.com/luxfi/mpc) for threshold cryptography and a JSON file store for metadata.
 
 ## Architecture
 

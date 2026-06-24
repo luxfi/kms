@@ -157,11 +157,11 @@ export const RelayCliSystemdDeploymentMethod = () => {
   };
 
   const installCommand = useMemo(() => {
-    return `sudo infisical relay systemd install --name=${name} --domain=${siteURL} --host=${host} --token=${identityToken}`;
+    return `sudo lux relay systemd install --name=${name} --domain=${siteURL} --host=${host} --token=${identityToken}`;
   }, [name, siteURL, host, identityToken]);
 
-  const startServiceCommand = "sudo systemctl start infisical-relay";
-  const enableServiceCommand = "sudo systemctl enable infisical-relay";
+  const startServiceCommand = "sudo systemctl start lux-relay";
+  const enableServiceCommand = "sudo systemctl enable lux-relay";
 
   if (step === "command") {
     return (

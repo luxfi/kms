@@ -33,7 +33,7 @@
         "name": "Hanzo KMS Agent",
         "slug": "agent",
         "image": "Agent",
-        "docsLink": "/docs/integrations/platforms/infisical-agent"
+        "docsLink": "/docs/integrations/platforms/kms-agent"
     },
     {
         "name": "Amazon ECS",

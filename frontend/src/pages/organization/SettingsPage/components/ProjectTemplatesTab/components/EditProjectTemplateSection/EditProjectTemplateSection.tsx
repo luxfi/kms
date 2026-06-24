@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import { Button, EmptyState, Spinner } from "@app/components/v2";
 import {
-  InfisicalProjectTemplate,
+  ManagedProjectTemplate,
   TProjectTemplate,
   useGetProjectTemplateById
 } from "@app/hooks/api/projectTemplates";
@@ -16,15 +16,15 @@ type Props = {
 };
 
 export const EditProjectTemplateSection = ({ template, onBack }: Props) => {
-  const isInfisicalTemplate = Object.values(InfisicalProjectTemplate).includes(
-    template.name as InfisicalProjectTemplate
+  const isManagedTemplate = Object.values(ManagedProjectTemplate).includes(
+    template.name as ManagedProjectTemplate
   );
 
   const { data: projectTemplate, isPending } = useGetProjectTemplateById(template.id, {
     initialData: template,
-    enabled: !isInfisicalTemplate
+    enabled: !isManagedTemplate
   });
-  const finalTemplate = isInfisicalTemplate ? template : projectTemplate;
+  const finalTemplate = isManagedTemplate ? template : projectTemplate;
 
   return (
     <div>
@@ -44,7 +44,7 @@ export const EditProjectTemplateSection = ({ template, onBack }: Props) => {
         </div>
       ) : finalTemplate ? (
         <EditProjectTemplate
-          isInfisicalTemplate={isInfisicalTemplate}
+          isManagedTemplate={isManagedTemplate}
           projectTemplate={finalTemplate}
           onBack={onBack}
         />
