@@ -9,7 +9,7 @@
 //  3. List then Get every secret in the scope
 //  4. Write/update the K8s Secret named in spec.managedSecretReference
 //
-// Replaces the legacy hanzoai/kms-operator (Infisical-flavor SDK over HTTP).
+// Replaces the legacy hanzoai/kms-operator (SDK over HTTP).
 //
 //	Env:
 //	  RESYNC_INTERVAL  reconcile interval seconds (default 60)

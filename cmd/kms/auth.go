@@ -81,7 +81,7 @@ func (c *orgClaims) orgs() []string {
 // requested path org. The IAM `owner`/`name` claim carries the parent
 // org (e.g. "lux"), but operators address project-scoped vaults under
 // that org via a longer slug (e.g. the lux-operator queries KMS with
-// org="lux-infra", its Infisical projectSlug). A token for org "lux"
+// org="lux-infra", its legacy projectSlug). A token for org "lux"
 // must reach "lux-infra", "lux-mainnet", … — every project under it —
 // without minting per-project tokens.
 //

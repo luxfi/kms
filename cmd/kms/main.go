@@ -159,11 +159,11 @@ func main() {
 	mux.HandleFunc("GET /v1/kms/healthz", healthOK)
 	mux.HandleFunc("GET /v1/kms/health", healthOK)
 
-	// SPA bootstrap config. The Infisical-derived React frontend in
+	// SPA bootstrap config. The legacy-derived React frontend in
 	// frontend/src/hooks/api/admin/queries.ts:fetchServerConfig fetches
 	// `/v1/admin/config` at first paint and refuses to render when the
 	// payload is missing — the user sees `["server-config"] data is
-	// undefined`. We don't run the full Infisical admin surface, so
+	// undefined`. We don't run the full legacy admin surface, so
 	// this returns a minimal-but-complete shape: signups via IAM, no
 	// invite-only gating, no SMTP, instance is initialized. Fields the
 	// SPA reads: initialized, allowSignUp, allowedSignUpDomain, etc.

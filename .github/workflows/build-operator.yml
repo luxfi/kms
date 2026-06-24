@@ -1,7 +1,7 @@
 name: Build KMS Operator
 
 # Builds the KMSSecret reconciler (cmd/kms-operator) over the native luxfi/zap
-# binary transport — replaces the legacy Infisical-flavor HTTP operator that
+# binary transport — replaces the legacy HTTP operator that
 # POSTed /api/v1/auth/universal-auth/login (which the Go KMS server does not
 # expose → 404, breaking every KMSSecret sync). Self-contained build (no
 # cross-org reusable workflow); same pattern as build-lux-kms.yml /
