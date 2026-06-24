@@ -74,7 +74,7 @@ REPLICATE_AGE_RECIPIENTS_FALLBACK=age1pq1...     # comma-separated, multi-recipi
 ### E. Operator CRD
 
 ```yaml
-apiVersion: lux.cloud/v1
+apiVersion: lux.network/v1
 kind: ReplicateConfig
 spec:
   encryption:
