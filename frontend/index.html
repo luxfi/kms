@@ -8,12 +8,11 @@
       http-equiv="Content-Security-Policy"
       content="
     default-src 'self';
-    connect-src 'self' http://127.0.0.1:* https://checkout.stripe.com https://api.stripe.com https://api.pwnedpasswords.com https://hcaptcha.com https://*.hcaptcha.com;
-    script-src 'self' https://js.stripe.com https://api.stripe.com https://hcaptcha.com https://*.hcaptcha.com 'unsafe-inline' 'unsafe-eval';
+    connect-src 'self' http://127.0.0.1:* https://api.pwnedpasswords.com https://hcaptcha.com https://*.hcaptcha.com;
+    script-src 'self' https://hcaptcha.com https://*.hcaptcha.com 'unsafe-inline' 'unsafe-eval';
     style-src 'self' 'unsafe-inline' https://hcaptcha.com https://*.hcaptcha.com;
-    child-src https://api.stripe.com;
-    frame-src https://js.stripe.com/ https://api.stripe.com https://hcaptcha.com https://*.hcaptcha.com;
-    img-src 'self' https://*.stripe.com data:;
+    frame-src https://hcaptcha.com https://*.hcaptcha.com;
+    img-src 'self' data:;
     media-src 'self';
     font-src 'self' https://fonts.gstatic.com;
   "
