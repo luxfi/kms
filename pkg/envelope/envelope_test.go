@@ -38,7 +38,7 @@ func mustHeader(ident *keys.ServiceIdentity) envelope.IdentityHeader {
 func TestEnvelope_BuildVerify_RoundTrip(t *testing.T) {
 	ident := mustIdent(t, "hanzo/kms-operator")
 	defer ident.Wipe()
-	req := json.RawMessage(`{"path":"hanzo/commerce","name":"stripe","env":"prod"}`)
+	req := json.RawMessage(`{"path":"hanzo/commerce","name":"api-key","env":"prod"}`)
 	now := time.Unix(1_717_200_000, 0)
 
 	env, err := envelope.Build(mustHeader(ident), ident, 0x0040, req, "nonce-1", now)

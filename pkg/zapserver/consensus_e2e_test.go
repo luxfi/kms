@@ -80,7 +80,7 @@ func bootConsensusNativeServer(t *testing.T, validators, operators []ids.NodeID)
 	secStore := store.NewSecretStore(db)
 
 	// Pre-populate so an authorized Get returns OK rather than NotFound.
-	sec, err := store.Seal(mk, "hanzo/commerce", "stripe-key", "prod", []byte("sk_live_real"))
+	sec, err := store.Seal(mk, "hanzo/commerce", "api-key", "prod", []byte("secret-value"))
 	if err != nil {
 		t.Fatalf("store.Seal: %v", err)
 	}
@@ -151,7 +151,7 @@ func TestConsensusE2E_ValidatorReadsSecret(t *testing.T) {
 	}
 	defer c.Close()
 
-	value, err := c.Get(ctx, "stripe-key", "prod")
+	value, err := c.Get(ctx, "api-key", "prod")
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
@@ -207,7 +207,7 @@ func TestConsensusE2E_NonValidatorDenied(t *testing.T) {
 	}
 	defer c.Close()
 
-	if _, err := c.Get(ctx, "stripe-key", "prod"); err == nil {
+	if _, err := c.Get(ctx, "api-key", "prod"); err == nil {
 		t.Fatalf("stranger Get must be rejected (got nil error)")
 	}
 }
