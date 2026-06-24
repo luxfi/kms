@@ -29,6 +29,7 @@ func newTestCfg(t *testing.T, iamEndpoint string) *oidcConfig {
 	return &oidcConfig{
 		iamEndpoint:  strings.TrimRight(iamEndpoint, "/"),
 		iamHost:      u.Host,
+		tokenPath:    "/v1/iam/oauth/token",
 		clientID:     "lux-kms",
 		clientSecret: "test-secret",
 		stateSecret:  []byte("test-secret-test-secret-test-32!"),
@@ -132,7 +133,7 @@ func TestSsoOidcLogin_includesStateNonce(t *testing.T) {
 //  4. good state → token exchange + 302 /
 func TestSsoOidcCallback_validatesState(t *testing.T) {
 	iam := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/login/oauth/access_token" {
+		if r.URL.Path != "/v1/iam/oauth/token" {
 			t.Errorf("unexpected IAM path: %s", r.URL.Path)
 		}
 		body, _ := io.ReadAll(r.Body)

@@ -110,6 +110,11 @@ func main() {
 	vaultID := envOr("MPC_VAULT_ID", "")
 	nodeID := envOr("KMS_NODE_ID", "kms-0")
 	iamEndpoint := envOr("IAM_ENDPOINT", "https://hanzo.id")
+	// Canonical OAuth2 token endpoint on hanzoai/iam. The API moved under
+	// the `/v1/iam` prefix; the legacy root `/login/oauth/access_token`
+	// route is now a frontend redirect, not the token API. Env-overridable
+	// so a future path move needs no rebuild — one knob, one default.
+	iamTokenPath := envOr("IAM_TOKEN_PATH", "/v1/iam/oauth/token")
 	dataDir := envOr("KMS_DATA_DIR", "/data/kms")
 	listen := envOr("KMS_LISTEN", ":8080")
 
@@ -204,10 +209,10 @@ func main() {
 			"client_id":     {req.ClientID},
 			"client_secret": {req.ClientSecret},
 		}
-		// Canonical OAuth2 path on hanzoai/iam — no `/api/` prefix (killed in
-		// v2.381.0). `/login/oauth/access_token` is mounted at root per the
-		// OAuth2 spec; `/oauth/access_token` is also wired as an alias.
-		resp, err := http.PostForm(iamEndpoint+"/login/oauth/access_token", form)
+		// Canonical OAuth2 token endpoint on hanzoai/iam, under the `/v1/iam`
+		// API prefix (default IAM_TOKEN_PATH=/v1/iam/oauth/token). The legacy
+		// root `/login/oauth/access_token` is a frontend redirect, not the API.
+		resp, err := http.PostForm(iamEndpoint+iamTokenPath, form)
 		if err != nil {
 			writeJSON(w, http.StatusBadGateway, map[string]any{"statusCode": 502, "message": "identity provider unreachable"})
 			return
