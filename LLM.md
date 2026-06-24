@@ -360,3 +360,36 @@ StatefulSet (replicas=1) with PVC for ZapDB data. ZapDB Replicator runs in-proce
 - `github.com/luxfi/zap` — binary transport protocol (MPC + secrets)
 - `github.com/luxfi/age` — age encryption for S3 backups
 - `github.com/luxfi/mpc` — MPC daemon (external service, not imported)
+
+## Build (CI) — go.sum re-tag staleness
+
+The `Dockerfile` builds the server with `GOFLAGS=-mod=mod` (NOT vendor):
+`go mod vendor` strips supranational/blst's C headers (blst.h), and the
+CGO sqlcipher build needs them, so the module cache (full trees) is used
+instead of the in-tree `vendor/`. `Dockerfile.operator` builds with
+`CGO_ENABLED=0` and CAN use `-mod=vendor` (blst's cgo file is excluded).
+
+Because CI sets `GOPRIVATE=github.com/luxfi/*`, it fetches luxfi modules
+**direct from GitHub** (not the public proxy). When a luxfi tag is
+force-moved (re-tagged to a different commit) after kms's go.sum was
+written, `go mod download` fails with `checksum mismatch / SECURITY
+ERROR`: go.sum has the OLD tree hash, GitHub now serves the new commit.
+This is NOT an attack — it's a re-tag. Fix = update the one h1 line in
+go.sum to the authoritative current hash (NEVER bypass the check).
+Verify from a PRISTINE GOMODCACHE with `GOWORK=off`; the local
+`~/work/lux/go.work` + VCS cache can mask the drift by resolving the
+old commit. (June 2026: keys@v1.1.0 and age@v1.5.0 were both re-tagged
+via the "vendor: sync … docs" lineage.)
+
+## keys ↔ kms cycle (phantom tag) — does NOT block the build
+
+`luxfi/keys` (v1.0.9+) require `luxfi/kms@v1.9.12` and `@v1.11.3` — tags
+that were never published (kms jumps v1.9.10→v1.9.13→v1.11.0…). This is
+a release-ordering accident, NOT a code cycle: the package graph is
+acyclic — `go list -deps ./pkg/zapclient` has zero luxfi/keys
+(pkg/envelope is interface-decoupled; keys appears only in its _test.go
+files). kms building itself never fetches the phantom: Go resolves the
+kms module's own packages from the local tree, and MVS upgrades any
+consumer past the phantom to a real kms tag. The server (cmd/kms uses
+the in-repo `pkg/keys`) and operator compile ZERO external luxfi/keys —
+no keys content ships in either image.
