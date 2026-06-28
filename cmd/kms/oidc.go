@@ -35,6 +35,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -96,16 +97,38 @@ type oidcConfig struct {
 	jwtValidator *sessionJWTValidator
 }
 
-// loadOIDCConfig reads the OIDC settings. Returns nil if OIDC is not
-// configured — the handlers register a 503 in that case so the deployment
-// is observably misconfigured rather than silently broken.
+// kmsOIDCSecretSalt and kmsStateSalt MUST match hanzoai/iam
+// cmd/iam/cli/init_apps.go (KMSOIDCClientSecret). The two services derive the
+// SAME confidential client secret from the brand alone, so KMS and IAM agree
+// with zero coordination — no shared/stored secret, no env copy. Bump a salt to
+// rotate that derived value for all brands.
+const (
+	kmsOIDCSecretSalt = "hanzo-kms-oidc/v1"
+	kmsStateSalt      = "hanzo-kms-state/v1"
+)
+
+// deriveFromOwner is the canonical "<owner>-kms" secret derivation shared with
+// IAM. Output is 64 hex chars (>= the 32-byte state-secret floor).
+func deriveFromOwner(salt, owner string) string {
+	mac := hmac.New(sha256.New, []byte(salt))
+	mac.Write([]byte(owner + "-kms"))
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+// loadOIDCConfig reads the OIDC settings. Secrets are DERIVED from the brand
+// (KMS_IAM_OWNER) by default so a fresh cluster needs zero secret env and zero
+// coordination with IAM — IAM provisions the same "<owner>-kms" client with the
+// same derived secret on boot. Env still overrides each value (escape hatch).
+// Returns nil only if the non-secret IAM_ENDPOINT is unset — the handlers
+// register a 503 then so the deployment is observably misconfigured.
 func loadOIDCConfig() *oidcConfig {
 	iam := envOr("IAM_ENDPOINT", "")
-	cid := envOr("KMS_OIDC_CLIENT_ID", "")
-	cs := envOr("KMS_OIDC_CLIENT_SECRET", "")
-	ss := envOr("KMS_STATE_SECRET", "")
 	owner := envOr("KMS_IAM_OWNER", "lux")
-	if iam == "" || cid == "" || cs == "" || ss == "" {
+	// Derived-by-default; env overrides. client_id is the well-known "<owner>-kms".
+	cid := envOr("KMS_OIDC_CLIENT_ID", owner+"-kms")
+	cs := envOr("KMS_OIDC_CLIENT_SECRET", deriveFromOwner(kmsOIDCSecretSalt, owner))
+	ss := envOr("KMS_STATE_SECRET", deriveFromOwner(kmsStateSalt, owner))
+	if iam == "" {
 		return nil
 	}
 	// State HMAC key: minimum 32 bytes of entropy. The operator wires
