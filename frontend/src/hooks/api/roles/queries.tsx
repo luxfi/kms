@@ -52,7 +52,7 @@ export const roleQueryKeys = {
 
 export const getProjectRoles = async (projectId: string) => {
   const { data } = await apiRequest.get<{ roles: Array<Omit<TProjectRole, "permissions">> }>(
-    `/api/v1/projects/${projectId}/roles`
+    `/v1/projects/${projectId}/roles`
   );
   return data.roles;
 };
@@ -69,7 +69,7 @@ export const useGetProjectRoleBySlug = (projectId: string, roleSlug: string) =>
     queryKey: roleQueryKeys.getProjectRoleBySlug(projectId, roleSlug),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ role: TProjectRole }>(
-        `/api/v1/projects/${projectId}/roles/slug/${roleSlug}`
+        `/v1/projects/${projectId}/roles/slug/${roleSlug}`
       );
       return data.role;
     },
@@ -79,7 +79,7 @@ export const useGetProjectRoleBySlug = (projectId: string, roleSlug: string) =>
 const getOrgRoles = async (orgId: string) => {
   const { data } = await apiRequest.get<{
     data: { roles: Array<Omit<TOrgRole, "permissions"> & { permissions: TPermission[] }> };
-  }>(`/api/v1/organization/${orgId}/roles`);
+  }>(`/v1/organization/${orgId}/roles`);
   return data.data.roles;
 };
 
@@ -96,7 +96,7 @@ export const useGetOrgRole = (orgId: string, roleId: string) =>
     queryFn: async () => {
       const { data } = await apiRequest.get<{
         role: Omit<TOrgRole, "permissions"> & { permissions: unknown };
-      }>(`/api/v1/organization/${orgId}/roles/${roleId}`);
+      }>(`/v1/organization/${orgId}/roles/${roleId}`);
       return {
         ...data.role,
         permissions: data.role.permissions as TPermission[]
@@ -111,7 +111,7 @@ export const fetchUserOrgPermissions = async ({ orgId }: TGetUserOrgPermissionsD
   const { data } = await apiRequest.get<{
     permissions: PackRule<RawRuleOf<MongoAbility<OrgPermissionSet>>>[];
     memberships: Array<TUserMembership & { roles: { role: string }[] }>;
-  }>(`/api/v1/organization/${orgId}/permissions`);
+  }>(`/v1/organization/${orgId}/permissions`);
 
   return data;
 };
@@ -140,7 +140,7 @@ export const fetchUserProjectPermissions = async ({ projectId }: TGetUserProject
         actorName: string;
       };
     };
-  }>(`/api/v1/projects/${projectId}/permissions`, {});
+  }>(`/v1/projects/${projectId}/permissions`, {});
 
   return data.data;
 };

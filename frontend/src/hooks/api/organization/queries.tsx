@@ -68,7 +68,7 @@ export const fetchOrganizationById = async (id: string) => {
     data: { organization }
   } = await apiRequest.get<{
     organization: Organization;
-  }>(`/api/v1/organization/${id}`);
+  }>(`/v1/organization/${id}`);
   return organization;
 };
 
@@ -129,7 +129,7 @@ export const useUpdateOrg = () => {
       blockDuplicateSecretSyncDestinations,
       secretShareBrandConfig
     }) => {
-      return apiRequest.patch(`/api/v1/organization/${orgId}`, {
+      return apiRequest.patch(`/v1/organization/${orgId}`, {
         name,
         authEnforced,
         googleSsoAuthEnforced,
@@ -176,7 +176,7 @@ export const useGetOrgTrialUrl = () => {
     mutationFn: async ({ orgId, success_url }: { orgId: string; success_url: string }) => {
       const {
         data: { url }
-      } = await apiRequest.post(`/api/v1/organizations/${orgId}/session/trial`, {
+      } = await apiRequest.post(`/v1/organizations/${orgId}/session/trial`, {
         success_url
       });
 
@@ -190,7 +190,7 @@ export const useGetOrgPlanBillingInfo = (organizationId: string) => {
     queryKey: organizationKeys.getOrgPlanBillingInfo(organizationId),
     queryFn: async () => {
       const { data } = await apiRequest.get<PlanBillingInfo>(
-        `/api/v1/organizations/${organizationId}/plan/billing`
+        `/v1/organizations/${organizationId}/plan/billing`
       );
 
       return data;
@@ -204,7 +204,7 @@ export const useGetOrgPlanTable = (organizationId: string) => {
     queryKey: organizationKeys.getOrgPlanTable(organizationId),
     queryFn: async () => {
       const { data } = await apiRequest.get<OrgPlanTable>(
-        `/api/v1/organizations/${organizationId}/plan/table`
+        `/v1/organizations/${organizationId}/plan/table`
       );
 
       return data;
@@ -224,7 +224,7 @@ export const useGetOrgPlansTable = ({
     queryKey: organizationKeys.getOrgPlansTable(organizationId, billingCycle),
     queryFn: async () => {
       const { data } = await apiRequest.get<ProductsTable>(
-        `/api/v1/organizations/${organizationId}/plans/table?billingCycle=${billingCycle}`
+        `/v1/organizations/${organizationId}/plans/table?billingCycle=${billingCycle}`
       );
 
       return data;
@@ -238,7 +238,7 @@ export const useGetOrgBillingDetails = (organizationId: string) => {
     queryKey: organizationKeys.getOrgBillingDetails(organizationId),
     queryFn: async () => {
       const { data } = await apiRequest.get<BillingDetails>(
-        `/api/v1/organizations/${organizationId}/billing-details`
+        `/v1/organizations/${organizationId}/billing-details`
       );
 
       return data;
@@ -260,7 +260,7 @@ export const useUpdateOrgBillingDetails = () => {
       email?: string;
     }) => {
       const { data } = await apiRequest.patch(
-        `/api/v1/organizations/${organizationId}/billing-details`,
+        `/v1/organizations/${organizationId}/billing-details`,
         {
           name,
           email
@@ -282,7 +282,7 @@ export const useGetOrgPmtMethods = (organizationId: string) => {
     queryKey: organizationKeys.getOrgPmtMethods(organizationId),
     queryFn: async () => {
       const { data } = await apiRequest.get<PmtMethod[]>(
-        `/api/v1/organizations/${organizationId}/billing-details/payment-methods`
+        `/v1/organizations/${organizationId}/billing-details/payment-methods`
       );
 
       return data;
@@ -307,7 +307,7 @@ export const useAddOrgPmtMethod = () => {
       const {
         data: { url }
       } = await apiRequest.post(
-        `/api/v1/organizations/${organizationId}/billing-details/payment-methods`,
+        `/v1/organizations/${organizationId}/billing-details/payment-methods`,
         {
           success_url,
           cancel_url
@@ -336,7 +336,7 @@ export const useDeleteOrgPmtMethod = () => {
       pmtMethodId: string;
     }) => {
       const { data } = await apiRequest.delete(
-        `/api/v1/organizations/${organizationId}/billing-details/payment-methods/${pmtMethodId}`
+        `/v1/organizations/${organizationId}/billing-details/payment-methods/${pmtMethodId}`
       );
 
       return data;
@@ -354,7 +354,7 @@ export const useGetOrgTaxIds = (organizationId: string) => {
     queryKey: organizationKeys.getOrgTaxIds(organizationId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TaxID[]>(
-        `/api/v1/organizations/${organizationId}/billing-details/tax-ids`
+        `/v1/organizations/${organizationId}/billing-details/tax-ids`
       );
 
       return data;
@@ -377,7 +377,7 @@ export const useAddOrgTaxId = () => {
       value: string;
     }) => {
       const { data } = await apiRequest.post(
-        `/api/v1/organizations/${organizationId}/billing-details/tax-ids`,
+        `/v1/organizations/${organizationId}/billing-details/tax-ids`,
         {
           type,
           value
@@ -400,7 +400,7 @@ export const useDeleteOrgTaxId = () => {
   return useMutation({
     mutationFn: async ({ organizationId, taxId }: { organizationId: string; taxId: string }) => {
       const { data } = await apiRequest.delete(
-        `/api/v1/organizations/${organizationId}/billing-details/tax-ids/${taxId}`
+        `/v1/organizations/${organizationId}/billing-details/tax-ids/${taxId}`
       );
 
       return data;
@@ -418,7 +418,7 @@ export const useGetOrgInvoices = (organizationId: string) => {
     queryKey: organizationKeys.getOrgInvoices(organizationId),
     queryFn: async () => {
       const { data } = await apiRequest.get<Invoice[]>(
-        `/api/v1/organizations/${organizationId}/invoices`
+        `/v1/organizations/${organizationId}/invoices`
       );
 
       return data;
@@ -431,7 +431,7 @@ export const useCreateCustomerPortalSession = () => {
   return useMutation({
     mutationFn: async (organizationId: string) => {
       const { data } = await apiRequest.post(
-        `/api/v1/organizations/${organizationId}/customer-portal-session`
+        `/v1/organizations/${organizationId}/customer-portal-session`
       );
       return data;
     }
@@ -445,7 +445,7 @@ export const useGetOrgLicenses = (organizationId: string) => {
       if (organizationId === "") return undefined;
 
       const { data } = await apiRequest.get<License[]>(
-        `/api/v1/organizations/${organizationId}/licenses`
+        `/v1/organizations/${organizationId}/licenses`
       );
 
       return data;
@@ -491,7 +491,7 @@ export const useGetIdentityMembershipOrgs = (
     }),
     queryFn: async () => {
       const { data } = await apiRequest.get<TOrgIdentitiesList>(
-        `/api/v2/organizations/${organizationId}/identity-memberships`,
+        `/v2/organizations/${organizationId}/identity-memberships`,
         { params }
       );
 
@@ -510,7 +510,7 @@ export const useDeleteOrgById = () => {
       const {
         data: { organization }
       } = await apiRequest.delete<{ organization: Organization }>(
-        `/api/v2/organizations/${organizationId}`
+        `/v2/organizations/${organizationId}`
       );
       return organization;
     },
@@ -555,7 +555,7 @@ export const useGetOrganizationGroups = (organizationId: string) => {
       const {
         data: { groups }
       } = await apiRequest.get<{ groups: TGroupOrgMembership[] }>(
-        `/api/v1/organization/${organizationId}/groups`
+        `/v1/organization/${organizationId}/groups`
       );
 
       return groups;
@@ -571,7 +571,7 @@ export const useGetOrgIntegrationAuths = <TData = IntegrationAuth[],>(
     queryKey: organizationKeys.getOrgIntegrationAuths(organizationId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ authorizations: IntegrationAuth[] }>(
-        `/api/v1/organization/${organizationId}/integration-authorizations`
+        `/v1/organization/${organizationId}/integration-authorizations`
       );
 
       return data.authorizations;

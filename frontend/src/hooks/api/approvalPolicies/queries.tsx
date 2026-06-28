@@ -15,7 +15,7 @@ export const approvalPolicyQuery = {
       queryKey: approvalPolicyQuery.getByIdKey(params),
       queryFn: async () => {
         const { data } = await apiRequest.get<{ policy: TApprovalPolicy }>(
-          `/api/v1/approval-policies/${params.policyType}/${params.policyId}`
+          `/v1/approval-policies/${params.policyType}/${params.policyId}`
         );
         return data.policy;
       }
@@ -26,7 +26,7 @@ export const approvalPolicyQuery = {
       queryFn: async () => {
         const { data } = await apiRequest.get<{
           policies: TApprovalPolicy[];
-        }>(`/api/v1/approval-policies/${params.policyType}`, {
+        }>(`/v1/approval-policies/${params.policyType}`, {
           params: {
             projectId: params.projectId
           }

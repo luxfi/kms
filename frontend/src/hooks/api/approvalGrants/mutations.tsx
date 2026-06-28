@@ -11,7 +11,7 @@ export const useRevokeApprovalGrant = () => {
   return useMutation({
     mutationFn: async ({ policyType, grantId, revocationReason }: TRevokeApprovalGrantDTO) => {
       const { data } = await apiRequest.post<{ grant: TApprovalGrant }>(
-        `/api/v1/approval-policies/${policyType}/grants/${grantId}/revoke`,
+        `/v1/approval-policies/${policyType}/grants/${grantId}/revoke`,
         { revocationReason }
       );
       return data.grant;

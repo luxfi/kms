@@ -31,7 +31,7 @@ export const useUpdateRiskStatus = () => {
   >({
     mutationFn: async (opt) => {
       const { data } = await apiRequest.post<TSecretScanningGitRisks>(
-        `/api/v1/secret-scanning/organization/${opt.organizationId}/risks/${opt.riskId}/status`,
+        `/v1/secret-scanning/organization/${opt.organizationId}/risks/${opt.riskId}/status`,
         { status: opt.status }
       );
       return data;
@@ -71,7 +71,7 @@ export const useExportSecretScanningRisks = () => {
 
       const { data } = await apiRequest.get<{
         risks: TSecretScanningGitRisks[];
-      }>(`/api/v1/secret-scanning/organization/${orgId}/risks/export`, {
+      }>(`/v1/secret-scanning/organization/${orgId}/risks/export`, {
         params
       });
       return data.risks;

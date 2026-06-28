@@ -76,7 +76,7 @@ export const useGetCmekPublicKey = (
     queryKey: cmekKeys.getPublicKey(keyId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TCmekGetPublicKeyResponse>(
-        `/api/v1/kms/keys/${keyId}/public-key`
+        `/v1/kms/keys/${keyId}/public-key`
       );
       return data;
     },
@@ -101,7 +101,7 @@ export const useGetCmekPrivateKey = (
     queryKey: cmekKeys.getPrivateKey(keyId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TCmekGetPrivateKeyResponse>(
-        `/api/v1/kms/keys/${keyId}/private-key`
+        `/v1/kms/keys/${keyId}/private-key`
       );
       return data;
     },

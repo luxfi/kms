@@ -21,7 +21,7 @@ export const SshCaSetupSection = ({ resourceId, isOptional = false, className }:
 
   const [cmdOpen, setCmdOpen] = useState(false);
 
-  const setupSshCaCommand = `curl -H "Authorization: Bearer ${getAuthToken()}" "${siteURL}/api/v1/pam/resources/ssh/${resourceId}/ssh-ca-setup" | sudo bash`;
+  const setupSshCaCommand = `curl -H "Authorization: Bearer ${getAuthToken()}" "${siteURL}/v1/pam/resources/ssh/${resourceId}/ssh-ca-setup" | sudo bash`;
 
   return (
     <button

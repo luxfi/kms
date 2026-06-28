@@ -29,7 +29,7 @@ export const useNetlifyConnectionListAccounts = (
     queryKey: netlifyConnectionKeys.listAccounts(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ accounts: TNetlifyAccount[] }>(
-        `/api/v1/app-connections/netlify/${connectionId}/accounts`
+        `/v1/app-connections/netlify/${connectionId}/accounts`
       );
 
       return data.accounts;
@@ -55,7 +55,7 @@ export const useNetlifyConnectionListSites = (
     queryKey: netlifyConnectionKeys.listSites(connectionId, accountId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ sites: TNetlifySite[] }>(
-        `/api/v1/app-connections/netlify/${connectionId}/accounts/${accountId}/sites`
+        `/v1/app-connections/netlify/${connectionId}/accounts/${accountId}/sites`
       );
 
       return data.sites;

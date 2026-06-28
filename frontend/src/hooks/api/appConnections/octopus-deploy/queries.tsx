@@ -31,7 +31,7 @@ export const useOctopusDeployConnectionListSpaces = (
     queryKey: octopusDeployConnectionKeys.listSpaces(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TOctopusDeploySpace[]>(
-        `/api/v1/app-connections/octopus-deploy/${connectionId}/spaces`
+        `/v1/app-connections/octopus-deploy/${connectionId}/spaces`
       );
 
       return data;
@@ -57,7 +57,7 @@ export const useOctopusDeployConnectionListProjects = (
     queryKey: octopusDeployConnectionKeys.listProjects(connectionId, spaceId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TOctopusDeployProject[]>(
-        `/api/v1/app-connections/octopus-deploy/${connectionId}/projects`,
+        `/v1/app-connections/octopus-deploy/${connectionId}/projects`,
         {
           params: { spaceId }
         }
@@ -87,7 +87,7 @@ export const useOctopusDeployConnectionGetScopeValues = (
     queryKey: octopusDeployConnectionKeys.getScopeValues(connectionId, spaceId, projectId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TOctopusDeployScopeValues>(
-        `/api/v1/app-connections/octopus-deploy/${connectionId}/scope-values`,
+        `/v1/app-connections/octopus-deploy/${connectionId}/scope-values`,
         { params: { spaceId, projectId } }
       );
 

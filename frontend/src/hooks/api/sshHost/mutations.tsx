@@ -22,7 +22,7 @@ export const useUpdateSshHost = () => {
   const queryClient = useQueryClient();
   return useMutation<TSshHost, object, TUpdateSshHostDTO>({
     mutationFn: async ({ sshHostId, ...body }) => {
-      const { data: host } = await apiRequest.patch(`/api/v1/ssh/hosts/${sshHostId}`, body);
+      const { data: host } = await apiRequest.patch(`/v1/ssh/hosts/${sshHostId}`, body);
       return host;
     },
     onSuccess: ({ projectId }) => {
@@ -35,7 +35,7 @@ export const useDeleteSshHost = () => {
   const queryClient = useQueryClient();
   return useMutation<TSshHost, object, TDeleteSshHostDTO>({
     mutationFn: async ({ sshHostId }) => {
-      const { data: host } = await apiRequest.delete(`/api/v1/ssh/hosts/${sshHostId}`);
+      const { data: host } = await apiRequest.delete(`/v1/ssh/hosts/${sshHostId}`);
       return host;
     },
     onSuccess: ({ projectId }) => {

@@ -13,7 +13,7 @@ export const useGetPkiAlertById = (alertId: string) => {
   return useQuery({
     queryKey: pkiAlertKeys.getPkiAlertById(alertId),
     queryFn: async () => {
-      const { data: alert } = await apiRequest.get<TPkiAlert>(`/api/v1/pki/alerts/${alertId}`);
+      const { data: alert } = await apiRequest.get<TPkiAlert>(`/v1/pki/alerts/${alertId}`);
       return alert;
     },
     enabled: Boolean(alertId)

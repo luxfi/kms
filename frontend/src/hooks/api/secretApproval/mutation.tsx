@@ -56,7 +56,7 @@ export const useUpdateSecretApprovalPolicy = () => {
       allowedSelfApprovals,
       environments
     }) => {
-      const { data } = await apiRequest.patch(`/api/v2/secret-approvals/${id}`, {
+      const { data } = await apiRequest.patch(`/v2/secret-approvals/${id}`, {
         approvals,
         approvers,
         bypassers,
@@ -81,7 +81,7 @@ export const useDeleteSecretApprovalPolicy = () => {
 
   return useMutation<object, object, TDeleteSecretPolicyDTO>({
     mutationFn: async ({ id }) => {
-      const { data } = await apiRequest.delete(`/api/v2/secret-approvals/${id}`);
+      const { data } = await apiRequest.delete(`/v2/secret-approvals/${id}`);
       return data;
     },
     onSuccess: (_, { projectId }) => {

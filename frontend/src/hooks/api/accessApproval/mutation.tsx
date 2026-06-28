@@ -71,7 +71,7 @@ export const useUpdateAccessApprovalPolicy = () => {
       environments,
       maxTimePeriod
     }) => {
-      const { data } = await apiRequest.patch(`/api/v1/access-approvals/policies/${id}`, {
+      const { data } = await apiRequest.patch(`/v1/access-approvals/policies/${id}`, {
         approvals,
         approvers,
         bypassers,
@@ -98,7 +98,7 @@ export const useDeleteAccessApprovalPolicy = () => {
 
   return useMutation<object, object, TDeleteSecretPolicyDTO>({
     mutationFn: async ({ id }) => {
-      const { data } = await apiRequest.delete(`/api/v1/access-approvals/policies/${id}`);
+      const { data } = await apiRequest.delete(`/v1/access-approvals/policies/${id}`);
       return data;
     },
     onSuccess: (_, { projectSlug }) => {
@@ -141,7 +141,7 @@ export const useUpdateAccessRequest = () => {
   return useMutation<TAccessApprovalRequest, object, TUpdateAccessRequestDTO>({
     mutationFn: async ({ requestId, ...payload }) => {
       const { data } = await apiRequest.patch<{ approval: TAccessApprovalRequest }>(
-        `/api/v1/access-approvals/requests/${requestId}`,
+        `/v1/access-approvals/requests/${requestId}`,
         payload
       );
 
@@ -171,7 +171,7 @@ export const useReviewAccessRequest = () => {
   >({
     mutationFn: async ({ requestId, status, bypassReason }) => {
       const { data } = await apiRequest.post(
-        `/api/v1/access-approvals/requests/${requestId}/review`,
+        `/v1/access-approvals/requests/${requestId}/review`,
         {
           status,
           bypassReason

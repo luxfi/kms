@@ -99,7 +99,7 @@ const fetchFolderCommitHistory = async (
 
 export const fetchCommitDetails = async (projectId: string, commitId: string) => {
   const { data } = await apiRequest.get<CommitWithChanges>(
-    `/api/v1/pit/commits/${commitId}/changes`,
+    `/v1/pit/commits/${commitId}/changes`,
     {
       params: {
         projectId
@@ -118,7 +118,7 @@ export const fetchRollbackPreview = async (
   secretPath: string
 ): Promise<RollbackPreview[]> => {
   const { data } = await apiRequest.get<RollbackPreview[]>(
-    `/api/v1/pit/commits/${commitId}/compare`,
+    `/v1/pit/commits/${commitId}/compare`,
     {
       params: {
         folderId,
@@ -141,7 +141,7 @@ const fetchRollback = async (
   envSlug?: string
 ) => {
   const { data } = await apiRequest.post<{ success: boolean }>(
-    `/api/v1/pit/commits/${commitId}/rollback`,
+    `/v1/pit/commits/${commitId}/rollback`,
     {
       folderId,
       deepRollback,
@@ -155,7 +155,7 @@ const fetchRollback = async (
 
 const fetchRevert = async (commitId: string, projectId: string) => {
   const { data } = await apiRequest.post<{ success: boolean; message: string }>(
-    `/api/v1/pit/commits/${commitId}/revert`,
+    `/v1/pit/commits/${commitId}/revert`,
     {
       projectId
     }

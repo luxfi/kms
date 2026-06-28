@@ -23,7 +23,7 @@ export const projectIdentityMembershipQuery = {
       queryFn: async () => {
         const { data } = await apiRequest.get<{
           identities: TAvailableProjectIdentities;
-        }>(`/api/v1/projects/${params.projectId}/memberships/available-identities`, {
+        }>(`/v1/projects/${params.projectId}/memberships/available-identities`, {
           params: {
             offset: params.offset,
             limit: params.limit,
@@ -75,7 +75,7 @@ export const useListProjectIdentityMemberships = (
       });
 
       const { data } = await apiRequest.get<TProjectIdentityMembershipsListV2>(
-        `/api/v1/projects/${projectId}/memberships/identities`,
+        `/v1/projects/${projectId}/memberships/identities`,
         { params }
       );
       return data;
@@ -93,7 +93,7 @@ export const useGetProjectIdentityMembership = (projectId: string, identityId: s
       const {
         data: { identityMembership }
       } = await apiRequest.get<{ identityMembership: IdentityProjectMembershipV1 }>(
-        `/api/v1/projects/${projectId}/identity-memberships/${identityId}`
+        `/v1/projects/${projectId}/identity-memberships/${identityId}`
       );
       return identityMembership;
     }
@@ -108,7 +108,7 @@ export const useGetProjectIdentityMembershipV2 = (projectId: string, identityId:
       const {
         data: { identityMembership }
       } = await apiRequest.get<{ identityMembership: IdentityProjectMembershipV1 }>(
-        `/api/v1/projects/${projectId}/memberships/identities/${identityId}`
+        `/v1/projects/${projectId}/memberships/identities/${identityId}`
       );
       return identityMembership;
     }

@@ -35,7 +35,7 @@ export const useGetIdentityProjectPrivilegeDetails = ({
         data: { privilege }
       } = await apiRequest.get<{
         privilege: TIdentityProjectPrivilege;
-      }>(`/api/v2/identity-project-additional-privilege/${privilegeId}`, {
+      }>(`/v2/identity-project-additional-privilege/${privilegeId}`, {
         params: {
           identityId,
           projectId

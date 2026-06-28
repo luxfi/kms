@@ -58,7 +58,7 @@ export const useGetDynamicSecretDetails = ({
     queryFn: async () => {
       const { data } = await apiRequest.get<{
         dynamicSecret: TDynamicSecret & { inputs: unknown };
-      }>(`/api/v1/dynamic-secrets/${name}`, {
+      }>(`/v1/dynamic-secrets/${name}`, {
         params: {
           projectSlug,
           environmentSlug,

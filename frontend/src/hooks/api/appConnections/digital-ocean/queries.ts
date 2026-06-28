@@ -27,7 +27,7 @@ export const useDigitalOceanConnectionListApps = (
     queryKey: digitalOceanAppPlatformConnectionKeys.listAccounts(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ apps: TDigitalOceanApp[] }>(
-        `/api/v1/app-connections/digital-ocean/${connectionId}/apps`
+        `/v1/app-connections/digital-ocean/${connectionId}/apps`
       );
 
       return data.apps;

@@ -39,7 +39,7 @@ export const useUpdatePkiSubscriber = () => {
   return useMutation<TPkiSubscriber, object, TUpdatePkiSubscriberDTO>({
     mutationFn: async ({ subscriberName, ...body }) => {
       const { data: subscriber } = await apiRequest.patch(
-        `/api/v1/pki/subscribers/${subscriberName}`,
+        `/v1/pki/subscribers/${subscriberName}`,
         body
       );
       return subscriber;
@@ -63,7 +63,7 @@ export const useDeletePkiSubscriber = () => {
   return useMutation<TPkiSubscriber, object, TDeletePkiSubscriberDTO>({
     mutationFn: async ({ subscriberName, projectId }) => {
       const { data: subscriber } = await apiRequest.delete(
-        `/api/v1/pki/subscribers/${subscriberName}`,
+        `/v1/pki/subscribers/${subscriberName}`,
         {
           data: {
             projectId
@@ -91,7 +91,7 @@ export const useIssuePkiSubscriberCert = () => {
   return useMutation<TCreateCertificateResponse, object, TIssuePkiSubscriberCertDTO>({
     mutationFn: async ({ subscriberName, projectId }) => {
       const { data } = await apiRequest.post(
-        `/api/v1/pki/subscribers/${subscriberName}/issue-certificate`,
+        `/v1/pki/subscribers/${subscriberName}/issue-certificate`,
         {
           projectId
         }
@@ -113,7 +113,7 @@ export const useOrderPkiSubscriberCert = () => {
   return useMutation<{ message: string }, object, TIssuePkiSubscriberCertDTO>({
     mutationFn: async ({ subscriberName, projectId }) => {
       const { data } = await apiRequest.post(
-        `/api/v1/pki/subscribers/${subscriberName}/order-certificate`,
+        `/v1/pki/subscribers/${subscriberName}/order-certificate`,
         {
           projectId
         }

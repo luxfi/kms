@@ -26,7 +26,7 @@ export const useUpdateSubOrganization = () => {
   return useMutation({
     mutationFn: async ({ subOrgId, name }: TUpdateSubOrganizationDTO) => {
       const { data } = await apiRequest.patch<{ organization: TSubOrganization }>(
-        `/api/v1/sub-organizations/${subOrgId}`,
+        `/v1/sub-organizations/${subOrgId}`,
         { name }
       );
       return data;

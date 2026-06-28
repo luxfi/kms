@@ -79,7 +79,7 @@ export const useGetAuditLogStreamById = <T extends LogProvider>(
     queryKey: auditLogStreamKeys.getById(provider, logStreamId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ auditLogStream: TAuditLogStreamProviderMap[T] }>(
-        `/api/v1/audit-log-streams/${provider}/${logStreamId}`
+        `/v1/audit-log-streams/${provider}/${logStreamId}`
       );
 
       return data.auditLogStream;

@@ -250,7 +250,7 @@ export const useGetProjectSecretsAllEnv = ({
 
 const fetchEncryptedSecretVersion = async (secretId: string, offset: number, limit: number) => {
   const { data } = await apiRequest.get<{ secretVersions: SecretVersions[] }>(
-    `/api/v1/dashboard/secret-versions/${secretId}`,
+    `/v1/dashboard/secret-versions/${secretId}`,
     {
       params: {
         limit,
@@ -273,7 +273,7 @@ export const useGetSecretVersion = (dto: GetSecretVersionsDTO) =>
 
 export const fetchSecretVersionValue = async (secretId: string, version: number) => {
   const { data } = await apiRequest.get<TSecretVersionValue>(
-    `/api/v1/dashboard/secret-versions/${secretId}/value/${version}`
+    `/v1/dashboard/secret-versions/${secretId}/value/${version}`
   );
   return data.value;
 };
@@ -300,7 +300,7 @@ export const useGetSecretAccessList = (dto: TGetSecretAccessListDTO) =>
         groups: SecretAccessListEntry[];
         identities: SecretAccessListEntry[];
         users: SecretAccessListEntry[];
-      }>(`/api/v1/secrets/${dto.secretKey}/access-list`, {
+      }>(`/v1/secrets/${dto.secretKey}/access-list`, {
         params: {
           projectId: dto.projectId,
           environment: dto.environment,
@@ -319,7 +319,7 @@ const fetchSecretReferenceTree = async ({
   environmentSlug
 }: TGetSecretReferenceTreeDTO) => {
   const { data } = await apiRequest.get<{ tree: TSecretReferenceTraceNode; value: string }>(
-    `/api/v4/secrets/${secretKey}/secret-reference-tree`,
+    `/v4/secrets/${secretKey}/secret-reference-tree`,
     {
       params: {
         secretPath,

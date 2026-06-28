@@ -104,7 +104,7 @@ export const useGetGroupById = (groupId: string) => {
     enabled: Boolean(groupId),
     queryKey: groupKeys.getGroupById(groupId),
     queryFn: async () => {
-      const { data } = await apiRequest.get<TGroup>(`/api/v1/groups/${groupId}`);
+      const { data } = await apiRequest.get<TGroup>(`/v1/groups/${groupId}`);
 
       return { group: data };
     }
@@ -145,7 +145,7 @@ export const useListGroupUsers = ({
       });
 
       const { data } = await apiRequest.get<{ users: TGroupUser[]; totalCount: number }>(
-        `/api/v1/groups/${id}/users`,
+        `/v1/groups/${id}/users`,
         {
           params
         }
@@ -203,7 +203,7 @@ export const useListGroupMembers = ({
       }
 
       const { data } = await apiRequest.get<{ members: TGroupMember[]; totalCount: number }>(
-        `/api/v1/groups/${id}/members`,
+        `/v1/groups/${id}/members`,
         {
           params
         }
@@ -250,7 +250,7 @@ export const useListGroupMachineIdentities = ({
       const { data } = await apiRequest.get<{
         machineIdentities: TGroupMachineIdentity[];
         totalCount: number;
-      }>(`/api/v1/groups/${id}/machine-identities`, {
+      }>(`/v1/groups/${id}/machine-identities`, {
         params
       });
 
@@ -299,7 +299,7 @@ export const useListGroupProjects = ({
       });
 
       const { data } = await apiRequest.get<{ projects: TGroupProject[]; totalCount: number }>(
-        `/api/v1/groups/${id}/projects`,
+        `/v1/groups/${id}/projects`,
         {
           params
         }

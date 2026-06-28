@@ -40,7 +40,7 @@ export const useGetCert = (serialNumber: string) => {
       const {
         data: { certificate }
       } = await apiRequest.get<{ certificate: TCertificate }>(
-        `/api/v1/pki/certificates/${serialNumber}`
+        `/v1/pki/certificates/${serialNumber}`
       );
       return certificate;
     },
@@ -56,7 +56,7 @@ export const useGetCertBody = (serialNumber: string) => {
         certificate: string;
         certificateChain: string;
         serialNumber: string;
-      }>(`/api/v1/pki/certificates/${serialNumber}/certificate`);
+      }>(`/v1/pki/certificates/${serialNumber}/certificate`);
       return data;
     },
     enabled: Boolean(serialNumber)
@@ -72,7 +72,7 @@ export const useGetCertBundle = (serialNumber: string) => {
         certificateChain: string;
         serialNumber: string;
         privateKey: string | null;
-      }>(`/api/v1/pki/certificates/${serialNumber}/bundle`);
+      }>(`/v1/pki/certificates/${serialNumber}/bundle`);
       return data;
     },
     enabled: Boolean(serialNumber)
@@ -117,7 +117,7 @@ export const useGetCertificateRequest = (requestId: string, projectSlug: string)
     queryKey: certKeys.getCertificateRequest(requestId, projectSlug),
     queryFn: async () => {
       const { data } = await apiRequest.get<TCertificateRequestDetails>(
-        `/api/v1/cert-manager/certificates/certificate-requests/${requestId}?projectSlug=${projectSlug}`
+        `/v1/cert-manager/certificates/certificate-requests/${requestId}?projectSlug=${projectSlug}`
       );
       return data;
     },
