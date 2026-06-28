@@ -29,7 +29,7 @@ export const useUpdateCa = () => {
   return useMutation<TUnifiedCertificateAuthority, object, TUpdateCertificateAuthorityDTO>({
     mutationFn: async ({ id, ...body }) => {
       const { data } = await apiRequest.patch<TUnifiedCertificateAuthority>(
-        `/api/v1/cert-manager/ca/${body.type}/${id}`,
+        `/v1/cert-manager/ca/${body.type}/${id}`,
         body
       );
 
@@ -55,7 +55,7 @@ export const useCreateCa = () => {
   return useMutation<TUnifiedCertificateAuthority, object, TCreateCertificateAuthorityDTO>({
     mutationFn: async (body) => {
       const { data } = await apiRequest.post<TUnifiedCertificateAuthority>(
-        `/api/v1/cert-manager/ca/${body.type}`,
+        `/v1/cert-manager/ca/${body.type}`,
         body
       );
       return data;
@@ -77,7 +77,7 @@ export const useDeleteCa = () => {
   return useMutation<TUnifiedCertificateAuthority, object, TDeleteCertificateAuthorityDTO>({
     mutationFn: async ({ id, type }) => {
       const { data } = await apiRequest.delete<TUnifiedCertificateAuthority>(
-        `/api/v1/cert-manager/ca/${type}/${id}`
+        `/v1/cert-manager/ca/${type}/${id}`
       );
       return data;
     },
@@ -98,7 +98,7 @@ export const useSignIntermediate = () => {
   return useMutation<TSignIntermediateResponse, object, TSignIntermediateDTO>({
     mutationFn: async (body) => {
       const { data } = await apiRequest.post<TSignIntermediateResponse>(
-        `/api/v1/cert-manager/ca/internal/${body.caId}/sign-intermediate`,
+        `/v1/cert-manager/ca/internal/${body.caId}/sign-intermediate`,
         body
       );
       return data;
@@ -111,7 +111,7 @@ export const useImportCaCertificate = (projectId: string) => {
   return useMutation<TImportCaCertificateResponse, object, TImportCaCertificateDTO>({
     mutationFn: async ({ caId, ...body }) => {
       const { data } = await apiRequest.post<TImportCaCertificateResponse>(
-        `/api/v1/cert-manager/ca/internal/${caId}/import-certificate`,
+        `/v1/cert-manager/ca/internal/${caId}/import-certificate`,
         body
       );
       return data;
@@ -198,7 +198,7 @@ export const useRenewCa = () => {
   return useMutation<TRenewCaResponse, object, TRenewCaDTO>({
     mutationFn: async (body) => {
       const { data } = await apiRequest.post<TRenewCaResponse>(
-        `/api/v1/cert-manager/ca/internal/${body.caId}/renew`,
+        `/v1/cert-manager/ca/internal/${body.caId}/renew`,
         body
       );
       return data;

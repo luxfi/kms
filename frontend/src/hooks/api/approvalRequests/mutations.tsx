@@ -16,7 +16,7 @@ export const useCreateApprovalRequest = () => {
   return useMutation({
     mutationFn: async ({ policyType, ...dto }: TCreateApprovalRequestDTO) => {
       const { data } = await apiRequest.post<{ request: TApprovalRequest }>(
-        `/api/v1/approval-policies/${policyType}/requests`,
+        `/v1/approval-policies/${policyType}/requests`,
         dto
       );
       return data.request;
@@ -32,7 +32,7 @@ export const useApproveApprovalRequest = () => {
   return useMutation({
     mutationFn: async ({ policyType, requestId, comment }: TApproveApprovalRequestDTO) => {
       const { data } = await apiRequest.post<{ request: TApprovalRequest }>(
-        `/api/v1/approval-policies/${policyType}/requests/${requestId}/approve`,
+        `/v1/approval-policies/${policyType}/requests/${requestId}/approve`,
         { comment }
       );
       return data.request;
@@ -48,7 +48,7 @@ export const useRejectApprovalRequest = () => {
   return useMutation({
     mutationFn: async ({ policyType, requestId, comment }: TRejectApprovalRequestDTO) => {
       const { data } = await apiRequest.post<{ request: TApprovalRequest }>(
-        `/api/v1/approval-policies/${policyType}/requests/${requestId}/reject`,
+        `/v1/approval-policies/${policyType}/requests/${requestId}/reject`,
         { comment }
       );
       return data.request;
@@ -64,7 +64,7 @@ export const useCancelApprovalRequest = () => {
   return useMutation({
     mutationFn: async ({ policyType, requestId }: TCancelApprovalRequestDTO) => {
       const { data } = await apiRequest.post<{ request: TApprovalRequest }>(
-        `/api/v1/approval-policies/${policyType}/requests/${requestId}/cancel`
+        `/v1/approval-policies/${policyType}/requests/${requestId}/cancel`
       );
       return data.request;
     },

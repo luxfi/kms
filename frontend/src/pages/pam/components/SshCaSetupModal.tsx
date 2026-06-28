@@ -16,7 +16,7 @@ export const SshCaSetupModal = ({ isOpen, onOpenChange, resourceId }: Props) => 
   const portSuffix = port && port !== "80" ? `:${port}` : "";
   const siteURL = `${protocol}//${hostname}${portSuffix}`;
 
-  const setupSshCaCommand = `curl -H "Authorization: Bearer ${getAuthToken()}" "${siteURL}/api/v1/pam/resources/ssh/${resourceId}/ssh-ca-setup" | sudo bash`;
+  const setupSshCaCommand = `curl -H "Authorization: Bearer ${getAuthToken()}" "${siteURL}/v1/pam/resources/ssh/${resourceId}/ssh-ca-setup" | sudo bash`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(setupSshCaCommand);

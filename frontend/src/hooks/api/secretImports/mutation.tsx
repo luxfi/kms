@@ -44,7 +44,7 @@ export const useUpdateSecretImport = () => {
 
   return useMutation<object, object, TUpdateSecretImportDTO>({
     mutationFn: async ({ environment, import: secretImports, projectId, path, id }) => {
-      const { data } = await apiRequest.patch(`/api/v2/secret-imports/${id}`, {
+      const { data } = await apiRequest.patch(`/v2/secret-imports/${id}`, {
         import: secretImports,
         environment,
         path,
@@ -69,7 +69,7 @@ export const useUpdateSecretImport = () => {
 export const useResyncSecretReplication = () => {
   return useMutation<object, object, TResyncSecretReplicationDTO>({
     mutationFn: async ({ environment, projectId, path, id }) => {
-      const { data } = await apiRequest.post(`/api/v2/secret-imports/${id}/replication-resync`, {
+      const { data } = await apiRequest.post(`/v2/secret-imports/${id}/replication-resync`, {
         environment,
         path,
         projectId
@@ -84,7 +84,7 @@ export const useDeleteSecretImport = () => {
 
   return useMutation<object, object, TDeleteSecretImportDTO>({
     mutationFn: async ({ id, projectId, path, environment }) => {
-      const { data } = await apiRequest.delete(`/api/v2/secret-imports/${id}`, {
+      const { data } = await apiRequest.delete(`/v2/secret-imports/${id}`, {
         data: {
           projectId,
           path,

@@ -13,7 +13,7 @@ export const subscriptionQueryKeys = {
 
 export const fetchOrgSubscription = async (orgID: string, refreshCache: boolean = false) => {
   const { data } = await apiRequest.get<{ plan: SubscriptionPlan }>(
-    `/api/v1/organizations/${orgID}/plan${refreshCache ? "?refreshCache=true" : ""}`
+    `/v1/organizations/${orgID}/plan${refreshCache ? "?refreshCache=true" : ""}`
   );
 
   return data.plan;

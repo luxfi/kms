@@ -109,7 +109,7 @@ export const useGetPamResourceById = (
     queryKey: pamKeys.getResource(resourceType || "", resourceId || ""),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ resource: TPamResource }>(
-        `/api/v1/pam/resources/${resourceType}/${resourceId}`
+        `/v1/pam/resources/${resourceType}/${resourceId}`
       );
 
       return data.resource;
@@ -166,7 +166,7 @@ export const useGetPamSessionById = (
     queryKey: pamKeys.getSession(sessionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ session: TPamSession }>(
-        `/api/v1/pam/sessions/${sessionId}`
+        `/v1/pam/sessions/${sessionId}`
       );
 
       return data.session;

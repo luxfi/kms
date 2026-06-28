@@ -13,7 +13,7 @@ export const useGetSshHostById = (sshHostId: string) => {
   return useQuery({
     queryKey: sshHostKeys.getSshHostById(sshHostId),
     queryFn: async () => {
-      const { data: sshHost } = await apiRequest.get<TSshHost>(`/api/v1/ssh/hosts/${sshHostId}`);
+      const { data: sshHost } = await apiRequest.get<TSshHost>(`/v1/ssh/hosts/${sshHostId}`);
       return sshHost;
     },
     enabled: Boolean(sshHostId)
@@ -22,7 +22,7 @@ export const useGetSshHostById = (sshHostId: string) => {
 
 export const fetchSshHostUserCaPublicKey = async (sshHostId: string): Promise<string> => {
   const { data } = await apiRequest.get<string>(
-    `/api/v1/ssh/hosts/${sshHostId}/user-ca-public-key`
+    `/v1/ssh/hosts/${sshHostId}/user-ca-public-key`
   );
   return data;
 };

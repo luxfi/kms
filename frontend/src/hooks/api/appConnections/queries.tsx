@@ -114,7 +114,7 @@ export const useListAvailableAppConnections = (
     queryKey: appConnectionKeys.listAvailable(app, projectId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TAvailableAppConnectionsResponse>(
-        `/api/v1/app-connections/${app}/available`,
+        `/v1/app-connections/${app}/available`,
         { params: { projectId } }
       );
 
@@ -142,7 +142,7 @@ export const useListAvailableAppConnections = (
 //     queryKey: appConnectionKeys.getUsage(app, connectionId),
 //     queryFn: async () => {
 //       const { data } = await apiRequest.get<AppConnectionUsage>(
-//         `/api/v1/app-connections/${app}/${connectionId}/usage`
+//         `/v1/app-connections/${app}/${connectionId}/usage`
 //       );
 //
 //       return data;
@@ -168,7 +168,7 @@ export const useListAvailableAppConnections = (
 //     queryKey: appConnectionKeys.listByApp(app),
 //     queryFn: async () => {
 //       const { data } = await apiRequest.get<TListAppConnections<TAppConnectionMap[T]>>(
-//         `/api/v1/app-connections/${app}`
+//         `/v1/app-connections/${app}`
 //       );
 //
 //       return data.appConnections;
@@ -195,7 +195,7 @@ export const useListAvailableAppConnections = (
 //     queryKey: appConnectionKeys.byId(app, connectionId),
 //     queryFn: async () => {
 //       const { data } = await apiRequest.get<TGetAppConnection<TAppConnectionMap[T]>>(
-//         `/api/v1/app-connections/${app}/${connectionId}`
+//         `/v1/app-connections/${app}/${connectionId}`
 //       );
 //
 //       return data.appConnection;

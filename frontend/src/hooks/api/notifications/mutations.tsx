@@ -35,7 +35,7 @@ export const useUpdateNotification = () => {
   return useMutation({
     mutationFn: async ({ notificationId, isRead }: { notificationId: string; isRead: boolean }) => {
       const { data } = await apiRequest.patch<{ notification: TUserNotification }>(
-        `/api/v1/notifications/user/${notificationId}`,
+        `/v1/notifications/user/${notificationId}`,
         { isRead }
       );
       return data.notification;
@@ -58,7 +58,7 @@ export const useDeleteNotification = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (notificationId: string) => {
-      await apiRequest.delete(`/api/v1/notifications/user/${notificationId}`);
+      await apiRequest.delete(`/v1/notifications/user/${notificationId}`);
     },
     onSuccess: (_, notificationId) => {
       queryClient.setQueryData<TUserNotification[]>(notificationKeys.list(orgId), (oldData) => {

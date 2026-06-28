@@ -62,7 +62,7 @@ export const fetchSlackIntegrations = async () => {
 
 export const fetchSlackIntegrationById = async (id?: string) => {
   const { data } = await apiRequest.get<SlackIntegration>(
-    `/api/v1/workflow-integrations/slack/${id}`
+    `/v1/workflow-integrations/slack/${id}`
   );
 
   return data;
@@ -70,7 +70,7 @@ export const fetchSlackIntegrationById = async (id?: string) => {
 
 export const fetchSlackIntegrationChannels = async (id?: string) => {
   const { data } = await apiRequest.get<SlackIntegrationChannel[]>(
-    `/api/v1/workflow-integrations/slack/${id}/channels`
+    `/v1/workflow-integrations/slack/${id}/channels`
   );
 
   return data;
@@ -92,14 +92,14 @@ export const fetchMicrosoftTeamsIntegrations = async () => {
 
 export const fetchMicrosoftTeamsIntegrationById = async (id?: string) => {
   const { data } = await apiRequest.get<MicrosoftTeamsIntegration>(
-    `/api/v1/workflow-integrations/microsoft-teams/${id}`
+    `/v1/workflow-integrations/microsoft-teams/${id}`
   );
 
   return data;
 };
 export const fetchMicrosoftTeamsIntegrationTeams = async (id?: string) => {
   const { data } = await apiRequest.get<MicrosoftTeamsIntegrationTeam[]>(
-    `/api/v1/workflow-integrations/microsoft-teams/${id}/teams`
+    `/v1/workflow-integrations/microsoft-teams/${id}/teams`
   );
 
   return data;

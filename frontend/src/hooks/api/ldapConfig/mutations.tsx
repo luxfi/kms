@@ -116,7 +116,7 @@ export const useCreateLDAPGroupMapping = () => {
       ldapGroupCN: string;
       groupSlug: string;
     }) => {
-      const { data } = await apiRequest.post(`/api/v1/ldap/config/${ldapConfigId}/group-maps`, {
+      const { data } = await apiRequest.post(`/v1/ldap/config/${ldapConfigId}/group-maps`, {
         ldapGroupCN,
         groupSlug
       });
@@ -139,7 +139,7 @@ export const useDeleteLDAPGroupMapping = () => {
       ldapGroupMapId: string;
     }) => {
       const { data } = await apiRequest.delete(
-        `/api/v1/ldap/config/${ldapConfigId}/group-maps/${ldapGroupMapId}`
+        `/v1/ldap/config/${ldapConfigId}/group-maps/${ldapGroupMapId}`
       );
       return data;
     },

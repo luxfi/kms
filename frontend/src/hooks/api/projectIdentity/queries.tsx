@@ -15,7 +15,7 @@ export const projectIdentityQuery = {
       queryKey: projectIdentityQuery.getByIdKey(params),
       queryFn: async () => {
         const { data } = await apiRequest.get<{ identity: TProjectIdentity }>(
-          `/api/v1/projects/${params.projectId}/identities/${params.identityId}`
+          `/v1/projects/${params.projectId}/identities/${params.identityId}`
         );
         return data.identity;
       }
@@ -27,7 +27,7 @@ export const projectIdentityQuery = {
         const { data } = await apiRequest.get<{
           identities: TProjectIdentity[];
           totalCount: number;
-        }>(`/api/v1/projects/${params.projectId}/identities`, {
+        }>(`/v1/projects/${params.projectId}/identities`, {
           params: {
             offset: params.offset,
             limit: params.limit,

@@ -14,7 +14,7 @@ export const useGetWorkspaceBot = (workspaceId: string) =>
     queryFn: async () => {
       const {
         data: { bot }
-      } = await apiRequest.get<{ bot: TBot }>(`/api/v1/bot/${workspaceId}`);
+      } = await apiRequest.get<{ bot: TBot }>(`/v1/bot/${workspaceId}`);
       return bot;
     },
     enabled: Boolean(workspaceId)
@@ -25,7 +25,7 @@ export const useUpdateBotActiveStatus = () => {
 
   return useMutation<object, object, TSetBotActiveStatusDto>({
     mutationFn: ({ botId, isActive, botKey }) => {
-      return apiRequest.patch(`/api/v1/bot/${botId}/active`, {
+      return apiRequest.patch(`/v1/bot/${botId}/active`, {
         isActive,
         botKey
       });

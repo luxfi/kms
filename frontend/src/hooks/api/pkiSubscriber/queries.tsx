@@ -53,7 +53,7 @@ export const useGetPkiSubscriber = (
     queryKey: pkiSubscriberKeys.getPkiSubscriber({ subscriberName, projectId }),
     queryFn: async () => {
       const { data: pkiSubscriber } = await apiRequest.get<TPkiSubscriber>(
-        `/api/v1/pki/subscribers/${subscriberName}`,
+        `/v1/pki/subscribers/${subscriberName}`,
         {
           params: {
             projectId
@@ -98,7 +98,7 @@ export const useGetPkiSubscriberCertificates = (
       const {
         data: { certificates, totalCount }
       } = await apiRequest.get<{ certificates: TCertificate[]; totalCount: number }>(
-        `/api/v1/pki/subscribers/${subscriberName}/certificates`,
+        `/v1/pki/subscribers/${subscriberName}/certificates`,
         {
           params
         }

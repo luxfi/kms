@@ -36,7 +36,7 @@ export const useListAwsConnectionKmsKeys = (
     queryKey: awsConnectionKeys.listKmsKeys({ connectionId, ...params }),
     queryFn: async () => {
       const { data } = await apiRequest.get<TAwsConnectionListKmsKeysResponse>(
-        `/api/v1/app-connections/aws/${connectionId}/kms-keys`,
+        `/v1/app-connections/aws/${connectionId}/kms-keys`,
         { params }
       );
 
@@ -62,7 +62,7 @@ export const useListAwsConnectionIamUsers = (
     queryKey: awsConnectionKeys.listIamUsers({ connectionId }),
     queryFn: async () => {
       const { data } = await apiRequest.get<TAwsConnectionListIamUsersResponse>(
-        `/api/v1/app-connections/aws/${connectionId}/users`
+        `/v1/app-connections/aws/${connectionId}/users`
       );
 
       return data.iamUsers;

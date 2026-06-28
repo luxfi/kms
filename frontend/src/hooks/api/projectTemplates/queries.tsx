@@ -51,7 +51,7 @@ export const useGetProjectTemplateById = (
     queryKey: projectTemplateKeys.byId(templateId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TProjectTemplateResponse>(
-        `/api/v1/project-templates/${templateId}`
+        `/v1/project-templates/${templateId}`
       );
 
       return data.projectTemplate;

@@ -25,7 +25,7 @@ export const useGetCertTemplate = (id: string) => {
     queryKey: certTemplateKeys.getCertTemplateById(id),
     queryFn: async () => {
       const { data: certificateTemplate } = await apiRequest.get<TCertificateTemplate>(
-        `/api/v1/pki/certificate-templates/${id}`
+        `/v1/pki/certificate-templates/${id}`
       );
       return certificateTemplate;
     },
@@ -63,7 +63,7 @@ export const useGetEstConfig = (certificateTemplateId: string) => {
     queryKey: certTemplateKeys.getEstConfig(certificateTemplateId),
     queryFn: async () => {
       const { data: estConfig } = await apiRequest.get<TEstConfig>(
-        `/api/v1/pki/certificate-templates/${certificateTemplateId}/est-config`
+        `/v1/pki/certificate-templates/${certificateTemplateId}/est-config`
       );
 
       return estConfig;

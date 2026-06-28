@@ -8,7 +8,7 @@ export const useDeleteGatewayV2ById = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => {
-      return apiRequest.delete(`/api/v2/gateways/${id}`);
+      return apiRequest.delete(`/v2/gateways/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries(gatewaysQueryKeys.list());

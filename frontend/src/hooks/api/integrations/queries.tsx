@@ -26,7 +26,7 @@ const fetchIntegrations = async () => {
 
 const fetchIntegration = async (id: string) => {
   const { data } = await apiRequest.get<{ integration: TIntegrationWithEnv }>(
-    `/api/v1/integration/${id}`
+    `/v1/integration/${id}`
   );
 
   return data.integration;
@@ -137,7 +137,7 @@ export const useDeleteIntegration = () => {
   >({
     mutationFn: ({ id, shouldDeleteIntegrationSecrets }) =>
       apiRequest.delete(
-        `/api/v1/integration/${id}?shouldDeleteIntegrationSecrets=${shouldDeleteIntegrationSecrets}`
+        `/v1/integration/${id}?shouldDeleteIntegrationSecrets=${shouldDeleteIntegrationSecrets}`
       ),
     onSuccess: (_, { workspaceId }) => {
       queryClient.invalidateQueries({
@@ -172,7 +172,7 @@ export const useGetIntegration = (
 
 export const useSyncIntegration = () => {
   return useMutation<object, object, { id: string; workspaceId: string; lastUsed: string }>({
-    mutationFn: ({ id }) => apiRequest.post(`/api/v1/integration/${id}/sync`),
+    mutationFn: ({ id }) => apiRequest.post(`/v1/integration/${id}/sync`),
     onSuccess: () => {
       createNotification({
         text: "Successfully triggered manual sync",

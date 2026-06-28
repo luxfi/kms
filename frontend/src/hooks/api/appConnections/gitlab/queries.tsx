@@ -29,7 +29,7 @@ export const useGitLabConnectionListProjects = (
     queryKey: gitlabConnectionKeys.listProjects(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TGitLabProject[]>(
-        `/api/v1/app-connections/gitlab/${connectionId}/projects`
+        `/v1/app-connections/gitlab/${connectionId}/projects`
       );
 
       return data;
@@ -54,7 +54,7 @@ export const useGitLabConnectionListGroups = (
     queryKey: gitlabConnectionKeys.listGroups(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TGitLabGroup[]>(
-        `/api/v1/app-connections/gitlab/${connectionId}/groups`
+        `/v1/app-connections/gitlab/${connectionId}/groups`
       );
 
       return data;

@@ -37,7 +37,7 @@ export const useOCIConnectionListCompartments = (
     queryKey: ociConnectionKeys.listCompartments(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TOCICompartment[]>(
-        `/api/v1/app-connections/oci/${connectionId}/compartments`
+        `/v1/app-connections/oci/${connectionId}/compartments`
       );
 
       return data;
@@ -62,7 +62,7 @@ export const useOCIConnectionListVaults = (
     queryKey: ociConnectionKeys.listVaults(connectionId, compartmentOcid),
     queryFn: async () => {
       const { data } = await apiRequest.get<TOCIVault[]>(
-        `/api/v1/app-connections/oci/${connectionId}/vaults`,
+        `/v1/app-connections/oci/${connectionId}/vaults`,
         {
           params: {
             compartmentOcid
@@ -92,7 +92,7 @@ export const useOCIConnectionListVaultKeys = (
     queryKey: ociConnectionKeys.listVaultKeys(connectionId, compartmentOcid, vaultOcid),
     queryFn: async () => {
       const { data } = await apiRequest.get<TOCIVaultKey[]>(
-        `/api/v1/app-connections/oci/${connectionId}/vault-keys`,
+        `/v1/app-connections/oci/${connectionId}/vault-keys`,
         {
           params: {
             compartmentOcid,

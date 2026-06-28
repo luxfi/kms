@@ -20,7 +20,7 @@ export const useGetScimTokens = (organizationId: string) => {
       const {
         data: { scimTokens }
       } = await apiRequest.get<{ scimTokens: ScimTokenData[] }>(
-        `/api/v1/scim/scim-tokens?organizationId=${organizationId}`
+        `/v1/scim/scim-tokens?organizationId=${organizationId}`
       );
 
       return scimTokens;

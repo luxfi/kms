@@ -41,14 +41,14 @@ import {
 } from "./types";
 
 export const fetchProjectById = async (projectId: string) => {
-  const { data } = await apiRequest.get<{ project: Project }>(`/api/v1/projects/${projectId}`);
+  const { data } = await apiRequest.get<{ project: Project }>(`/v1/projects/${projectId}`);
 
   return data.project;
 };
 
 const fetchWorkspaceIndexStatus = async (projectId: string) => {
   const { data } = await apiRequest.get<boolean>(
-    `/api/v3/projects/${projectId}/secrets/blind-index-status`
+    `/v3/projects/${projectId}/secrets/blind-index-status`
   );
 
   return data;
@@ -56,7 +56,7 @@ const fetchWorkspaceIndexStatus = async (projectId: string) => {
 
 const fetchProjectUpgradeStatus = async (projectId: string) => {
   const { data } = await apiRequest.get<{ status: string }>(
-    `/api/v1/projects/${projectId}/upgrade/status`
+    `/v1/projects/${projectId}/upgrade/status`
   );
 
   return data;
@@ -67,7 +67,7 @@ export const useUpgradeProject = () => {
 
   return useMutation<object, object, { projectId: string; privateKey: string }>({
     mutationFn: ({ projectId, privateKey }) => {
-      return apiRequest.post(`/api/v1/projects/${projectId}/upgrade`, {
+      return apiRequest.post(`/v1/projects/${projectId}/upgrade`, {
         userPrivateKey: privateKey
       });
     },
@@ -151,7 +151,7 @@ export const useSearchProjects = ({ options, ...dto }: TSearchProjectsDTO) =>
 
 const fetchUserWorkspaceMemberships = async (orgId: string) => {
   const { data } = await apiRequest.get<Record<string, Project[]>>(
-    `/api/v1/organization/${orgId}/project-memberships`
+    `/v1/organization/${orgId}/project-memberships`
   );
 
   return data;
@@ -167,7 +167,7 @@ export const useGetUserWorkspaceMemberships = (orgId: string) =>
 
 const fetchWorkspaceAuthorization = async (projectId: string) => {
   const { data } = await apiRequest.get<{ authorizations: IntegrationAuth[] }>(
-    `/api/v1/projects/${projectId}/authorizations`
+    `/v1/projects/${projectId}/authorizations`
   );
 
   return data.authorizations;
@@ -186,7 +186,7 @@ export const useGetWorkspaceAuthorizations = <TData = IntegrationAuth[],>(
 
 export const fetchWorkspaceIntegrations = async (projectId: string) => {
   const { data } = await apiRequest.get<{ integrations: TIntegration[] }>(
-    `/api/v1/projects/${projectId}/integrations`
+    `/v1/projects/${projectId}/integrations`
   );
   return data.integrations;
 };
@@ -245,7 +245,7 @@ export const useUpdateProject = () => {
       pitVersionLimit
     }) => {
       const { data } = await apiRequest.patch<{ project: Project }>(
-        `/api/v1/projects/${projectID}`,
+        `/v1/projects/${projectID}`,
         {
           name: newProjectName,
           description: newProjectDescription,
@@ -272,7 +272,7 @@ export const useUpdateWorkspaceAuditLogsRetention = () => {
   return useMutation<Project, object, UpdateAuditLogsRetentionDTO>({
     mutationFn: async ({ projectSlug, auditLogsRetentionDays }) => {
       const { data } = await apiRequest.put(
-        `/api/v1/projects/${projectSlug}/audit-logs-retention`,
+        `/v1/projects/${projectSlug}/audit-logs-retention`,
         {
           auditLogsRetentionDays
         }
@@ -290,7 +290,7 @@ export const useDeleteWorkspace = () => {
 
   return useMutation<Project, object, DeleteWorkspaceDTO>({
     mutationFn: async ({ projectID }) => {
-      const { data } = await apiRequest.delete(`/api/v1/projects/${projectID}`);
+      const { data } = await apiRequest.delete(`/v1/projects/${projectID}`);
       return data.project;
     },
     onSuccess: () => {
@@ -308,7 +308,7 @@ export const useCreateWsEnvironment = () => {
   return useMutation<ProjectEnv, ProjectEnv, CreateEnvironmentDTO>({
     mutationFn: async ({ projectId, name, slug }) => {
       const { data } = await apiRequest.post<{ environment: ProjectEnv }>(
-        `/api/v1/projects/${projectId}/environments`,
+        `/v1/projects/${projectId}/environments`,
         {
           name,
           slug
@@ -329,7 +329,7 @@ export const useUpdateWsEnvironment = () => {
 
   return useMutation<object, object, UpdateEnvironmentDTO>({
     mutationFn: ({ projectId, id, name, slug, position }) => {
-      return apiRequest.patch(`/api/v1/projects/${projectId}/environments/${id}`, {
+      return apiRequest.patch(`/v1/projects/${projectId}/environments/${id}`, {
         name,
         slug,
         position
@@ -348,7 +348,7 @@ export const useDeleteWsEnvironment = () => {
 
   return useMutation<object, object, DeleteEnvironmentDTO>({
     mutationFn: ({ id, projectId }) => {
-      return apiRequest.delete(`/api/v1/projects/${projectId}/environments/${id}`);
+      return apiRequest.delete(`/v1/projects/${projectId}/environments/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -368,7 +368,7 @@ export const useGetWorkspaceUsers = (
     queryFn: async () => {
       const {
         data: { users }
-      } = await apiRequest.get<{ users: TWorkspaceUser[] }>(`/api/v1/projects/${projectId}/users`, {
+      } = await apiRequest.get<{ users: TWorkspaceUser[] }>(`/v1/projects/${projectId}/users`, {
         params: {
           includeGroupMembers,
           roles:
@@ -390,7 +390,7 @@ export const useGetWorkspaceUserDetails = (projectId: string, membershipId: stri
       const {
         data: { membership }
       } = await apiRequest.get<{ membership: TWorkspaceUser }>(
-        `/api/v1/projects/${projectId}/memberships/${membershipId}`
+        `/v1/projects/${projectId}/memberships/${membershipId}`
       );
       return membership;
     },
@@ -412,7 +412,7 @@ export const useDeleteUserFromWorkspace = () => {
     }) => {
       const {
         data: { deletedMembership }
-      } = await apiRequest.delete(`/api/v1/projects/${projectId}/memberships`, {
+      } = await apiRequest.delete(`/v1/projects/${projectId}/memberships`, {
         data: { usernames }
       });
       return deletedMembership;
@@ -433,7 +433,7 @@ export const useUpdateUserWorkspaceRole = () => {
       const {
         data: { membership }
       } = await apiRequest.patch<{ membership: { projectId: string } }>(
-        `/api/v1/projects/${projectId}/memberships/${membershipId}`,
+        `/v1/projects/${projectId}/memberships/${membershipId}`,
         {
           roles
         }
@@ -457,7 +457,7 @@ export const useGetWorkspaceGroupMembershipDetails = (projectId: string, groupId
       const {
         data: { groupMembership }
       } = await apiRequest.get<{ groupMembership: TGroupMembership }>(
-        `/api/v1/projects/${projectId}/groups/${groupId}`
+        `/v1/projects/${projectId}/groups/${groupId}`
       );
       return groupMembership;
     }
@@ -471,7 +471,7 @@ export const useListWorkspaceGroups = (projectId: string) => {
       const {
         data: { groupMemberships }
       } = await apiRequest.get<{ groupMemberships: TGroupMembership[] }>(
-        `/api/v1/projects/${projectId}/groups`
+        `/v1/projects/${projectId}/groups`
       );
       return groupMemberships;
     },
@@ -499,7 +499,7 @@ export const useListWorkspaceCas = ({
       const {
         data: { cas }
       } = await apiRequest.get<{ cas: TCertificateAuthority[] }>(
-        `/api/v1/projects/${projectId}/cas`,
+        `/v1/projects/${projectId}/cas`,
         {
           params
         }
@@ -591,7 +591,7 @@ export const useListWorkspaceCertificates = ({
       const {
         data: { certificates, totalCount }
       } = await apiRequest.get<{ certificates: TCertificate[]; totalCount: number }>(
-        `/api/v1/projects/${projectId}/certificates`,
+        `/v1/projects/${projectId}/certificates`,
         {
           params
         }
@@ -610,7 +610,7 @@ export const useListWorkspacePkiAlerts = ({ projectId }: { projectId: string }) 
     queryFn: async () => {
       const {
         data: { alerts }
-      } = await apiRequest.get<{ alerts: TPkiAlert[] }>(`/api/v1/projects/${projectId}/pki-alerts`);
+      } = await apiRequest.get<{ alerts: TPkiAlert[] }>(`/v1/projects/${projectId}/pki-alerts`);
 
       return { alerts };
     },
@@ -625,7 +625,7 @@ export const useListWorkspacePkiCollections = ({ projectId }: { projectId: strin
       const {
         data: { collections }
       } = await apiRequest.get<{ collections: TPkiCollection[] }>(
-        `/api/v1/projects/${projectId}/pki-collections`
+        `/v1/projects/${projectId}/pki-collections`
       );
 
       return { collections };
@@ -641,7 +641,7 @@ export const useListWorkspaceCertificateTemplates = ({ projectId }: { projectId:
       const {
         data: { certificateTemplates }
       } = await apiRequest.get<{ certificateTemplates: TCertificateTemplate[] }>(
-        `/api/v1/projects/${projectId}/certificate-templates`
+        `/v1/projects/${projectId}/certificate-templates`
       );
 
       return { certificateTemplates };
@@ -674,7 +674,7 @@ export const useListWorkspaceSshCertificates = ({
       const { data } = await apiRequest.get<{
         certificates: TSshCertificate[];
         totalCount: number;
-      }>(`/api/v1/projects/${projectId}/ssh-certificates`, {
+      }>(`/v1/projects/${projectId}/ssh-certificates`, {
         params
       });
       return data;
@@ -690,7 +690,7 @@ export const useListWorkspaceSshCas = (projectId: string) => {
       const {
         data: { cas }
       } = await apiRequest.get<{ cas: Omit<TSshCertificateAuthority, "publicKey">[] }>(
-        `/api/v1/projects/${projectId}/ssh-cas`
+        `/v1/projects/${projectId}/ssh-cas`
       );
       return cas;
     },
@@ -704,7 +704,7 @@ export const useListWorkspaceSshHosts = (projectId: string) => {
     queryFn: async () => {
       const {
         data: { hosts }
-      } = await apiRequest.get<{ hosts: TSshHost[] }>(`/api/v1/projects/${projectId}/ssh-hosts`);
+      } = await apiRequest.get<{ hosts: TSshHost[] }>(`/v1/projects/${projectId}/ssh-hosts`);
       return hosts;
     },
     enabled: Boolean(projectId)
@@ -718,7 +718,7 @@ export const useListWorkspacePkiSubscribers = (projectId: string) => {
       const {
         data: { subscribers }
       } = await apiRequest.get<{ subscribers: TPkiSubscriber[] }>(
-        `/api/v1/projects/${projectId}/pki-subscribers`
+        `/v1/projects/${projectId}/pki-subscribers`
       );
       return subscribers;
     },
@@ -733,7 +733,7 @@ export const useListWorkspaceSshHostGroups = (projectId: string) => {
       const {
         data: { groups }
       } = await apiRequest.get<{ groups: (TSshHostGroup & { hostCount: number })[] }>(
-        `/api/v1/projects/${projectId}/ssh-host-groups`
+        `/v1/projects/${projectId}/ssh-host-groups`
       );
       return groups;
     },
@@ -746,7 +746,7 @@ export const useListWorkspaceSshCertificateTemplates = (projectId: string) => {
     queryKey: projectKeys.getProjectSshCertificateTemplates(projectId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ certificateTemplates: TSshCertificateTemplate[] }>(
-        `/api/v1/projects/${projectId}/ssh-certificate-templates`
+        `/v1/projects/${projectId}/ssh-certificate-templates`
       );
       return data;
     },
@@ -766,7 +766,7 @@ export const useGetWorkspaceWorkflowIntegrationConfig = ({
     queryFn: async () => {
       const { data } = await apiRequest
         .get<ProjectWorkflowIntegrationConfig>(
-          `/api/v1/projects/${projectId}/workflow-integration-config/${integration}`
+          `/v1/projects/${projectId}/workflow-integration-config/${integration}`
         )
         .catch((err) => {
           if (err.response.status === 404) {
@@ -787,7 +787,7 @@ export const useGetProjectSshConfig = (projectId: string) => {
     queryKey: projectKeys.getProjectSshConfig(projectId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TProjectSshConfig>(
-        `/api/v1/projects/${projectId}/ssh-config`
+        `/v1/projects/${projectId}/ssh-config`
       );
 
       return data;

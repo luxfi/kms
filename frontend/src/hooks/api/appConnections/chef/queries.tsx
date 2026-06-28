@@ -29,7 +29,7 @@ export const useChefConnectionListDataBags = (
     queryKey: chefConnectionKeys.listDataBags(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TChefDataBag[]>(
-        `/api/v1/app-connections/chef/${connectionId}/data-bags`
+        `/v1/app-connections/chef/${connectionId}/data-bags`
       );
 
       return data;
@@ -56,7 +56,7 @@ export const useChefConnectionListDataBagItems = (
     queryFn: async () => {
       const params = { dataBagName };
       const { data } = await apiRequest.get<TChefDataBagItem[]>(
-        `/api/v1/app-connections/chef/${connectionId}/data-bag-items`,
+        `/v1/app-connections/chef/${connectionId}/data-bag-items`,
         { params }
       );
 

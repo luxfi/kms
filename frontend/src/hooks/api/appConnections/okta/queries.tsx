@@ -26,7 +26,7 @@ export const useOktaConnectionListApps = (
     queryKey: oktaConnectionKeys.listApps(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ apps: TOktaApp[] }>(
-        `/api/v1/app-connections/okta/${connectionId}/apps`
+        `/v1/app-connections/okta/${connectionId}/apps`
       );
 
       return data.apps;

@@ -57,7 +57,7 @@ export const useListProjectEnvironmentsFolders = (
     queryKey: folderQueryKeys.getProjectEnvironmentsFolders(projectId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TProjectEnvironmentsFolders>(
-        `/api/v1/projects/${projectId}/environment-folder-tree`
+        `/v1/projects/${projectId}/environment-folder-tree`
       );
       return data;
     },
@@ -235,7 +235,7 @@ export const useUpdateFolder = () => {
 
   return useMutation<object, object, TUpdateFolderDTO>({
     mutationFn: async ({ path = "/", folderId, name, environment, projectId, description }) => {
-      const { data } = await apiRequest.patch(`/api/v2/folders/${folderId}`, {
+      const { data } = await apiRequest.patch(`/v2/folders/${folderId}`, {
         name,
         environment,
         projectId,
@@ -275,7 +275,7 @@ export const useDeleteFolder = () => {
 
   return useMutation<object, object, TDeleteFolderDTO>({
     mutationFn: async ({ path = "/", folderId, environment, projectId, forceDelete = true }) => {
-      const { data } = await apiRequest.delete(`/api/v2/folders/${folderId}`, {
+      const { data } = await apiRequest.delete(`/v2/folders/${folderId}`, {
         data: {
           environment,
           projectId,

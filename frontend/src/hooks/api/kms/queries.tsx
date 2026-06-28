@@ -34,7 +34,7 @@ export const useGetExternalKmsById = ({
     queryKey: kmsKeys.getExternalKmsById(kmsId),
     enabled: Boolean(kmsId),
     queryFn: async () => {
-      const { data } = await apiRequest.get<Kms>(`/api/v1/external-kms/${provider}/${kmsId}`);
+      const { data } = await apiRequest.get<Kms>(`/v1/external-kms/${provider}/${kmsId}`);
       return data;
     }
   });
@@ -53,7 +53,7 @@ export const useGetActiveProjectKms = (projectId: string) => {
           name: string;
           isExternal: string;
         };
-      }>(`/api/v1/projects/${projectId}/kms`);
+      }>(`/v1/projects/${projectId}/kms`);
       return secretManagerKmsKey;
     }
   });
@@ -62,7 +62,7 @@ export const useGetActiveProjectKms = (projectId: string) => {
 export const fetchProjectKmsBackup = async (projectId: string) => {
   const { data } = await apiRequest.get<{
     secretManager: string;
-  }>(`/api/v1/projects/${projectId}/kms/backup`);
+  }>(`/v1/projects/${projectId}/kms/backup`);
 
   return data;
 };

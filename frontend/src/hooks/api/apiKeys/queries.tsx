@@ -33,7 +33,7 @@ export const useUpdateAPIKeyV2 = () => {
     mutationFn: async ({ apiKeyDataId, name }) => {
       const {
         data: { apiKeyData }
-      } = await apiRequest.patch(`/api/v3/api-key/${apiKeyDataId}`, {
+      } = await apiRequest.patch(`/v3/api-key/${apiKeyDataId}`, {
         name
       });
       return apiKeyData;
@@ -50,7 +50,7 @@ export const useDeleteAPIKeyV2 = () => {
     mutationFn: async ({ apiKeyDataId }) => {
       const {
         data: { apiKeyData }
-      } = await apiRequest.delete(`/api/v3/api-key/${apiKeyDataId}`);
+      } = await apiRequest.delete(`/v3/api-key/${apiKeyDataId}`);
       return apiKeyData;
     },
     onSuccess: () => {

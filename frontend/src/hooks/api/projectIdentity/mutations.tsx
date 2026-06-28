@@ -17,7 +17,7 @@ export const useCreateProjectIdentity = () => {
   return useMutation({
     mutationFn: async ({ projectId, ...dto }: TCreateProjectIdentityDTO) => {
       const { data } = await apiRequest.post<{ identity: TProjectIdentity }>(
-        `/api/v1/projects/${projectId}/identities`,
+        `/v1/projects/${projectId}/identities`,
         dto
       );
       return data.identity;
@@ -36,7 +36,7 @@ export const useUpdateProjectIdentity = () => {
   return useMutation({
     mutationFn: async ({ projectId, identityId, ...updates }: TUpdateProjectIdentityDTO) => {
       const { data } = await apiRequest.patch<{ identity: TProjectIdentity }>(
-        `/api/v1/projects/${projectId}/identities/${identityId}`,
+        `/v1/projects/${projectId}/identities/${identityId}`,
         updates
       );
       return data.identity;
@@ -55,7 +55,7 @@ export const useDeleteProjectIdentity = () => {
   return useMutation({
     mutationFn: async ({ projectId, identityId }: TDeleteProjectIdentityDTO) => {
       const { data } = await apiRequest.delete<{ identity: TProjectIdentity }>(
-        `/api/v1/projects/${projectId}/identities/${identityId}`
+        `/v1/projects/${projectId}/identities/${identityId}`
       );
       return data.identity;
     },

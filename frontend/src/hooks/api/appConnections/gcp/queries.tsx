@@ -29,7 +29,7 @@ export const useGcpConnectionListProjects = (
     queryKey: gcpConnectionKeys.listProjects(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TGcpProject[]>(
-        `/api/v1/app-connections/gcp/${connectionId}/secret-manager-projects`
+        `/v1/app-connections/gcp/${connectionId}/secret-manager-projects`
       );
 
       return data;
@@ -54,7 +54,7 @@ export const useGcpConnectionListProjectLocations = (
     queryKey: gcpConnectionKeys.listProjectLocations({ connectionId, projectId }),
     queryFn: async () => {
       const { data } = await apiRequest.get<TGcpLocation[]>(
-        `/api/v1/app-connections/gcp/${connectionId}/secret-manager-project-locations`,
+        `/v1/app-connections/gcp/${connectionId}/secret-manager-project-locations`,
         { params: { projectId } }
       );
 

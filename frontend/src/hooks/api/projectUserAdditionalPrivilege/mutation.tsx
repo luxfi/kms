@@ -32,7 +32,7 @@ export const useUpdateProjectUserAdditionalPrivilege = () => {
   return useMutation<{ privilege: TProjectUserPrivilege }, object, TUpdateProjectUserPrivlegeDTO>({
     mutationFn: async (dto) => {
       const { data } = await apiRequest.patch(
-        `/api/v1/user-project-additional-privilege/${dto.privilegeId}`,
+        `/v1/user-project-additional-privilege/${dto.privilegeId}`,
         dto
       );
       return data.privilege;
@@ -51,7 +51,7 @@ export const useDeleteProjectUserAdditionalPrivilege = () => {
   return useMutation<{ privilege: TProjectUserPrivilege }, object, TDeleteProjectUserPrivilegeDTO>({
     mutationFn: async (dto) => {
       const { data } = await apiRequest.delete(
-        `/api/v1/user-project-additional-privilege/${dto.privilegeId}`
+        `/v1/user-project-additional-privilege/${dto.privilegeId}`
       );
       return data.privilege;
     },

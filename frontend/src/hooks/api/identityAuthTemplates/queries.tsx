@@ -48,7 +48,7 @@ export const useGetIdentityAuthTemplate = (templateId: string, organizationId: s
     queryKey: identityAuthTemplatesKeys.getTemplate(templateId),
     queryFn: async () => {
       const { data } = await apiRequest.get<IdentityAuthTemplate>(
-        `/api/v1/identity-templates/${templateId}`,
+        `/v1/identity-templates/${templateId}`,
         {
           params: { organizationId }
         }
@@ -77,7 +77,7 @@ export const useGetTemplateUsages = (dto: GetTemplateUsagesDTO) => {
     queryKey: identityAuthTemplatesKeys.getTemplateUsages(dto.templateId),
     queryFn: async () => {
       const { data } = await apiRequest.get<MachineAuthTemplateUsage[]>(
-        `/api/v1/identity-templates/${dto.templateId}/usage`,
+        `/v1/identity-templates/${dto.templateId}/usage`,
         {
           params: { organizationId: dto.organizationId }
         }

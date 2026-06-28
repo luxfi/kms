@@ -8,7 +8,7 @@ export const useDeleteRelayById = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => {
-      return apiRequest.delete(`/api/v1/relays/${id}`);
+      return apiRequest.delete(`/v1/relays/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: relayQueryKeys.list() });

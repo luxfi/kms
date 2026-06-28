@@ -32,7 +32,7 @@ export const useUpdateKmipClient = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, name, description, permissions }: TUpdateKmipClient) => {
-      const { data } = await apiRequest.patch(`/api/v1/kmip/clients/${id}`, {
+      const { data } = await apiRequest.patch(`/v1/kmip/clients/${id}`, {
         name,
         description,
         permissions
@@ -52,7 +52,7 @@ export const useDeleteKmipClients = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id }: TDeleteKmipClient) => {
-      const { data } = await apiRequest.delete(`/api/v1/kmip/clients/${id}`);
+      const { data } = await apiRequest.delete(`/v1/kmip/clients/${id}`);
 
       return data;
     },
@@ -68,7 +68,7 @@ export const useGenerateKmipClientCertificate = () => {
   return useMutation({
     mutationFn: async (payload: TGenerateKmipClientCertificate) => {
       const { data } = await apiRequest.post<KmipClientCertificate>(
-        `/api/v1/kmip/clients/${payload.clientId}/certificates`,
+        `/v1/kmip/clients/${payload.clientId}/certificates`,
         payload
       );
 

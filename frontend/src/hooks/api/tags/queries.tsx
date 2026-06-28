@@ -9,7 +9,7 @@ const projectTags = {
 };
 
 const fetchWsTag = async (projectID: string) => {
-  const { data } = await apiRequest.get<{ tags: UserWsTags }>(`/api/v1/projects/${projectID}/tags`);
+  const { data } = await apiRequest.get<{ tags: UserWsTags }>(`/v1/projects/${projectID}/tags`);
 
   return data.tags;
 };
@@ -27,7 +27,7 @@ export const useCreateWsTag = () => {
 
   return useMutation<WsTag, object, CreateTagDTO>({
     mutationFn: async ({ projectId: projectID, tagColor, tagSlug }) => {
-      const { data } = await apiRequest.post<{ tag: WsTag }>(`/api/v1/projects/${projectID}/tags`, {
+      const { data } = await apiRequest.post<{ tag: WsTag }>(`/v1/projects/${projectID}/tags`, {
         color: tagColor || "",
         slug: tagSlug
       });
@@ -45,7 +45,7 @@ export const useDeleteWsTag = () => {
   return useMutation<WsTag, object, DeleteTagDTO>({
     mutationFn: async ({ tagID, projectId }) => {
       const { data } = await apiRequest.delete<{ tag: WsTag }>(
-        `/api/v1/projects/${projectId}/tags/${tagID}`
+        `/v1/projects/${projectId}/tags/${tagID}`
       );
       return data.tag;
     },

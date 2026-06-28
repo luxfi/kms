@@ -35,7 +35,7 @@ export const useUpdateCmek = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ keyId, name, description, isDisabled }: TUpdateCmek) => {
-      const { data } = await apiRequest.patch(`/api/v1/kms/keys/${keyId}`, {
+      const { data } = await apiRequest.patch(`/v1/kms/keys/${keyId}`, {
         name,
         description,
         isDisabled
@@ -53,7 +53,7 @@ export const useDeleteCmek = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ keyId }: TDeleteCmek) => {
-      const { data } = await apiRequest.delete(`/api/v1/kms/keys/${keyId}`);
+      const { data } = await apiRequest.delete(`/v1/kms/keys/${keyId}`);
 
       return data;
     },
@@ -67,7 +67,7 @@ export const useCmekEncrypt = () => {
   return useMutation({
     mutationFn: async ({ keyId, plaintext, isBase64Encoded }: TCmekEncrypt) => {
       const { data } = await apiRequest.post<TCmekEncryptResponse>(
-        `/api/v1/kms/keys/${keyId}/encrypt`,
+        `/v1/kms/keys/${keyId}/encrypt`,
         {
           plaintext: isBase64Encoded ? plaintext : encodeBase64(Buffer.from(plaintext))
         }
@@ -86,7 +86,7 @@ export const useCmekSign = () => {
       signingAlgorithm,
       isBase64Encoded
     }: TCmekSign & { isBase64Encoded: boolean }) => {
-      const res = await apiRequest.post<TCmekSignResponse>(`/api/v1/kms/keys/${keyId}/sign`, {
+      const res = await apiRequest.post<TCmekSignResponse>(`/v1/kms/keys/${keyId}/sign`, {
         data: isBase64Encoded ? data : encodeBase64(Buffer.from(data)),
         signingAlgorithm
       });
@@ -105,7 +105,7 @@ export const useCmekVerify = () => {
       signingAlgorithm,
       isBase64Encoded
     }: TCmekVerify & { isBase64Encoded: boolean }) => {
-      const res = await apiRequest.post<TCmekVerifyResponse>(`/api/v1/kms/keys/${keyId}/verify`, {
+      const res = await apiRequest.post<TCmekVerifyResponse>(`/v1/kms/keys/${keyId}/verify`, {
         data: isBase64Encoded ? data : encodeBase64(Buffer.from(data)),
         signature,
         signingAlgorithm
@@ -120,7 +120,7 @@ export const useCmekDecrypt = () => {
   return useMutation({
     mutationFn: async ({ keyId, ciphertext }: TCmekDecrypt) => {
       const { data } = await apiRequest.post<TCmekDecryptResponse>(
-        `/api/v1/kms/keys/${keyId}/decrypt`,
+        `/v1/kms/keys/${keyId}/decrypt`,
         {
           ciphertext
         }

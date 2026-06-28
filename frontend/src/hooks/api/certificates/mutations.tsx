@@ -25,7 +25,7 @@ export const useDeleteCert = () => {
       const {
         data: { certificate }
       } = await apiRequest.delete<{ certificate: TCertificate }>(
-        `/api/v1/cert-manager/certificates/${id}`
+        `/v1/cert-manager/certificates/${id}`
       );
       return certificate;
     },
@@ -53,7 +53,7 @@ export const useRevokeCert = () => {
       const {
         data: { certificate }
       } = await apiRequest.post<{ certificate: TCertificate }>(
-        `/api/v1/cert-manager/certificates/${id}/revoke`,
+        `/v1/cert-manager/certificates/${id}/revoke`,
         {
           revocationReason
         }
@@ -100,7 +100,7 @@ export const useRenewCertificate = () => {
   return useMutation<TRenewCertificateResponse, object, TRenewCertificateDTO>({
     mutationFn: async ({ certificateId }) => {
       const { data } = await apiRequest.post<TRenewCertificateResponse>(
-        `/api/v1/cert-manager/certificates/${certificateId}/renew`,
+        `/v1/cert-manager/certificates/${certificateId}/renew`,
         {}
       );
       return data;
@@ -133,7 +133,7 @@ export const useUpdateRenewalConfig = () => {
   >({
     mutationFn: async ({ certificateId, renewBeforeDays, enableAutoRenewal }) => {
       const { data } = await apiRequest.patch<{ message: string; renewBeforeDays?: number }>(
-        `/api/v1/cert-manager/certificates/${certificateId}/config`,
+        `/v1/cert-manager/certificates/${certificateId}/config`,
         { renewBeforeDays, enableAutoRenewal }
       );
       return data;
@@ -154,7 +154,7 @@ export const useDownloadCertPkcs12 = () => {
     mutationFn: async ({ certificateId, projectSlug, password, alias }) => {
       try {
         const response = await apiRequest.post(
-          `/api/v1/cert-manager/certificates/${certificateId}/pkcs12`,
+          `/v1/cert-manager/certificates/${certificateId}/pkcs12`,
           {
             password,
             alias

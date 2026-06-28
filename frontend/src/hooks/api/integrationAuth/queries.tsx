@@ -140,7 +140,7 @@ const integrationAuthKeys = {
 
 const fetchIntegrationAuthById = async (integrationAuthId: string) => {
   const { data } = await apiRequest.get<{ integrationAuth: IntegrationAuth }>(
-    `/api/v1/integration-auth/${integrationAuthId}`
+    `/v1/integration-auth/${integrationAuthId}`
   );
   return data.integrationAuth;
 };
@@ -170,7 +170,7 @@ const fetchIntegrationAuthApps = async ({
 
   const searchParams = new URLSearchParams(params);
   const { data } = await apiRequest.get<{ apps: App[] }>(
-    `/api/v1/integration-auth/${integrationAuthId}/apps`,
+    `/v1/integration-auth/${integrationAuthId}/apps`,
     { params: searchParams }
   );
 
@@ -179,7 +179,7 @@ const fetchIntegrationAuthApps = async ({
 
 const fetchIntegrationAuthTeams = async (integrationAuthId: string) => {
   const { data } = await apiRequest.get<{ teams: Team[] }>(
-    `/api/v1/integration-auth/${integrationAuthId}/teams`
+    `/v1/integration-auth/${integrationAuthId}/teams`
   );
   return data.teams;
 };
@@ -192,7 +192,7 @@ const fetchIntegrationAuthChecklyGroups = async ({
   accountId: string;
 }) => {
   const { data } = await apiRequest.get<{ groups: ChecklyGroup[] }>(
-    `/api/v1/integration-auth/${integrationAuthId}/checkly/groups`,
+    `/v1/integration-auth/${integrationAuthId}/checkly/groups`,
     {
       params: {
         accountId
@@ -213,7 +213,7 @@ const fetchIntegrationAuthVercelBranches = async ({
   const {
     data: { branches }
   } = await apiRequest.get<{ branches: string[] }>(
-    `/api/v1/integration-auth/${integrationAuthId}/vercel/branches`,
+    `/v1/integration-auth/${integrationAuthId}/vercel/branches`,
     {
       params: {
         appId
@@ -228,7 +228,7 @@ const fetchIntegrationAuthGithubOrgs = async (integrationAuthId: string) => {
   const {
     data: { orgs }
   } = await apiRequest.get<{ orgs: Org[] }>(
-    `/api/v1/integration-auth/${integrationAuthId}/github/orgs`
+    `/v1/integration-auth/${integrationAuthId}/github/orgs`
   );
 
   return orgs;
@@ -244,7 +244,7 @@ const fetchIntegrationAuthGithubEnvs = async (
   const {
     data: { envs }
   } = await apiRequest.get<{ envs: Array<{ name: string; envId: string }> }>(
-    `/api/v1/integration-auth/${integrationAuthId}/github/envs?repoName=${repoName}&repoOwner=${repoOwner}`
+    `/v1/integration-auth/${integrationAuthId}/github/envs?repoName=${repoName}&repoOwner=${repoOwner}`
   );
 
   return envs;
@@ -254,7 +254,7 @@ const fetchIntegrationAuthQoveryOrgs = async (integrationAuthId: string) => {
   const {
     data: { orgs }
   } = await apiRequest.get<{ orgs: Org[] }>(
-    `/api/v1/integration-auth/${integrationAuthId}/qovery/orgs`
+    `/v1/integration-auth/${integrationAuthId}/qovery/orgs`
   );
 
   return orgs;
@@ -272,7 +272,7 @@ const fetchIntegrationAuthQoveryProjects = async ({
   const {
     data: { projects }
   } = await apiRequest.get<{ projects: Project[] }>(
-    `/api/v1/integration-auth/${integrationAuthId}/qovery/projects`,
+    `/v1/integration-auth/${integrationAuthId}/qovery/projects`,
     {
       params: {
         orgId
@@ -295,7 +295,7 @@ const fetchIntegrationAuthQoveryEnvironments = async ({
   const {
     data: { environments }
   } = await apiRequest.get<{ environments: Environment[] }>(
-    `/api/v1/integration-auth/${integrationAuthId}/qovery/environments`,
+    `/v1/integration-auth/${integrationAuthId}/qovery/environments`,
     {
       params: {
         projectId
@@ -321,7 +321,7 @@ const fetchIntegrationAuthQoveryScopes = async ({
     const {
       data: { apps }
     } = await apiRequest.get<{ apps: App[] }>(
-      `/api/v1/integration-auth/${integrationAuthId}/qovery/apps`,
+      `/v1/integration-auth/${integrationAuthId}/qovery/apps`,
       {
         params: {
           environmentId
@@ -336,7 +336,7 @@ const fetchIntegrationAuthQoveryScopes = async ({
     const {
       data: { containers }
     } = await apiRequest.get<{ containers: App[] }>(
-      `/api/v1/integration-auth/${integrationAuthId}/qovery/containers`,
+      `/v1/integration-auth/${integrationAuthId}/qovery/containers`,
       {
         params: {
           environmentId
@@ -351,7 +351,7 @@ const fetchIntegrationAuthQoveryScopes = async ({
     const {
       data: { jobs }
     } = await apiRequest.get<{ jobs: App[] }>(
-      `/api/v1/integration-auth/${integrationAuthId}/qovery/jobs`,
+      `/v1/integration-auth/${integrationAuthId}/qovery/jobs`,
       {
         params: {
           environmentId
@@ -379,7 +379,7 @@ const fetchIntegrationAuthVercelCustomEnvironments = async ({
       appId: string;
       customEnvironments: VercelEnvironment[];
     }[];
-  }>(`/api/v1/integration-auth/${integrationAuthId}/vercel/custom-environments`, {
+  }>(`/v1/integration-auth/${integrationAuthId}/vercel/custom-environments`, {
     params: {
       teamId
     }
@@ -396,7 +396,7 @@ const fetchIntegrationAuthHerokuPipelines = async ({
   const {
     data: { pipelines }
   } = await apiRequest.get<{ pipelines: HerokuPipelineCoupling[] }>(
-    `/api/v1/integration-auth/${integrationAuthId}/heroku/pipelines`
+    `/v1/integration-auth/${integrationAuthId}/heroku/pipelines`
   );
 
   return pipelines;
@@ -413,7 +413,7 @@ const fetchIntegrationAuthRailwayEnvironments = async ({
   const {
     data: { environments }
   } = await apiRequest.get<{ environments: Environment[] }>(
-    `/api/v1/integration-auth/${integrationAuthId}/railway/environments`,
+    `/v1/integration-auth/${integrationAuthId}/railway/environments`,
     {
       params: {
         appId
@@ -435,7 +435,7 @@ const fetchIntegrationAuthRailwayServices = async ({
   const {
     data: { services }
   } = await apiRequest.get<{ services: Service[] }>(
-    `/api/v1/integration-auth/${integrationAuthId}/railway/services`,
+    `/v1/integration-auth/${integrationAuthId}/railway/services`,
     {
       params: {
         appId
@@ -450,7 +450,7 @@ const fetchIntegrationAuthBitbucketWorkspaces = async (integrationAuthId: string
   const {
     data: { workspaces }
   } = await apiRequest.get<{ workspaces: BitbucketWorkspace[] }>(
-    `/api/v1/integration-auth/${integrationAuthId}/bitbucket/workspaces`
+    `/v1/integration-auth/${integrationAuthId}/bitbucket/workspaces`
   );
   return workspaces;
 };
@@ -463,7 +463,7 @@ const fetchIntegrationAuthBitbucketEnvironments = async (
   const {
     data: { environments }
   } = await apiRequest.get<{ environments: BitbucketEnvironment[] }>(
-    `/api/v1/integration-auth/${integrationAuthId}/bitbucket/environments`,
+    `/v1/integration-auth/${integrationAuthId}/bitbucket/environments`,
     {
       params: {
         workspaceSlug,
@@ -484,7 +484,7 @@ const fetchIntegrationAuthNorthflankSecretGroups = async ({
   const {
     data: { secretGroups }
   } = await apiRequest.get<{ secretGroups: NorthflankSecretGroup[] }>(
-    `/api/v1/integration-auth/${integrationAuthId}/northflank/secret-groups`,
+    `/v1/integration-auth/${integrationAuthId}/northflank/secret-groups`,
     {
       params: {
         appId
@@ -507,7 +507,7 @@ const fetchIntegrationAuthTeamCityBuildConfigs = async ({
   const {
     data: { buildConfigs }
   } = await apiRequest.get<{ buildConfigs: TeamCityBuildConfig[] }>(
-    `/api/v1/integration-auth/${integrationAuthId}/teamcity/build-configs`,
+    `/v1/integration-auth/${integrationAuthId}/teamcity/build-configs`,
     {
       params: {
         appId
@@ -523,7 +523,7 @@ const fetchIntegrationAuthOctopusDeploySpaces = async (integrationAuthId: string
     data: { spaces }
   } = await apiRequest.get<{
     spaces: { Name: string; Slug: string; Id: string; IsDefault: boolean }[];
-  }>(`/api/v1/integration-auth/${integrationAuthId}/octopus-deploy/spaces`);
+  }>(`/v1/integration-auth/${integrationAuthId}/octopus-deploy/spaces`);
   return spaces;
 };
 
@@ -534,7 +534,7 @@ const fetchIntegrationAuthOctopusDeployScopeValues = async ({
   resourceId
 }: TGetIntegrationAuthOctopusDeployScopeValuesDTO) => {
   const { data } = await apiRequest.get<TOctopusDeployVariableSetScopeValues>(
-    `/api/v1/integration-auth/${integrationAuthId}/octopus-deploy/scope-values`,
+    `/v1/integration-auth/${integrationAuthId}/octopus-deploy/scope-values`,
     { params: { scope, spaceId, resourceId } }
   );
   return data;
@@ -675,7 +675,7 @@ export const useGetIntegrationAuthAwsKmsKeys = ({
       const {
         data: { kmsKeys }
       } = await apiRequest.get<{ kmsKeys: KmsKey[] }>(
-        `/api/v1/integration-auth/${integrationAuthId}/aws-secrets-manager/kms-keys`,
+        `/v1/integration-auth/${integrationAuthId}/aws-secrets-manager/kms-keys`,
         {
           params: {
             region
@@ -887,7 +887,7 @@ const fetchIntegrationAuthCircleCIOrganizations = async (integrationAuthId: stri
     data: { organizations }
   } = await apiRequest.get<{
     organizations: CircleCIOrganization[];
-  }>(`/api/v1/integration-auth/${integrationAuthId}/circleci/organizations`);
+  }>(`/v1/integration-auth/${integrationAuthId}/circleci/organizations`);
   return organizations;
 };
 export const useGetIntegrationAuthCircleCIOrganizations = (integrationAuthId: string) => {
@@ -1028,7 +1028,7 @@ export const useDeleteIntegrationAuths = () => {
   return useMutation<object, object, { integration: string; workspaceId: string }>({
     mutationFn: ({ integration, workspaceId }) =>
       apiRequest.delete(
-        `/api/v1/integration-auth?${new URLSearchParams({
+        `/v1/integration-auth?${new URLSearchParams({
           integration,
           projectId: workspaceId
         })}`
@@ -1049,7 +1049,7 @@ export const useDeleteIntegrationAuth = () => {
   const queryClient = useQueryClient();
 
   return useMutation<object, object, { id: string; workspaceId: string }>({
-    mutationFn: ({ id }) => apiRequest.delete(`/api/v1/integration-auth/${id}`),
+    mutationFn: ({ id }) => apiRequest.delete(`/v1/integration-auth/${id}`),
     onSuccess: (_, { workspaceId }) => {
       queryClient.invalidateQueries({
         queryKey: projectKeys.getProjectAuthorization(workspaceId)
