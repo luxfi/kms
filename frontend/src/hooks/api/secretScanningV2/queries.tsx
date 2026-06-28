@@ -115,7 +115,7 @@ export const useGetSecretScanningDataSource = (
     queryKey: secretScanningV2Keys.dataSourceById(dataSourceId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TSecretScanningDataSourceResponse>(
-        `/api/v2/secret-scanning/data-sources/${type}/${dataSourceId}`
+        `/v2/secret-scanning/data-sources/${type}/${dataSourceId}`
       );
 
       return data.dataSource;
@@ -140,7 +140,7 @@ export const useListSecretScanningResources = (
     queryKey: secretScanningV2Keys.listResources(dataSourceId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TListSecretScanningResourcesResponse>(
-        `/api/v2/secret-scanning/data-sources/${type}/${dataSourceId}/resources-dashboard`
+        `/v2/secret-scanning/data-sources/${type}/${dataSourceId}/resources-dashboard`
       );
 
       return data.resources;
@@ -165,7 +165,7 @@ export const useListSecretScanningScans = (
     queryKey: secretScanningV2Keys.listScans(dataSourceId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TListSecretScanningScansResponse>(
-        `/api/v2/secret-scanning/data-sources/${type}/${dataSourceId}/scans-dashboard`
+        `/v2/secret-scanning/data-sources/${type}/${dataSourceId}/scans-dashboard`
       );
 
       return data.scans;

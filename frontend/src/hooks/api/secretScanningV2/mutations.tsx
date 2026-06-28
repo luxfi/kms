@@ -20,7 +20,7 @@ export const useCreateSecretScanningDataSource = () => {
   return useMutation({
     mutationFn: async ({ type, ...params }: TCreateSecretScanningDataSourceDTO) => {
       const { data } = await apiRequest.post<TSecretScanningDataSourceResponse>(
-        `/api/v2/secret-scanning/data-sources/${type}`,
+        `/v2/secret-scanning/data-sources/${type}`,
         params
       );
 
@@ -38,7 +38,7 @@ export const useUpdateSecretScanningDataSource = () => {
   return useMutation({
     mutationFn: async ({ type, dataSourceId, ...params }: TUpdateSecretScanningDataSourceDTO) => {
       const { data } = await apiRequest.patch<TSecretScanningDataSourceResponse>(
-        `/api/v2/secret-scanning/data-sources/${type}/${dataSourceId}`,
+        `/v2/secret-scanning/data-sources/${type}/${dataSourceId}`,
         params
       );
 
@@ -66,7 +66,7 @@ export const useDeleteSecretScanningDataSource = () => {
   return useMutation({
     mutationFn: async ({ type, dataSourceId }: TDeleteSecretScanningDataSourceDTO) => {
       const { data } = await apiRequest.delete<TSecretScanningDataSourceResponse>(
-        `/api/v2/secret-scanning/data-sources/${type}/${dataSourceId}`
+        `/v2/secret-scanning/data-sources/${type}/${dataSourceId}`
       );
 
       return data.dataSource;
@@ -93,7 +93,7 @@ export const useTriggerSecretScanningDataSource = () => {
   return useMutation({
     mutationFn: async ({ type, dataSourceId, resourceId }: TTriggerSecretScanningDataSourceDTO) => {
       const { data } = await apiRequest.post<TSecretScanningDataSourceResponse>(
-        `/api/v2/secret-scanning/data-sources/${type}/${dataSourceId}${resourceId ? `/resources/${resourceId}` : ""}/scan`
+        `/v2/secret-scanning/data-sources/${type}/${dataSourceId}${resourceId ? `/resources/${resourceId}` : ""}/scan`
       );
 
       return data.dataSource;
@@ -121,7 +121,7 @@ export const useUpdateSecretScanningFinding = () => {
   return useMutation({
     mutationFn: async ({ findingId, ...params }: TUpdateSecretScanningFinding) => {
       const { data } = await apiRequest.patch<TSecretScanningFindingResponse>(
-        `/api/v2/secret-scanning/findings/${findingId}`,
+        `/v2/secret-scanning/findings/${findingId}`,
         params
       );
 
@@ -171,7 +171,7 @@ export const useUpdateSecretScanningConfig = () => {
   return useMutation({
     mutationFn: async ({ projectId, ...params }: TSecretScanningConfig) => {
       const { data } = await apiRequest.patch<TGetSecretScanningConfigResponse>(
-        `/api/v2/secret-scanning/configs?projectId=${projectId}`,
+        `/v2/secret-scanning/configs?projectId=${projectId}`,
         params
       );
 

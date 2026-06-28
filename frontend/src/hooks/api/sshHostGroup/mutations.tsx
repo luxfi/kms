@@ -34,7 +34,7 @@ export const useUpdateSshHostGroup = () => {
   return useMutation<TSshHostGroup, object, TUpdateSshHostGroupDTO>({
     mutationFn: async ({ sshHostGroupId, ...body }) => {
       const { data: hostGroup } = await apiRequest.patch(
-        `/api/v1/ssh/host-groups/${sshHostGroupId}`,
+        `/v1/ssh/host-groups/${sshHostGroupId}`,
         body
       );
       return hostGroup;
@@ -58,7 +58,7 @@ export const useDeleteSshHostGroup = () => {
   return useMutation<TSshHostGroup, object, TDeleteSshHostGroupDTO>({
     mutationFn: async ({ sshHostGroupId }) => {
       const { data: hostGroup } = await apiRequest.delete(
-        `/api/v1/ssh/host-groups/${sshHostGroupId}`
+        `/v1/ssh/host-groups/${sshHostGroupId}`
       );
       return hostGroup;
     },
@@ -80,7 +80,7 @@ export const useAddHostToSshHostGroup = () => {
   const queryClient = useQueryClient();
   return useMutation<void, object, { sshHostGroupId: string; sshHostId: string }>({
     mutationFn: async ({ sshHostGroupId, sshHostId }) => {
-      await apiRequest.post(`/api/v1/ssh/host-groups/${sshHostGroupId}/hosts/${sshHostId}`);
+      await apiRequest.post(`/v1/ssh/host-groups/${sshHostGroupId}/hosts/${sshHostId}`);
     },
     onSuccess: (_, { sshHostGroupId }) => {
       queryClient.invalidateQueries({
@@ -94,7 +94,7 @@ export const useRemoveHostFromSshHostGroup = () => {
   const queryClient = useQueryClient();
   return useMutation<void, object, { sshHostGroupId: string; sshHostId: string }>({
     mutationFn: async ({ sshHostGroupId, sshHostId }) => {
-      await apiRequest.delete(`/api/v1/ssh/host-groups/${sshHostGroupId}/hosts/${sshHostId}`);
+      await apiRequest.delete(`/v1/ssh/host-groups/${sshHostGroupId}/hosts/${sshHostId}`);
     },
     onSuccess: (_, { sshHostGroupId }) => {
       queryClient.invalidateQueries({

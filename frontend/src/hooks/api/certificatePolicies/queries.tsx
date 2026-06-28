@@ -47,7 +47,7 @@ export const useGetCertificatePolicyById = ({ policyId }: TGetCertificatePolicyB
     queryFn: async () => {
       const { data } = await apiRequest.get<{
         certificatePolicy: TCertificatePolicy;
-      }>(`/api/v1/cert-manager/certificate-policies/${policyId}`);
+      }>(`/v1/cert-manager/certificate-policies/${policyId}`);
       return data.certificatePolicy;
     },
     enabled: Boolean(policyId)

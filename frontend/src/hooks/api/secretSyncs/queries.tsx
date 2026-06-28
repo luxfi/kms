@@ -88,7 +88,7 @@ export const useGetSecretSync = (
     queryKey: secretSyncKeys.byId(destination, syncId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TSecretSyncResponse>(
-        `/api/v1/secret-syncs/${destination}/${syncId}`
+        `/v1/secret-syncs/${destination}/${syncId}`
       );
 
       return data.secretSync;
@@ -118,7 +118,7 @@ export const useCheckDuplicateDestination = (
       const { data } = await apiRequest.post<{
         hasDuplicate: boolean;
         duplicateProjectId?: string;
-      }>(`/api/v1/secret-syncs/${destination}/check-destination`, {
+      }>(`/v1/secret-syncs/${destination}/check-destination`, {
         destinationConfig,
         excludeSyncId,
         projectId

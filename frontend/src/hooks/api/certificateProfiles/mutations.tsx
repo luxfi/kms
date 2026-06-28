@@ -35,7 +35,7 @@ export const useUpdateCertificateProfile = () => {
     mutationFn: async ({ profileId, ...data }) => {
       const { data: response } = await apiRequest.patch<{
         certificateProfile: TCertificateProfile;
-      }>(`/api/v1/cert-manager/certificate-profiles/${profileId}`, data);
+      }>(`/v1/cert-manager/certificate-profiles/${profileId}`, data);
       return response.certificateProfile;
     },
     onSuccess: (profile, { profileId }) => {
@@ -56,7 +56,7 @@ export const useDeleteCertificateProfile = () => {
     mutationFn: async ({ profileId }) => {
       const { data: response } = await apiRequest.delete<{
         certificateProfile: TCertificateProfile;
-      }>(`/api/v1/cert-manager/certificate-profiles/${profileId}`);
+      }>(`/v1/cert-manager/certificate-profiles/${profileId}`);
       return response.certificateProfile;
     },
     onSuccess: (profile, { profileId }) => {

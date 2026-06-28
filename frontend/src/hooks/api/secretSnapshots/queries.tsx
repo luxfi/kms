@@ -32,7 +32,7 @@ const fetchWorkspaceSnaphots = async ({
   offset = 0
 }: TGetSecretSnapshotsDTO & { offset: number }) => {
   const res = await apiRequest.get<{ secretSnapshots: TSecretSnapshot[] }>(
-    `/api/v1/projects/${projectId}/secret-snapshots`,
+    `/v1/projects/${projectId}/secret-snapshots`,
     {
       params: {
         limit,
@@ -58,7 +58,7 @@ export const useGetWorkspaceSnapshotList = (dto: TGetSecretSnapshotsDTO & { isPa
 
 const fetchSnapshotEncSecrets = async (snapshotId: string) => {
   const res = await apiRequest.get<{ secretSnapshot: TSnapshotData }>(
-    `/api/v1/secret-snapshot/${snapshotId}`
+    `/v1/secret-snapshot/${snapshotId}`
   );
   return res.data.secretSnapshot;
 };
@@ -120,7 +120,7 @@ const fetchWorkspaceSecretSnaphotCount = async (
   directory = "/"
 ) => {
   const res = await apiRequest.get<{ count: number }>(
-    `/api/v1/projects/${projectId}/secret-snapshots/count`,
+    `/v1/projects/${projectId}/secret-snapshots/count`,
     {
       params: {
         environment,
@@ -148,7 +148,7 @@ export const usePerformSecretRollback = () => {
 
   return useMutation<object, object, TSecretRollbackDTO>({
     mutationFn: async ({ snapshotId }) => {
-      const { data } = await apiRequest.post(`/api/v1/secret-snapshot/${snapshotId}/rollback`);
+      const { data } = await apiRequest.post(`/v1/secret-snapshot/${snapshotId}/rollback`);
       return data;
     },
     onSuccess: (_, { projectId, environment, directory }) => {

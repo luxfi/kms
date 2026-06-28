@@ -34,7 +34,7 @@ export const useGetCa = ({ caId, type }: { caId: string; type: CaType }) => {
     queryKey: caKeys.getCaById(caId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TUnifiedCertificateAuthority>(
-        `/api/v1/cert-manager/ca/${type}/${caId}`
+        `/v1/cert-manager/ca/${type}/${caId}`
       );
       return data;
     },
@@ -47,7 +47,7 @@ export const useListCasByTypeAndProjectId = (type: CaType, projectId: string) =>
     queryKey: caKeys.listCasByTypeAndProjectId(type, projectId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TUnifiedCertificateAuthority[]>(
-        `/api/v1/cert-manager/ca/${type}?projectId=${projectId}`
+        `/v1/cert-manager/ca/${type}?projectId=${projectId}`
       );
 
       return data;
@@ -61,7 +61,7 @@ export const useListCasByProjectId = (projectId: string) => {
     queryFn: async () => {
       const { data } = await apiRequest.get<{
         certificateAuthorities: TUnifiedCertificateAuthority[];
-      }>(`/api/v1/cert-manager/ca?projectId=${projectId}`);
+      }>(`/v1/cert-manager/ca?projectId=${projectId}`);
 
       return data.certificateAuthorities;
     }
@@ -74,10 +74,10 @@ export const useListExternalCasByProjectId = (projectId: string) => {
     queryFn: async () => {
       const [acmeResponse, azureAdCsResponse] = await Promise.allSettled([
         apiRequest.get<TUnifiedCertificateAuthority[]>(
-          `/api/v1/cert-manager/ca/${CaType.ACME}?projectId=${projectId}`
+          `/v1/cert-manager/ca/${CaType.ACME}?projectId=${projectId}`
         ),
         apiRequest.get<TUnifiedCertificateAuthority[]>(
-          `/api/v1/cert-manager/ca/${CaType.AZURE_AD_CS}?projectId=${projectId}`
+          `/v1/cert-manager/ca/${CaType.AZURE_AD_CS}?projectId=${projectId}`
         )
       ]);
 
@@ -101,7 +101,7 @@ export const useGetInternalCaById = (caId: string) => {
     queryKey: caKeys.getCaById(caId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TInternalCertificateAuthority>(
-        `/api/v1/cert-manager/ca/internal/${caId}`
+        `/v1/cert-manager/ca/internal/${caId}`
       );
       return data;
     },
@@ -120,7 +120,7 @@ export const useGetCaCerts = (caId: string) => {
           serialNumber: string;
           version: number;
         }[]
-      >(`/api/v1/cert-manager/ca/internal/${caId}/ca-certificates`);
+      >(`/v1/cert-manager/ca/internal/${caId}/ca-certificates`);
       return data;
     },
     enabled: Boolean(caId)
@@ -135,7 +135,7 @@ export const useGetCaCert = (caId: string) => {
         certificate: string;
         certificateChain: string;
         serialNumber: string;
-      }>(`/api/v1/cert-manager/ca/internal/${caId}/certificate`);
+      }>(`/v1/cert-manager/ca/internal/${caId}/certificate`);
       return data;
     },
     enabled: Boolean(caId)
@@ -150,7 +150,7 @@ export const useGetCaCsr = (caId: string) => {
         data: { csr }
       } = await apiRequest.get<{
         csr: string;
-      }>(`/api/v1/cert-manager/ca/internal/${caId}/csr`);
+      }>(`/v1/cert-manager/ca/internal/${caId}/csr`);
       return csr;
     },
     enabled: Boolean(caId)
@@ -166,7 +166,7 @@ export const useGetCaCrls = (caId: string) => {
           id: string;
           crl: string;
         }[]
-      >(`/api/v1/cert-manager/ca/internal/${caId}/crls`);
+      >(`/v1/cert-manager/ca/internal/${caId}/crls`);
       return data;
     },
     enabled: Boolean(caId)
@@ -180,7 +180,7 @@ export const useGetCaCertTemplates = (caId: string) => {
     queryFn: async () => {
       const { data } = await apiRequest.get<{
         certificateTemplates: TCertificateTemplate[];
-      }>(`/api/v1/pki/ca/${caId}/certificate-templates`);
+      }>(`/v1/pki/ca/${caId}/certificate-templates`);
       return data;
     },
     enabled: Boolean(caId)
@@ -201,7 +201,7 @@ export const useGetAzureAdcsTemplates = ({
     queryFn: async () => {
       const { data } = await apiRequest.get<{
         templates: TAzureAdCsTemplate[];
-      }>(`/api/v1/cert-manager/ca/azure-ad-cs/${caId}/templates?projectId=${projectId}`);
+      }>(`/v1/cert-manager/ca/azure-ad-cs/${caId}/templates?projectId=${projectId}`);
       return data;
     },
     enabled: Boolean(caId && projectId && isAzureAdcsCa)

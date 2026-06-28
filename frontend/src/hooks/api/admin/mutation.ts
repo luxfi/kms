@@ -59,7 +59,7 @@ export const useAdminDeleteUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (userId: string) => {
-      await apiRequest.delete(`/api/v1/admin/user-management/users/${userId}`);
+      await apiRequest.delete(`/v1/admin/user-management/users/${userId}`);
 
       return {};
     },
@@ -96,7 +96,7 @@ export const useAdminDeleteOrganizationMembership = () => {
   return useMutation<object, object, { organizationId: string; membershipId: string }>({
     mutationFn: async ({ organizationId, membershipId }) => {
       await apiRequest.delete(
-        `/api/v1/admin/organization-management/organizations/${organizationId}/memberships/${membershipId}`
+        `/v1/admin/organization-management/organizations/${organizationId}/memberships/${membershipId}`
       );
 
       return {};
@@ -114,7 +114,7 @@ export const useAdminDeleteOrganization = () => {
   return useMutation({
     mutationFn: async (organizationId: string) => {
       await apiRequest.delete(
-        `/api/v1/admin/organization-management/organizations/${organizationId}`
+        `/v1/admin/organization-management/organizations/${organizationId}`
       );
     },
     onSuccess: () => {
@@ -130,7 +130,7 @@ export const useAdminRemoveIdentitySuperAdminAccess = () => {
   return useMutation({
     mutationFn: async (identityId: string) => {
       await apiRequest.delete(
-        `/api/v1/admin/identity-management/identities/${identityId}/super-admin-access`
+        `/v1/admin/identity-management/identities/${identityId}/super-admin-access`
       );
 
       return {};
@@ -147,7 +147,7 @@ export const useRemoveUserServerAdminAccess = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (userId: string) => {
-      await apiRequest.delete(`/api/v1/admin/user-management/users/${userId}/admin-access`);
+      await apiRequest.delete(`/v1/admin/user-management/users/${userId}/admin-access`);
 
       return {};
     },
@@ -163,7 +163,7 @@ export const useAdminGrantServerAdminAccess = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (userId: string) => {
-      await apiRequest.patch(`/api/v1/admin/user-management/users/${userId}/admin-access`);
+      await apiRequest.patch(`/v1/admin/user-management/users/${userId}/admin-access`);
       return {};
     },
     onSuccess: () => {
@@ -219,7 +219,7 @@ export const useServerAdminResendOrgInvite = () => {
   return useMutation({
     mutationFn: async ({ organizationId, membershipId }: TResendOrgInviteDTO) => {
       await apiRequest.post(
-        `/api/v1/admin/organization-management/organizations/${organizationId}/memberships/${membershipId}/resend-invite`
+        `/v1/admin/organization-management/organizations/${organizationId}/memberships/${membershipId}/resend-invite`
       );
     }
   });
@@ -231,7 +231,7 @@ export const useServerAdminAccessOrg = () => {
   return useMutation({
     mutationFn: async (orgId: string) => {
       const { data } = await apiRequest.post(
-        `/api/v1/admin/organization-management/organizations/${orgId}/access`
+        `/v1/admin/organization-management/organizations/${orgId}/access`
       );
       return data;
     },

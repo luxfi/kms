@@ -87,7 +87,7 @@ export const useAddIdentityUniversalAuth = () => {
     }) => {
       const {
         data: { identityUniversalAuth }
-      } = await apiRequest.post(`/api/v1/auth/universal-auth/identities/${identityId}`, {
+      } = await apiRequest.post(`/v1/auth/universal-auth/identities/${identityId}`, {
         clientSecretTrustedIps,
         accessTokenTTL,
         accessTokenMaxTTL,
@@ -140,7 +140,7 @@ export const useUpdateIdentityUniversalAuth = () => {
     }) => {
       const {
         data: { identityUniversalAuth }
-      } = await apiRequest.patch(`/api/v1/auth/universal-auth/identities/${identityId}`, {
+      } = await apiRequest.patch(`/v1/auth/universal-auth/identities/${identityId}`, {
         clientSecretTrustedIps,
         accessTokenTTL,
         accessTokenMaxTTL,
@@ -182,7 +182,7 @@ export const useDeleteIdentityUniversalAuth = () => {
     mutationFn: async ({ identityId }) => {
       const {
         data: { identityUniversalAuth }
-      } = await apiRequest.delete(`/api/v1/auth/universal-auth/identities/${identityId}`);
+      } = await apiRequest.delete(`/v1/auth/universal-auth/identities/${identityId}`);
       return identityUniversalAuth;
     },
     onSuccess: (_, { organizationId, identityId, projectId }) => {
@@ -216,7 +216,7 @@ export const useCreateIdentityUniversalAuthClientSecret = () => {
   >({
     mutationFn: async ({ identityId, description, ttl, numUsesLimit }) => {
       const { data } = await apiRequest.post(
-        `/api/v1/auth/universal-auth/identities/${identityId}/client-secrets`,
+        `/v1/auth/universal-auth/identities/${identityId}/client-secrets`,
         {
           description,
           ttl,
@@ -240,7 +240,7 @@ export const useRevokeIdentityUniversalAuthClientSecret = () => {
       const {
         data: { clientSecretData }
       } = await apiRequest.post<{ clientSecretData: ClientSecretData }>(
-        `/api/v1/auth/universal-auth/identities/${identityId}/client-secrets/${clientSecretId}/revoke`
+        `/v1/auth/universal-auth/identities/${identityId}/client-secrets/${clientSecretId}/revoke`
       );
       return clientSecretData;
     },
@@ -259,7 +259,7 @@ export const useClearIdentityUniversalAuthLockouts = () => {
       const {
         data: { deleted }
       } = await apiRequest.post<{ deleted: number }>(
-        `/api/v1/auth/universal-auth/identities/${identityId}/clear-lockouts`
+        `/v1/auth/universal-auth/identities/${identityId}/clear-lockouts`
       );
       return deleted;
     },
@@ -288,7 +288,7 @@ export const useAddIdentityGcpAuth = () => {
       const {
         data: { identityGcpAuth }
       } = await apiRequest.post<{ identityGcpAuth: IdentityGcpAuth }>(
-        `/api/v1/auth/gcp-auth/identities/${identityId}`,
+        `/v1/auth/gcp-auth/identities/${identityId}`,
         {
           type,
           allowedServiceAccounts,
@@ -340,7 +340,7 @@ export const useUpdateIdentityGcpAuth = () => {
       const {
         data: { identityGcpAuth }
       } = await apiRequest.patch<{ identityGcpAuth: IdentityGcpAuth }>(
-        `/api/v1/auth/gcp-auth/identities/${identityId}`,
+        `/v1/auth/gcp-auth/identities/${identityId}`,
         {
           type,
           allowedServiceAccounts,
@@ -381,7 +381,7 @@ export const useDeleteIdentityGcpAuth = () => {
     mutationFn: async ({ identityId }) => {
       const {
         data: { identityGcpAuth }
-      } = await apiRequest.delete(`/api/v1/auth/gcp-auth/identities/${identityId}`);
+      } = await apiRequest.delete(`/v1/auth/gcp-auth/identities/${identityId}`);
       return identityGcpAuth;
     },
     onSuccess: (_, { organizationId, identityId, projectId }) => {
@@ -420,7 +420,7 @@ export const useAddIdentityAwsAuth = () => {
       const {
         data: { identityAwsAuth }
       } = await apiRequest.post<{ identityAwsAuth: IdentityAwsAuth }>(
-        `/api/v1/auth/aws-auth/identities/${identityId}`,
+        `/v1/auth/aws-auth/identities/${identityId}`,
         {
           stsEndpoint,
           allowedPrincipalArns,
@@ -470,7 +470,7 @@ export const useUpdateIdentityAwsAuth = () => {
       const {
         data: { identityAwsAuth }
       } = await apiRequest.patch<{ identityAwsAuth: IdentityAwsAuth }>(
-        `/api/v1/auth/aws-auth/identities/${identityId}`,
+        `/v1/auth/aws-auth/identities/${identityId}`,
         {
           stsEndpoint,
           allowedPrincipalArns,
@@ -510,7 +510,7 @@ export const useDeleteIdentityAwsAuth = () => {
     mutationFn: async ({ identityId }) => {
       const {
         data: { identityAwsAuth }
-      } = await apiRequest.delete(`/api/v1/auth/aws-auth/identities/${identityId}`);
+      } = await apiRequest.delete(`/v1/auth/aws-auth/identities/${identityId}`);
       return identityAwsAuth;
     },
     onSuccess: (_, { organizationId, identityId, projectId }) => {
@@ -548,7 +548,7 @@ export const useAddIdentityOciAuth = () => {
       const {
         data: { identityOciAuth }
       } = await apiRequest.post<{ identityOciAuth: IdentityOciAuth }>(
-        `/api/v1/auth/oci-auth/identities/${identityId}`,
+        `/v1/auth/oci-auth/identities/${identityId}`,
         {
           tenancyOcid,
           allowedUsernames,
@@ -596,7 +596,7 @@ export const useUpdateIdentityOciAuth = () => {
       const {
         data: { identityOciAuth }
       } = await apiRequest.patch<{ identityOciAuth: IdentityOciAuth }>(
-        `/api/v1/auth/oci-auth/identities/${identityId}`,
+        `/v1/auth/oci-auth/identities/${identityId}`,
         {
           tenancyOcid,
           allowedUsernames,
@@ -635,7 +635,7 @@ export const useDeleteIdentityOciAuth = () => {
     mutationFn: async ({ identityId }) => {
       const {
         data: { identityOciAuth }
-      } = await apiRequest.delete(`/api/v1/auth/oci-auth/identities/${identityId}`);
+      } = await apiRequest.delete(`/v1/auth/oci-auth/identities/${identityId}`);
       return identityOciAuth;
     },
     onSuccess: (_, { organizationId, identityId, projectId }) => {
@@ -672,7 +672,7 @@ export const useAddIdentityAliCloudAuth = () => {
       const {
         data: { identityAliCloudAuth }
       } = await apiRequest.post<{ identityAliCloudAuth: IdentityAliCloudAuth }>(
-        `/api/v1/auth/alicloud-auth/identities/${identityId}`,
+        `/v1/auth/alicloud-auth/identities/${identityId}`,
         {
           allowedArns,
           accessTokenTTL,
@@ -720,7 +720,7 @@ export const useUpdateIdentityAliCloudAuth = () => {
       const {
         data: { identityAliCloudAuth }
       } = await apiRequest.patch<{ identityAliCloudAuth: IdentityAliCloudAuth }>(
-        `/api/v1/auth/alicloud-auth/identities/${identityId}`,
+        `/v1/auth/alicloud-auth/identities/${identityId}`,
         {
           allowedArns,
           accessTokenTTL,
@@ -760,7 +760,7 @@ export const useDeleteIdentityAliCloudAuth = () => {
     mutationFn: async ({ identityId }) => {
       const {
         data: { identityAliCloudAuth }
-      } = await apiRequest.delete(`/api/v1/auth/alicloud-auth/identities/${identityId}`);
+      } = await apiRequest.delete(`/v1/auth/alicloud-auth/identities/${identityId}`);
       return identityAliCloudAuth;
     },
     onSuccess: (_, { organizationId, identityId, projectId }) => {
@@ -800,7 +800,7 @@ export const useAddIdentityTlsCertAuth = () => {
       const {
         data: { identityTlsCertAuth }
       } = await apiRequest.post<{ identityTlsCertAuth: IdentityTlsCertAuth }>(
-        `/api/v1/auth/tls-cert-auth/identities/${identityId}`,
+        `/v1/auth/tls-cert-auth/identities/${identityId}`,
         {
           allowedCommonNames,
           caCertificate,
@@ -850,7 +850,7 @@ export const useUpdateIdentityTlsCertAuth = () => {
       const {
         data: { identityTlsCertAuth }
       } = await apiRequest.patch<{ identityTlsCertAuth: IdentityTlsCertAuth }>(
-        `/api/v1/auth/tls-cert-auth/identities/${identityId}`,
+        `/v1/auth/tls-cert-auth/identities/${identityId}`,
         {
           caCertificate,
           allowedCommonNames,
@@ -891,7 +891,7 @@ export const useDeleteIdentityTlsCertAuth = () => {
     mutationFn: async ({ identityId }) => {
       const {
         data: { identityTlsCertAuth }
-      } = await apiRequest.delete(`/api/v1/auth/tls-cert-auth/identities/${identityId}`);
+      } = await apiRequest.delete(`/v1/auth/tls-cert-auth/identities/${identityId}`);
       return identityTlsCertAuth;
     },
     onSuccess: (_, { organizationId, identityId, projectId }) => {
@@ -936,7 +936,7 @@ export const useUpdateIdentityOidcAuth = () => {
       const {
         data: { identityOidcAuth }
       } = await apiRequest.patch<{ identityOidcAuth: IdentityOidcAuth }>(
-        `/api/v1/auth/oidc-auth/identities/${identityId}`,
+        `/v1/auth/oidc-auth/identities/${identityId}`,
         {
           oidcDiscoveryUrl,
           caCert,
@@ -994,7 +994,7 @@ export const useAddIdentityOidcAuth = () => {
       const {
         data: { identityOidcAuth }
       } = await apiRequest.post<{ identityOidcAuth: IdentityOidcAuth }>(
-        `/api/v1/auth/oidc-auth/identities/${identityId}`,
+        `/v1/auth/oidc-auth/identities/${identityId}`,
         {
           oidcDiscoveryUrl,
           caCert,
@@ -1038,7 +1038,7 @@ export const useDeleteIdentityOidcAuth = () => {
     mutationFn: async ({ identityId }) => {
       const {
         data: { identityOidcAuth }
-      } = await apiRequest.delete(`/api/v1/auth/oidc-auth/identities/${identityId}`);
+      } = await apiRequest.delete(`/v1/auth/oidc-auth/identities/${identityId}`);
       return identityOidcAuth;
     },
     onSuccess: (_, { organizationId, identityId, projectId }) => {
@@ -1081,7 +1081,7 @@ export const useUpdateIdentityJwtAuth = () => {
       const {
         data: { identityJwtAuth }
       } = await apiRequest.patch<{ identityJwtAuth: IdentityJwtAuth }>(
-        `/api/v1/auth/jwt-auth/identities/${identityId}`,
+        `/v1/auth/jwt-auth/identities/${identityId}`,
         {
           configurationType,
           jwksUrl,
@@ -1141,7 +1141,7 @@ export const useAddIdentityJwtAuth = () => {
       const {
         data: { identityJwtAuth }
       } = await apiRequest.post<{ identityJwtAuth: IdentityJwtAuth }>(
-        `/api/v1/auth/jwt-auth/identities/${identityId}`,
+        `/v1/auth/jwt-auth/identities/${identityId}`,
         {
           configurationType,
           jwksUrl,
@@ -1186,7 +1186,7 @@ export const useDeleteIdentityJwtAuth = () => {
     mutationFn: async ({ identityId }) => {
       const {
         data: { identityJwtAuth }
-      } = await apiRequest.delete(`/api/v1/auth/jwt-auth/identities/${identityId}`);
+      } = await apiRequest.delete(`/v1/auth/jwt-auth/identities/${identityId}`);
       return identityJwtAuth;
     },
     onSuccess: (_, { organizationId, identityId, projectId }) => {
@@ -1225,7 +1225,7 @@ export const useAddIdentityAzureAuth = () => {
       const {
         data: { identityAzureAuth }
       } = await apiRequest.post<{ identityAzureAuth: IdentityAzureAuth }>(
-        `/api/v1/auth/azure-auth/identities/${identityId}`,
+        `/v1/auth/azure-auth/identities/${identityId}`,
         {
           tenantId,
           resource,
@@ -1282,7 +1282,7 @@ export const useAddIdentityKubernetesAuth = () => {
       const {
         data: { identityKubernetesAuth }
       } = await apiRequest.post<{ identityKubernetesAuth: IdentityKubernetesAuth }>(
-        `/api/v1/auth/kubernetes-auth/identities/${identityId}`,
+        `/v1/auth/kubernetes-auth/identities/${identityId}`,
         {
           kubernetesHost,
           tokenReviewerJwt,
@@ -1337,7 +1337,7 @@ export const useUpdateIdentityAzureAuth = () => {
       const {
         data: { identityAzureAuth }
       } = await apiRequest.patch<{ identityAzureAuth: IdentityAzureAuth }>(
-        `/api/v1/auth/azure-auth/identities/${identityId}`,
+        `/v1/auth/azure-auth/identities/${identityId}`,
         {
           tenantId,
           resource,
@@ -1377,7 +1377,7 @@ export const useDeleteIdentityAzureAuth = () => {
     mutationFn: async ({ identityId }) => {
       const {
         data: { identityAzureAuth }
-      } = await apiRequest.delete(`/api/v1/auth/azure-auth/identities/${identityId}`);
+      } = await apiRequest.delete(`/v1/auth/azure-auth/identities/${identityId}`);
       return identityAzureAuth;
     },
     onSuccess: (_, { organizationId, identityId, projectId }) => {
@@ -1421,7 +1421,7 @@ export const useUpdateIdentityKubernetesAuth = () => {
       const {
         data: { identityKubernetesAuth }
       } = await apiRequest.patch<{ identityKubernetesAuth: IdentityKubernetesAuth }>(
-        `/api/v1/auth/kubernetes-auth/identities/${identityId}`,
+        `/v1/auth/kubernetes-auth/identities/${identityId}`,
         {
           kubernetesHost,
           tokenReviewerJwt,
@@ -1468,7 +1468,7 @@ export const useDeleteIdentityKubernetesAuth = () => {
     mutationFn: async ({ identityId }) => {
       const {
         data: { identityKubernetesAuth }
-      } = await apiRequest.delete(`/api/v1/auth/kubernetes-auth/identities/${identityId}`);
+      } = await apiRequest.delete(`/v1/auth/kubernetes-auth/identities/${identityId}`);
       return identityKubernetesAuth;
     },
     onSuccess: (_, { organizationId, identityId, projectId }) => {
@@ -1506,7 +1506,7 @@ export const useAddIdentityTokenAuth = () => {
       const {
         data: { identityTokenAuth }
       } = await apiRequest.post<{ identityTokenAuth: IdentityTokenAuth }>(
-        `/api/v1/auth/token-auth/identities/${identityId}`,
+        `/v1/auth/token-auth/identities/${identityId}`,
         {
           accessTokenTTL,
           accessTokenMaxTTL,
@@ -1552,7 +1552,7 @@ export const useUpdateIdentityTokenAuth = () => {
       const {
         data: { identityTokenAuth }
       } = await apiRequest.patch<{ identityTokenAuth: IdentityTokenAuth }>(
-        `/api/v1/auth/token-auth/identities/${identityId}`,
+        `/v1/auth/token-auth/identities/${identityId}`,
         {
           accessTokenTTL,
           accessTokenMaxTTL,
@@ -1591,7 +1591,7 @@ export const useDeleteIdentityTokenAuth = () => {
     mutationFn: async ({ identityId }) => {
       const {
         data: { identityTokenAuth }
-      } = await apiRequest.delete(`/api/v1/auth/token-auth/identities/${identityId}`);
+      } = await apiRequest.delete(`/v1/auth/token-auth/identities/${identityId}`);
       return identityTokenAuth;
     },
     onSuccess: (_, { organizationId, identityId, projectId }) => {
@@ -1619,7 +1619,7 @@ export const useCreateTokenIdentityTokenAuth = () => {
   return useMutation<CreateTokenIdentityTokenAuthRes, object, CreateTokenIdentityTokenAuthDTO>({
     mutationFn: async ({ identityId, name }) => {
       const { data } = await apiRequest.post<CreateTokenIdentityTokenAuthRes>(
-        `/api/v1/auth/token-auth/identities/${identityId}/tokens`,
+        `/v1/auth/token-auth/identities/${identityId}/tokens`,
         {
           name
         }
@@ -1642,7 +1642,7 @@ export const useUpdateIdentityTokenAuthToken = () => {
       const {
         data: { token }
       } = await apiRequest.patch<{ token: IdentityAccessToken }>(
-        `/api/v1/auth/token-auth/tokens/${tokenId}`,
+        `/v1/auth/token-auth/tokens/${tokenId}`,
         {
           name
         }
@@ -1663,7 +1663,7 @@ export const useRevokeIdentityTokenAuthToken = () => {
   return useMutation<RevokeTokenRes, object, RevokeTokenDTO>({
     mutationFn: async ({ tokenId }) => {
       const { data } = await apiRequest.post<RevokeTokenRes>(
-        `/api/v1/auth/token-auth/tokens/${tokenId}/revoke`
+        `/v1/auth/token-auth/tokens/${tokenId}/revoke`
       );
 
       return data;
@@ -1699,7 +1699,7 @@ export const useAddIdentityLdapAuth = () => {
       lockoutCounterResetSeconds
     }) => {
       const { data } = await apiRequest.post<{ identityLdapAuth: IdentityLdapAuth }>(
-        `/api/v1/auth/ldap-auth/identities/${identityId}`,
+        `/v1/auth/ldap-auth/identities/${identityId}`,
         {
           templateId,
           url,
@@ -1766,7 +1766,7 @@ export const useUpdateIdentityLdapAuth = () => {
       lockoutCounterResetSeconds
     }) => {
       const { data } = await apiRequest.patch<{ identityLdapAuth: IdentityLdapAuth }>(
-        `/api/v1/auth/ldap-auth/identities/${identityId}`,
+        `/v1/auth/ldap-auth/identities/${identityId}`,
         {
           templateId,
           url,
@@ -1814,7 +1814,7 @@ export const useDeleteIdentityLdapAuth = () => {
   const queryClient = useQueryClient();
   return useMutation<IdentityLdapAuth, object, DeleteIdentityLdapAuthDTO>({
     mutationFn: async ({ identityId }) => {
-      const { data } = await apiRequest.delete(`/api/v1/auth/ldap-auth/identities/${identityId}`);
+      const { data } = await apiRequest.delete(`/v1/auth/ldap-auth/identities/${identityId}`);
       return data.identityLdapAuth;
     },
     onSuccess: (_, { organizationId, identityId, projectId }) => {
@@ -1846,7 +1846,7 @@ export const useClearIdentityLdapAuthLockouts = () => {
       const {
         data: { deleted }
       } = await apiRequest.post<{ deleted: number }>(
-        `/api/v1/auth/ldap-auth/identities/${identityId}/clear-lockouts`
+        `/v1/auth/ldap-auth/identities/${identityId}/clear-lockouts`
       );
       return deleted;
     },

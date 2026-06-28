@@ -15,7 +15,7 @@ export const useGetLDAPConfig = (organizationId: string) => {
     queryFn: async () => {
       try {
         const { data } = await apiRequest.get(
-          `/api/v1/ldap/config?organizationId=${organizationId}`
+          `/v1/ldap/config?organizationId=${organizationId}`
         );
 
         return data;
@@ -34,7 +34,7 @@ export const useGetLDAPGroupMaps = (ldapConfigId: string) => {
       if (!ldapConfigId) return [];
 
       const { data } = await apiRequest.get<LDAPGroupMap[]>(
-        `/api/v1/ldap/config/${ldapConfigId}/group-maps`
+        `/v1/ldap/config/${ldapConfigId}/group-maps`
       );
 
       return data;

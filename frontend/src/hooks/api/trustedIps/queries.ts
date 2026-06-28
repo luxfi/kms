@@ -13,7 +13,7 @@ export const useGetTrustedIps = (projectId: string) => {
     queryKey: trustedIps.getTrustedIps(projectId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ trustedIps: TrustedIp[] }>(
-        `/api/v1/projects/${projectId}/trusted-ips`
+        `/v1/projects/${projectId}/trusted-ips`
       );
 
       return data.trustedIps;
@@ -35,7 +35,7 @@ export const useAddTrustedIp = () => {
       comment?: string;
       isActive: boolean;
     }) => {
-      const { data } = await apiRequest.post(`/api/v1/projects/${projectId}/trusted-ips`, {
+      const { data } = await apiRequest.post(`/v1/projects/${projectId}/trusted-ips`, {
         ipAddress,
         ...(comment ? { comment } : {}),
         isActive
@@ -66,7 +66,7 @@ export const useUpdateTrustedIp = () => {
       isActive: boolean;
     }) => {
       const { data } = await apiRequest.patch(
-        `/api/v1/projects/${projectId}/trusted-ips/${trustedIpId}`,
+        `/v1/projects/${projectId}/trusted-ips/${trustedIpId}`,
         {
           ipAddress,
           ...(comment ? { comment } : {}),
@@ -87,7 +87,7 @@ export const useDeleteTrustedIp = () => {
   return useMutation({
     mutationFn: async ({ projectId, trustedIpId }: { projectId: string; trustedIpId: string }) => {
       const { data } = await apiRequest.delete(
-        `/api/v1/projects/${projectId}/trusted-ips/${trustedIpId}`
+        `/v1/projects/${projectId}/trusted-ips/${trustedIpId}`
       );
 
       return data;

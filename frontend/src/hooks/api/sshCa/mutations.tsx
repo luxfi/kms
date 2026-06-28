@@ -39,7 +39,7 @@ export const useUpdateSshCa = () => {
     mutationFn: async ({ caId, ...body }) => {
       const {
         data: { ca }
-      } = await apiRequest.patch<{ ca: TSshCertificateAuthority }>(`/api/v1/ssh/ca/${caId}`, body);
+      } = await apiRequest.patch<{ ca: TSshCertificateAuthority }>(`/v1/ssh/ca/${caId}`, body);
       return ca;
     },
     onSuccess: ({ projectId }, { caId }) => {
@@ -55,7 +55,7 @@ export const useDeleteSshCa = () => {
     mutationFn: async ({ caId }) => {
       const {
         data: { ca }
-      } = await apiRequest.delete<{ ca: TSshCertificateAuthority }>(`/api/v1/ssh/ca/${caId}`);
+      } = await apiRequest.delete<{ ca: TSshCertificateAuthority }>(`/v1/ssh/ca/${caId}`);
       return ca;
     },
     onSuccess: ({ projectId }) => {

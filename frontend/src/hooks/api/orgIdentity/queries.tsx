@@ -15,7 +15,7 @@ export const orgIdentityQuery = {
       queryKey: orgIdentityQuery.getByIdKey(params),
       queryFn: async () => {
         const { data } = await apiRequest.get<{ identity: TOrgIdentity }>(
-          `/api/v1/organization/identities/${params.identityId}`
+          `/v1/organization/identities/${params.identityId}`
         );
         return data.identity;
       }

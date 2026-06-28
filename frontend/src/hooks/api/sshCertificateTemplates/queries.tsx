@@ -13,7 +13,7 @@ export const useGetSshCertTemplate = (id: string) => {
     queryKey: certTemplateKeys.getSshCertTemplateById(id),
     queryFn: async () => {
       const { data: certificateTemplate } = await apiRequest.get<TSshCertificateTemplate>(
-        `/api/v1/ssh/certificate-templates/${id}`
+        `/v1/ssh/certificate-templates/${id}`
       );
       return certificateTemplate;
     },

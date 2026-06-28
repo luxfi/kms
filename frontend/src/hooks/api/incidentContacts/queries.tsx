@@ -13,7 +13,7 @@ export const useGetOrgIncidentContact = (orgId: string) =>
     queryKey: incidentContactKeys.getAllContact(orgId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ incidentContactsOrg: IncidentContact[] }>(
-        `/api/v1/organization/${orgId}/incidentContactOrg`
+        `/v1/organization/${orgId}/incidentContactOrg`
       );
 
       return data.incidentContactsOrg;
@@ -27,7 +27,7 @@ export const useAddIncidentContact = () => {
 
   return useMutation<object, object, AddIncidentContactDTO>({
     mutationFn: async ({ orgId, email }) => {
-      const { data } = await apiRequest.post(`/api/v1/organization/${orgId}/incidentContactOrg`, {
+      const { data } = await apiRequest.post(`/v1/organization/${orgId}/incidentContactOrg`, {
         email
       });
       return data;
@@ -44,7 +44,7 @@ export const useDeleteIncidentContact = () => {
   return useMutation<object, object, DeleteIncidentContactDTO>({
     mutationFn: async ({ orgId, incidentContactId }) => {
       const { data } = await apiRequest.delete(
-        `/api/v1/organization/${orgId}/incidentContactOrg/${incidentContactId}`
+        `/v1/organization/${orgId}/incidentContactOrg/${incidentContactId}`
       );
       return data;
     },

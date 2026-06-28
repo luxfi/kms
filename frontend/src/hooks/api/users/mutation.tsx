@@ -11,7 +11,7 @@ export const useAddUserToWsNonE2EE = () => {
 
   return useMutation<object, object, AddUserToWsDTONonE2EE>({
     mutationFn: async ({ projectId, usernames, roleSlugs }) => {
-      const { data } = await apiRequest.post(`/api/v1/projects/${projectId}/memberships`, {
+      const { data } = await apiRequest.post(`/v1/projects/${projectId}/memberships`, {
         usernames,
         roleSlugs
       });
@@ -138,7 +138,7 @@ export const useRevokeMySessionById = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (sessionId: string) => {
-      const { data } = await apiRequest.delete(`/api/v2/users/me/sessions/${sessionId}`);
+      const { data } = await apiRequest.delete(`/v2/users/me/sessions/${sessionId}`);
       return data;
     },
     onSuccess() {

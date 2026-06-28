@@ -30,7 +30,7 @@ export const useUpdatePkiAlertV2 = () => {
   return useMutation<TPkiAlertV2, unknown, TUpdatePkiAlertV2>({
     mutationFn: async ({ alertId, ...data }) => {
       const { data: response } = await apiRequest.patch<{ alert: TPkiAlertV2 }>(
-        `/api/v1/cert-manager/alerts/${alertId}`,
+        `/v1/cert-manager/alerts/${alertId}`,
         data
       );
       return response.alert;
@@ -52,7 +52,7 @@ export const useDeletePkiAlertV2 = () => {
   return useMutation<TPkiAlertV2, unknown, TDeletePkiAlertV2>({
     mutationFn: async ({ alertId }) => {
       const { data } = await apiRequest.delete<{ alert: TPkiAlertV2 }>(
-        `/api/v1/cert-manager/alerts/${alertId}`
+        `/v1/cert-manager/alerts/${alertId}`
       );
       return data.alert;
     },

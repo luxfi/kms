@@ -28,7 +28,7 @@ export const useDeleteSecretRotation = () => {
 
   return useMutation<object, object, TDeleteSecretRotationDTO>({
     mutationFn: async (dto) => {
-      const { data } = await apiRequest.delete(`/api/v1/secret-rotations/${dto.id}`);
+      const { data } = await apiRequest.delete(`/v1/secret-rotations/${dto.id}`);
       return data;
     },
     onSuccess: (_, { workspaceId }) => {

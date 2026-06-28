@@ -57,7 +57,7 @@ export const LoginLdapPage = () => {
     // TODO: add callback port support
 
     // const callbackPort = queryParams.get("callback_port");
-    // window.open(`/api/v1/ldap/redirect/saml2/${ssoIdentifier}${callbackPort ? `?callback_port=${callbackPort}` : ""}`);
+    // window.open(`/v1/ldap/redirect/saml2/${ssoIdentifier}${callbackPort ? `?callback_port=${callbackPort}` : ""}`);
     // window.close();
   };
 

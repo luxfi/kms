@@ -38,7 +38,7 @@ export const useUpdateDynamicSecret = () => {
   return useMutation<object, object, TUpdateDynamicSecretDTO>({
     mutationFn: async (dto) => {
       const { data } = await apiRequest.patch<{ dynamicSecret: TDynamicSecret }>(
-        `/api/v1/dynamic-secrets/${dto.name}`,
+        `/v1/dynamic-secrets/${dto.name}`,
         dto
       );
       return data.dynamicSecret;
@@ -62,7 +62,7 @@ export const useDeleteDynamicSecret = () => {
   return useMutation<object, object, TDeleteDynamicSecretDTO>({
     mutationFn: async (dto) => {
       const { data } = await apiRequest.delete<{ dynamicSecret: TDynamicSecret }>(
-        `/api/v1/dynamic-secrets/${dto.name}`,
+        `/v1/dynamic-secrets/${dto.name}`,
         { data: dto }
       );
       return data.dynamicSecret;

@@ -100,7 +100,7 @@ const fetchSecretApprovalRequestDetails = async ({
   id
 }: Omit<TGetSecretApprovalRequestDetails, "decryptKey">) => {
   const { data } = await apiRequest.get<{ approval: TSecretApprovalRequest }>(
-    `/api/v1/secret-approval-requests/${id}`
+    `/v1/secret-approval-requests/${id}`
   );
 
   return data.approval;

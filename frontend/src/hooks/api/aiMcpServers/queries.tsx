@@ -48,7 +48,7 @@ export const useGetAiMcpServerById = (
     queryFn: async () => {
       const { data } = await apiRequest.get<{
         server: TAiMcpServer;
-      }>(`/api/v1/ai/mcp/servers/${serverId}`);
+      }>(`/v1/ai/mcp/servers/${serverId}`);
       return data.server;
     },
     enabled: Boolean(serverId),
@@ -62,7 +62,7 @@ export const useListAiMcpServerTools = ({ serverId }: TListAiMcpServerToolsDTO) 
     queryFn: async () => {
       const { data } = await apiRequest.get<{
         tools: TAiMcpServerTool[];
-      }>(`/api/v1/ai/mcp/servers/${serverId}/tools`);
+      }>(`/v1/ai/mcp/servers/${serverId}/tools`);
       return data;
     },
     enabled: Boolean(serverId)
@@ -77,7 +77,7 @@ export const useGetOAuthStatus = (
     queryKey: aiMcpServerKeys.oauthStatus(sessionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TOAuthStatusResponse>(
-        `/api/v1/ai/mcp/servers/oauth/status/${sessionId}`
+        `/v1/ai/mcp/servers/oauth/status/${sessionId}`
       );
       return data;
     },

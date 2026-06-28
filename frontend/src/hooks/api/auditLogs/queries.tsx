@@ -61,7 +61,7 @@ export const useGetAuditLogActorFilterOpts = (projectId: string) => {
     queryKey: auditLogKeys.getAuditLogActorFilterOpts(projectId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ actors: Actor[] }>(
-        `/api/v1/projects/${projectId}/audit-logs/filters/actors`
+        `/v1/projects/${projectId}/audit-logs/filters/actors`
       );
       return data.actors;
     }

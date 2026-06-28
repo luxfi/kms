@@ -28,7 +28,7 @@ export const useVercelConnectionListOrganizations = (
     queryKey: vercelConnectionKeys.listOrganizations(connectionId, projectSearch),
     queryFn: async () => {
       const { data } = await apiRequest.get<TVercelConnectionOrganization[]>(
-        `/api/v1/app-connections/vercel/${connectionId}/projects`,
+        `/v1/app-connections/vercel/${connectionId}/projects`,
         {
           params: {
             projectSearch

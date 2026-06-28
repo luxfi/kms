@@ -27,7 +27,7 @@ export const useDeleteScimToken = () => {
   const queryClient = useQueryClient();
   return useMutation<CreateScimTokenRes, object, DeleteScimTokenDTO>({
     mutationFn: async ({ scimTokenId }) => {
-      const { data } = await apiRequest.delete(`/api/v1/scim/scim-tokens/${scimTokenId}`);
+      const { data } = await apiRequest.delete(`/v1/scim/scim-tokens/${scimTokenId}`);
       return data;
     },
     onSuccess: (_, { organizationId }) => {

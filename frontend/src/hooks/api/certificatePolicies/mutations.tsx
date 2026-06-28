@@ -33,7 +33,7 @@ export const useUpdateCertificatePolicy = () => {
     mutationFn: async ({ policyId, ...data }) => {
       const { data: response } = await apiRequest.patch<{
         certificatePolicy: TCertificatePolicy;
-      }>(`/api/v1/cert-manager/certificate-policies/${policyId}`, data);
+      }>(`/v1/cert-manager/certificate-policies/${policyId}`, data);
       return response.certificatePolicy;
     },
     onSuccess: (policy, { policyId }) => {
@@ -53,7 +53,7 @@ export const useDeleteCertificatePolicy = () => {
     mutationFn: async ({ policyId }) => {
       const { data: response } = await apiRequest.delete<{
         certificatePolicy: TCertificatePolicy;
-      }>(`/api/v1/cert-manager/certificate-policies/${policyId}`);
+      }>(`/v1/cert-manager/certificate-policies/${policyId}`);
       return response.certificatePolicy;
     },
     onSuccess: (policy, { policyId }) => {

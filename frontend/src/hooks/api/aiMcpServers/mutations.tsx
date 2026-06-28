@@ -39,7 +39,7 @@ export const useUpdateAiMcpServer = () => {
     mutationFn: async ({ serverId, ...data }) => {
       const { data: response } = await apiRequest.patch<{
         server: TAiMcpServer;
-      }>(`/api/v1/ai/mcp/servers/${serverId}`, data);
+      }>(`/v1/ai/mcp/servers/${serverId}`, data);
       return response.server;
     },
     onSuccess: (server, { serverId }) => {
@@ -60,7 +60,7 @@ export const useDeleteAiMcpServer = () => {
     mutationFn: async ({ serverId }) => {
       const { data: response } = await apiRequest.delete<{
         server: TAiMcpServer;
-      }>(`/api/v1/ai/mcp/servers/${serverId}`);
+      }>(`/v1/ai/mcp/servers/${serverId}`);
       return response.server;
     },
     onSuccess: (server, { serverId }) => {
@@ -93,7 +93,7 @@ export const useSyncAiMcpServerTools = () => {
     mutationFn: async ({ serverId }) => {
       const { data: response } = await apiRequest.post<{
         tools: TAiMcpServerTool[];
-      }>(`/api/v1/ai/mcp/servers/${serverId}/tools/sync`);
+      }>(`/v1/ai/mcp/servers/${serverId}/tools/sync`);
       return response;
     },
     onSuccess: (_, { serverId }) => {

@@ -21,7 +21,7 @@ export const useCreateProjectRole = () => {
     mutationFn: async ({ projectId, ...dto }: TCreateProjectRoleDTO) => {
       const {
         data: { role }
-      } = await apiRequest.post(`/api/v1/projects/${projectId}/roles`, dto);
+      } = await apiRequest.post(`/v1/projects/${projectId}/roles`, dto);
       return role;
     },
     onSuccess: (_, { projectId }) => {
@@ -37,7 +37,7 @@ export const useUpdateProjectRole = () => {
     mutationFn: async ({ id, projectId, ...dto }: TUpdateProjectRoleDTO) => {
       const {
         data: { role }
-      } = await apiRequest.patch(`/api/v1/projects/${projectId}/roles/${id}`, dto);
+      } = await apiRequest.patch(`/v1/projects/${projectId}/roles/${id}`, dto);
       return role;
     },
     onSuccess: (_, { projectId, slug }) => {
@@ -57,7 +57,7 @@ export const useDeleteProjectRole = () => {
     mutationFn: async ({ projectId, id }: TDeleteProjectRoleDTO) => {
       const {
         data: { role }
-      } = await apiRequest.delete(`/api/v1/projects/${projectId}/roles/${id}`);
+      } = await apiRequest.delete(`/v1/projects/${projectId}/roles/${id}`);
       return role;
     },
     onSuccess: (_, { projectId }) => {
@@ -73,7 +73,7 @@ export const useCreateOrgRole = () => {
     mutationFn: async ({ orgId, ...dto }: TCreateOrgRoleDTO) => {
       const {
         data: { role }
-      } = await apiRequest.post(`/api/v1/organization/${orgId}/roles`, dto);
+      } = await apiRequest.post(`/v1/organization/${orgId}/roles`, dto);
 
       return role;
     },
@@ -90,7 +90,7 @@ export const useUpdateOrgRole = () => {
     mutationFn: async ({ id, orgId, ...dto }: TUpdateOrgRoleDTO) => {
       const {
         data: { role }
-      } = await apiRequest.patch(`/api/v1/organization/${orgId}/roles/${id}`, dto);
+      } = await apiRequest.patch(`/v1/organization/${orgId}/roles/${id}`, dto);
 
       return role;
     },
@@ -108,7 +108,7 @@ export const useDeleteOrgRole = () => {
     mutationFn: async ({ orgId, id }: TDeleteOrgRoleDTO) => {
       const {
         data: { role }
-      } = await apiRequest.delete(`/api/v1/organization/${orgId}/roles/${id}`, {
+      } = await apiRequest.delete(`/v1/organization/${orgId}/roles/${id}`, {
         data: { orgId }
       });
 

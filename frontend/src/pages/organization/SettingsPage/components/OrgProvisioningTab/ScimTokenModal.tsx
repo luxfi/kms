@@ -125,7 +125,7 @@ export const ScimTokenModal = ({ popUp, handlePopUpOpen, handlePopUpToggle }: Pr
   };
 
   const hasToken = Boolean(token);
-  const scimUrl = `${window.origin}/api/v1/scim`;
+  const scimUrl = `${window.origin}/v1/scim`;
 
   return (
     <Modal

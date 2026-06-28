@@ -15,7 +15,7 @@ export const useCreateAuditLogStream = () => {
   return useMutation({
     mutationFn: async ({ provider, ...params }: TCreateAuditLogStreamDTO) => {
       const { data } = await apiRequest.post<{ auditLogStream: TAuditLogStream }>(
-        `/api/v1/audit-log-streams/${provider}`,
+        `/v1/audit-log-streams/${provider}`,
         params
       );
 
@@ -30,7 +30,7 @@ export const useUpdateAuditLogStream = () => {
   return useMutation({
     mutationFn: async ({ auditLogStreamId, provider, ...params }: TUpdateAuditLogStreamDTO) => {
       const { data } = await apiRequest.patch<{ auditLogStream: TAuditLogStream }>(
-        `/api/v1/audit-log-streams/${provider}/${auditLogStreamId}`,
+        `/v1/audit-log-streams/${provider}/${auditLogStreamId}`,
         params
       );
 
@@ -50,7 +50,7 @@ export const useDeleteAuditLogStream = () => {
   return useMutation({
     mutationFn: async ({ auditLogStreamId, provider }: TDeleteAuditLogStreamDTO) => {
       const { data } = await apiRequest.delete<{ auditLogStream: TAuditLogStream }>(
-        `/api/v1/audit-log-streams/${provider}/${auditLogStreamId}`
+        `/v1/audit-log-streams/${provider}/${auditLogStreamId}`
       );
 
       return data.auditLogStream;

@@ -17,7 +17,7 @@ export const useCreateSecretSync = () => {
   return useMutation({
     mutationFn: async ({ destination, ...params }: TCreateSecretSyncDTO) => {
       const { data } = await apiRequest.post<TSecretSyncResponse>(
-        `/api/v1/secret-syncs/${destination}`,
+        `/v1/secret-syncs/${destination}`,
         params
       );
 
@@ -33,7 +33,7 @@ export const useUpdateSecretSync = () => {
   return useMutation({
     mutationFn: async ({ syncId, destination, ...params }: TUpdateSecretSyncDTO) => {
       const { data } = await apiRequest.patch<TSecretSyncResponse>(
-        `/api/v1/secret-syncs/${destination}/${syncId}`,
+        `/v1/secret-syncs/${destination}/${syncId}`,
         params
       );
 
@@ -50,7 +50,7 @@ export const useDeleteSecretSync = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ syncId, destination, removeSecrets }: TDeleteSecretSyncDTO) => {
-      const { data } = await apiRequest.delete(`/api/v1/secret-syncs/${destination}/${syncId}`, {
+      const { data } = await apiRequest.delete(`/v1/secret-syncs/${destination}/${syncId}`, {
         params: { removeSecrets }
       });
 
@@ -68,7 +68,7 @@ export const useTriggerSecretSyncSyncSecrets = () => {
   return useMutation({
     mutationFn: async ({ syncId, destination }: TTriggerSecretSyncSyncSecretsDTO) => {
       const { data } = await apiRequest.post(
-        `/api/v1/secret-syncs/${destination}/${syncId}/sync-secrets`
+        `/v1/secret-syncs/${destination}/${syncId}/sync-secrets`
       );
 
       return data;
@@ -89,7 +89,7 @@ export const useTriggerSecretSyncImportSecrets = () => {
       importBehavior
     }: TTriggerSecretSyncImportSecretsDTO) => {
       const { data } = await apiRequest.post(
-        `/api/v1/secret-syncs/${destination}/${syncId}/import-secrets?importBehavior=${importBehavior}`
+        `/v1/secret-syncs/${destination}/${syncId}/import-secrets?importBehavior=${importBehavior}`
       );
 
       return data;
@@ -106,7 +106,7 @@ export const useTriggerSecretSyncRemoveSecrets = () => {
   return useMutation({
     mutationFn: async ({ syncId, destination }: TTriggerSecretSyncRemoveSecretsDTO) => {
       const { data } = await apiRequest.post(
-        `/api/v1/secret-syncs/${destination}/${syncId}/remove-secrets`
+        `/v1/secret-syncs/${destination}/${syncId}/remove-secrets`
       );
 
       return data;

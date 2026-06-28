@@ -9,7 +9,7 @@ export const useDuplicateIntegrationAuth = () => {
   return useMutation<IntegrationAuth, object, TDuplicateIntegrationAuthDTO>({
     mutationFn: async (body) => {
       const { data } = await apiRequest.post<{ integrationAuth: IntegrationAuth }>(
-        `/api/v1/integration-auth/${body.integrationAuthId}/duplicate`,
+        `/v1/integration-auth/${body.integrationAuthId}/duplicate`,
         body
       );
 

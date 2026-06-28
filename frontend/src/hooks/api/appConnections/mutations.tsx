@@ -14,7 +14,7 @@ export const useCreateAppConnection = () => {
   return useMutation({
     mutationFn: async ({ app, ...params }: TCreateAppConnectionDTO) => {
       const { data } = await apiRequest.post<TAppConnectionResponse>(
-        `/api/v1/app-connections/${app}`,
+        `/v1/app-connections/${app}`,
         params
       );
 
@@ -32,7 +32,7 @@ export const useUpdateAppConnection = () => {
   return useMutation({
     mutationFn: async ({ connectionId, app, ...params }: TUpdateAppConnectionDTO) => {
       const { data } = await apiRequest.patch<TAppConnectionResponse>(
-        `/api/v1/app-connections/${app}/${connectionId}`,
+        `/v1/app-connections/${app}/${connectionId}`,
         params
       );
 
@@ -50,7 +50,7 @@ export const useDeleteAppConnection = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ connectionId, app }: TDeleteAppConnectionDTO) => {
-      const { data } = await apiRequest.delete(`/api/v1/app-connections/${app}/${connectionId}`);
+      const { data } = await apiRequest.delete(`/v1/app-connections/${app}/${connectionId}`);
 
       return data;
     },

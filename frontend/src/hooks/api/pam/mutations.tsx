@@ -24,7 +24,7 @@ export const useCreatePamResource = () => {
   return useMutation({
     mutationFn: async ({ resourceType, ...params }: TCreatePamResourceDTO) => {
       const { data } = await apiRequest.post<{ resource: TPamResource }>(
-        `/api/v1/pam/resources/${resourceType}`,
+        `/v1/pam/resources/${resourceType}`,
         params
       );
 
@@ -41,7 +41,7 @@ export const useUpdatePamResource = () => {
   return useMutation({
     mutationFn: async ({ resourceId, resourceType, ...params }: TUpdatePamResourceDTO) => {
       const { data } = await apiRequest.patch<{ resource: TPamResource }>(
-        `/api/v1/pam/resources/${resourceType}/${resourceId}`,
+        `/v1/pam/resources/${resourceType}/${resourceId}`,
         params
       );
 
@@ -58,7 +58,7 @@ export const useDeletePamResource = () => {
   return useMutation({
     mutationFn: async ({ resourceId, resourceType }: TDeletePamResourceDTO) => {
       const { data } = await apiRequest.delete<{ resource: TPamResource }>(
-        `/api/v1/pam/resources/${resourceType}/${resourceId}`
+        `/v1/pam/resources/${resourceType}/${resourceId}`
       );
 
       return data.resource;
@@ -75,7 +75,7 @@ export const useCreatePamAccount = () => {
   return useMutation({
     mutationFn: async ({ resourceType, ...params }: TCreatePamAccountDTO) => {
       const { data } = await apiRequest.post<{ account: TPamAccount }>(
-        `/api/v1/pam/accounts/${resourceType}`,
+        `/v1/pam/accounts/${resourceType}`,
         params
       );
 
@@ -92,7 +92,7 @@ export const useUpdatePamAccount = () => {
   return useMutation({
     mutationFn: async ({ resourceType, accountId, ...params }: TUpdatePamAccountDTO) => {
       const { data } = await apiRequest.patch<{ account: TPamAccount }>(
-        `/api/v1/pam/accounts/${resourceType}/${accountId}`,
+        `/v1/pam/accounts/${resourceType}/${accountId}`,
         params
       );
 
@@ -109,7 +109,7 @@ export const useDeletePamAccount = () => {
   return useMutation({
     mutationFn: async ({ resourceType, accountId }: TDeletePamAccountDTO) => {
       const { data } = await apiRequest.delete<{ account: TPamAccount }>(
-        `/api/v1/pam/accounts/${resourceType}/${accountId}`
+        `/v1/pam/accounts/${resourceType}/${accountId}`
       );
 
       return data.account;
@@ -179,7 +179,7 @@ export const useUpdatePamFolder = () => {
   return useMutation({
     mutationFn: async ({ folderId, ...params }: TUpdatePamFolderDTO) => {
       const { data } = await apiRequest.patch<{ folder: TPamFolder }>(
-        `/api/v1/pam/folders/${folderId}`,
+        `/v1/pam/folders/${folderId}`,
         params
       );
 
@@ -196,7 +196,7 @@ export const useDeletePamFolder = () => {
   return useMutation({
     mutationFn: async ({ folderId }: TDeletePamFolderDTO) => {
       const { data } = await apiRequest.delete<{ folder: TPamFolder }>(
-        `/api/v1/pam/folders/${folderId}`
+        `/v1/pam/folders/${folderId}`
       );
 
       return data.folder;

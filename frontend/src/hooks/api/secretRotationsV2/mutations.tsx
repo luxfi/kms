@@ -18,7 +18,7 @@ export const useCreateSecretRotationV2 = () => {
   return useMutation({
     mutationFn: async ({ type, ...params }: TCreateSecretRotationV2DTO) => {
       const { data } = await apiRequest.post<TSecretRotationV2Response>(
-        `/api/v2/secret-rotations/${type}`,
+        `/v2/secret-rotations/${type}`,
         params
       );
 
@@ -36,7 +36,7 @@ export const useUpdateSecretRotationV2 = () => {
   return useMutation({
     mutationFn: async ({ type, rotationId, ...params }: TUpdateSecretRotationV2DTO) => {
       const { data } = await apiRequest.patch<TSecretRotationV2Response>(
-        `/api/v2/secret-rotations/${type}/${rotationId}`,
+        `/v2/secret-rotations/${type}/${rotationId}`,
         params
       );
 
@@ -54,7 +54,7 @@ export const useRotateSecretRotationV2 = () => {
   return useMutation({
     mutationFn: async ({ type, rotationId }: TRotateSecretRotationV2DTO) => {
       const { data } = await apiRequest.post<TSecretRotationV2Response>(
-        `/api/v2/secret-rotations/${type}/${rotationId}/rotate-secrets`
+        `/v2/secret-rotations/${type}/${rotationId}/rotate-secrets`
       );
 
       return data.secretRotation;
@@ -80,7 +80,7 @@ export const useDeleteSecretRotationV2 = () => {
       revokeGeneratedCredentials
     }: TDeleteSecretRotationV2DTO) => {
       const { data } = await apiRequest.delete<TSecretRotationV2Response>(
-        `/api/v2/secret-rotations/${type}/${rotationId}`,
+        `/v2/secret-rotations/${type}/${rotationId}`,
         { params: { deleteSecrets, revokeGeneratedCredentials } }
       );
 
@@ -98,7 +98,7 @@ export const useReconcileUnixLinuxLocalAccountRotation = () => {
   return useMutation({
     mutationFn: async ({ rotationId }: TReconcileUnixLinuxLocalAccountRotationDTO) => {
       const { data } = await apiRequest.post<TReconcileUnixLinuxLocalAccountRotationResponse>(
-        `/api/v2/secret-rotations/${SecretRotation.UnixLinuxLocalAccount}/${rotationId}/reconcile`
+        `/v2/secret-rotations/${SecretRotation.UnixLinuxLocalAccount}/${rotationId}/reconcile`
       );
 
       return data;

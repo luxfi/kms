@@ -25,7 +25,7 @@ export const useAddGroupToWorkspace = () => {
     }) => {
       const {
         data: { groupMembership }
-      } = await apiRequest.post(`/api/v1/projects/${projectId}/groups/${groupId}`, {
+      } = await apiRequest.post(`/v1/projects/${projectId}/groups/${groupId}`, {
         role
       });
 
@@ -46,7 +46,7 @@ export const useUpdateGroupWorkspaceRole = () => {
     mutationFn: async ({ groupId, projectId, roles }: TUpdateWorkspaceGroupRoleDTO) => {
       const {
         data: { groupMembership }
-      } = await apiRequest.patch(`/api/v1/projects/${projectId}/groups/${groupId}`, {
+      } = await apiRequest.patch(`/v1/projects/${projectId}/groups/${groupId}`, {
         roles
       });
 
@@ -76,7 +76,7 @@ export const useDeleteGroupFromWorkspace = () => {
     }) => {
       const {
         data: { groupMembership }
-      } = await apiRequest.delete(`/api/v1/projects/${projectId}/groups/${groupId}`);
+      } = await apiRequest.delete(`/v1/projects/${projectId}/groups/${groupId}`);
       return groupMembership;
     },
     onSuccess: (_, { projectId, username, groupId }) => {
@@ -97,7 +97,7 @@ export const useLeaveProject = () => {
   const queryClient = useQueryClient();
   return useMutation<object, object, { projectId: string }>({
     mutationFn: ({ projectId }) => {
-      return apiRequest.delete(`/api/v1/projects/${projectId}/leave`);
+      return apiRequest.delete(`/v1/projects/${projectId}/leave`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: projectKeys.getAllUserProjects() });
@@ -109,7 +109,7 @@ export const useMigrateProjectToV3 = () => {
   const queryClient = useQueryClient();
   return useMutation<object, object, { projectId: string }>({
     mutationFn: ({ projectId }) => {
-      return apiRequest.post(`/api/v1/projects/${projectId}/migrate-v3`);
+      return apiRequest.post(`/v1/projects/${projectId}/migrate-v3`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -122,7 +122,7 @@ export const useMigrateProjectToV3 = () => {
 export const useRequestProjectAccess = () => {
   return useMutation<object, object, { projectId: string; comment: string }>({
     mutationFn: ({ projectId, comment }) => {
-      return apiRequest.post(`/api/v1/projects/${projectId}/project-access`, {
+      return apiRequest.post(`/v1/projects/${projectId}/project-access`, {
         comment
       });
     }
@@ -133,7 +133,7 @@ export const useUpdateProjectSshConfig = () => {
   const queryClient = useQueryClient();
   return useMutation<TProjectSshConfig, object, TUpdateProjectSshConfigDTO>({
     mutationFn: ({ projectId, defaultUserSshCaId, defaultHostSshCaId }) => {
-      return apiRequest.patch(`/api/v1/projects/${projectId}/ssh-config`, {
+      return apiRequest.patch(`/v1/projects/${projectId}/ssh-config`, {
         defaultUserSshCaId,
         defaultHostSshCaId
       });
