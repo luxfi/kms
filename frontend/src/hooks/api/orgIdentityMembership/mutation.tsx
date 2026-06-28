@@ -14,7 +14,7 @@ export const useCreateOrgIdentityMembership = () => {
   return useMutation({
     mutationFn: async ({ identityId, roles }: TCreateOrgIdentityMembershipDTO) => {
       const { data } = await apiRequest.post<{ identityMembership: TOrgIdentityMembership }>(
-        `/v1/organization/identity-memberships/${identityId}`,
+        `/v1/org-identity-memberships/${identityId}`,
         { roles }
       );
       return data.identityMembership;
@@ -30,7 +30,7 @@ export const useDeleteOrgIdentityMembership = () => {
   return useMutation({
     mutationFn: async ({ identityId }: TDeleteOrgIdentityMembershipDTO) => {
       const { data } = await apiRequest.delete<{ identityMembership: TOrgIdentityMembership }>(
-        `/v1/organization/identity-memberships/${identityId}`
+        `/v1/org-identity-memberships/${identityId}`
       );
       return data.identityMembership;
     },
