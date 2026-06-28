@@ -27,7 +27,7 @@ export const useSupabaseConnectionListProjects = (
     queryKey: supabaseConnectionKeys.listProjects(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ projects: TSupabaseProject[] }>(
-        `/api/v1/app-connections/supabase/${connectionId}/projects`
+        `/v1/app-connections/supabase/${connectionId}/projects`
       );
 
       return data.projects;

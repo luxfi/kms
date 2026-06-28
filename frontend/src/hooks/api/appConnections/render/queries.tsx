@@ -29,7 +29,7 @@ export const useRenderConnectionListServices = (
     queryKey: renderConnectionKeys.listServices(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TRenderService[]>(
-        `/api/v1/app-connections/render/${connectionId}/services`
+        `/v1/app-connections/render/${connectionId}/services`
       );
 
       return data;
@@ -54,7 +54,7 @@ export const useRenderConnectionListEnvironmentGroups = (
     queryKey: renderConnectionKeys.listEnvironmentGroups(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TRenderEnvironmentGroup[]>(
-        `/api/v1/app-connections/render/${connectionId}/environment-groups`
+        `/v1/app-connections/render/${connectionId}/environment-groups`
       );
 
       return data;

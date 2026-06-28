@@ -31,7 +31,7 @@ export const useLaravelForgeConnectionListOrganizations = (
     queryKey: laravelForgeConnectionKeys.listOrganizations(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TLaravelForgeOrganization[]>(
-        `/api/v1/app-connections/laravel-forge/${connectionId}/organizations`
+        `/v1/app-connections/laravel-forge/${connectionId}/organizations`
       );
 
       return data;
@@ -58,7 +58,7 @@ export const useLaravelForgeConnectionListServers = (
     queryFn: async () => {
       const params = { organizationSlug };
       const { data } = await apiRequest.get<TLaravelForgeServer[]>(
-        `/api/v1/app-connections/laravel-forge/${connectionId}/servers`,
+        `/v1/app-connections/laravel-forge/${connectionId}/servers`,
         { params }
       );
 
@@ -92,7 +92,7 @@ export const useLaravelForgeConnectionListSites = (
       };
 
       const { data } = await apiRequest.get<TLaravelForgeSite[]>(
-        `/api/v1/app-connections/laravel-forge/${connectionId}/sites`,
+        `/v1/app-connections/laravel-forge/${connectionId}/sites`,
         { params }
       );
 

@@ -104,7 +104,7 @@ export const fetchUserAction = async (action: string) => {
 
 export const fetchUserProjectFavorites = async (orgId: string) => {
   const { data } = await apiRequest.get<{ projectFavorites: string[] }>(
-    `/api/v1/user/me/project-favorites?orgId=${orgId}`
+    `/v1/user/me/project-favorites?orgId=${orgId}`
   );
 
   return data.projectFavorites;
@@ -152,7 +152,7 @@ export const useGetUserAction = (action: string) =>
 
 export const fetchOrgUsers = async (orgId: string) => {
   const { data } = await apiRequest.get<{ users: OrgUser[] }>(
-    `/api/v1/organization/${orgId}/users`
+    `/v1/organization/${orgId}/users`
   );
 
   return data.users;
@@ -205,7 +205,7 @@ export const useGetOrgMembership = (organizationId: string, orgMembershipId: str
       const {
         data: { membership }
       } = await apiRequest.get<{ membership: OrgUser }>(
-        `/api/v2/organizations/${organizationId}/memberships/${orgMembershipId}`
+        `/v2/organizations/${organizationId}/memberships/${orgMembershipId}`
       );
 
       return membership;
@@ -224,7 +224,7 @@ export const useGetOrgMembershipProjectMemberships = (
       const {
         data: { memberships }
       } = await apiRequest.get<{ memberships: TWorkspaceUser[] }>(
-        `/api/v2/organizations/${organizationId}/memberships/${orgMembershipId}/project-memberships`
+        `/v2/organizations/${organizationId}/memberships/${orgMembershipId}/project-memberships`
       );
 
       return memberships;
@@ -238,7 +238,7 @@ export const useDeleteOrgMembership = () => {
 
   return useMutation<object, object, DeleteOrgMembershipDTO>({
     mutationFn: ({ membershipId, orgId }) => {
-      return apiRequest.delete(`/api/v2/organizations/${orgId}/memberships/${membershipId}`);
+      return apiRequest.delete(`/v2/organizations/${orgId}/memberships/${membershipId}`);
     },
     onSuccess: (_, { orgId }) => {
       queryClient.invalidateQueries({ queryKey: userKeys.getOrgUsers(orgId) });
@@ -251,7 +251,7 @@ export const useDeleteOrgMembershipBatch = () => {
 
   return useMutation<object, object, DeleteOrgMembershipBatchDTO>({
     mutationFn: ({ membershipIds, orgId }) => {
-      return apiRequest.delete(`/api/v2/organizations/${orgId}/memberships`, {
+      return apiRequest.delete(`/v2/organizations/${orgId}/memberships`, {
         data: {
           membershipIds
         }
@@ -269,7 +269,7 @@ export const useDeactivateOrgMembership = () => {
   return useMutation<object, object, DeleteOrgMembershipDTO>({
     mutationFn: ({ membershipId, orgId }) => {
       return apiRequest.post(
-        `/api/v2/organizations/${orgId}/memberships/${membershipId}/deactivate`
+        `/v2/organizations/${orgId}/memberships/${membershipId}/deactivate`
       );
     },
     onSuccess: (_, { orgId, membershipId }) => {
@@ -285,7 +285,7 @@ export const useUpdateOrgMembership = () => {
   return useMutation<object, object, UpdateOrgMembershipDTO>({
     mutationFn: ({ organizationId, membershipId, role, isActive, metadata }) => {
       return apiRequest.patch(
-        `/api/v2/organizations/${organizationId}/memberships/${membershipId}`,
+        `/v2/organizations/${organizationId}/memberships/${membershipId}`,
         {
           role,
           isActive,
@@ -408,7 +408,7 @@ export const useDeleteAPIKey = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (apiKeyDataId: string) => {
-      const { data } = await apiRequest.delete(`/api/v2/users/me/api-keys/${apiKeyDataId}`);
+      const { data } = await apiRequest.delete(`/v2/users/me/api-keys/${apiKeyDataId}`);
 
       return data;
     },
@@ -472,7 +472,7 @@ export const useUpdateUserMfa = () => {
 export const fetchMyOrganizationProjects = async (orgId: string) => {
   const {
     data: { workspaces }
-  } = await apiRequest.get(`/api/v1/organization/${orgId}/my-workspaces`);
+  } = await apiRequest.get(`/v1/organization/${orgId}/my-workspaces`);
 
   return workspaces;
 };
@@ -492,7 +492,7 @@ export const useListUserGroupMemberships = (username: string) => {
     queryKey: userKeys.listUserGroupMemberships(username),
     queryFn: async () => {
       const { data } = await apiRequest.get<TGroupWithProjectMemberships[]>(
-        `/api/v1/user/me/${username}/groups`
+        `/v1/user/me/${username}/groups`
       );
 
       return data;

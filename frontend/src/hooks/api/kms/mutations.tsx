@@ -17,7 +17,7 @@ export const useAddExternalKms = (orgId: string) => {
   return useMutation({
     mutationFn: async ({ name, description, configuration }: AddExternalKmsType) => {
       const providerPath = configuration.type === ExternalKmsProvider.Aws ? "aws" : "gcp";
-      const { data } = await apiRequest.post(`/api/v1/external-kms/${providerPath}`, {
+      const { data } = await apiRequest.post(`/v1/external-kms/${providerPath}`, {
         name,
         description,
         configuration: configuration.inputs
@@ -42,7 +42,7 @@ export const useUpdateExternalKms = (orgId: string, provider: ExternalKmsProvide
     }: {
       kmsId: string;
     } & UpdateExternalKmsType) => {
-      const { data } = await apiRequest.patch(`/api/v1/external-kms/${provider}/${kmsId}`, {
+      const { data } = await apiRequest.patch(`/v1/external-kms/${provider}/${kmsId}`, {
         name,
         description,
         configuration: configuration?.inputs
@@ -61,7 +61,7 @@ export const useRemoveExternalKms = (orgId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ kmsId, provider }: { kmsId: string; provider: ExternalKmsProvider }) => {
-      const { data } = await apiRequest.delete(`/api/v1/external-kms/${provider}/${kmsId}`);
+      const { data } = await apiRequest.delete(`/v1/external-kms/${provider}/${kmsId}`);
 
       return data;
     },
@@ -77,7 +77,7 @@ export const useUpdateProjectKms = (projectId: string) => {
     mutationFn: async (
       updatedData: { type: KmsType.Internal } | { type: KmsType.External; kmsId: string }
     ) => {
-      const { data } = await apiRequest.patch(`/api/v1/projects/${projectId}/kms`, {
+      const { data } = await apiRequest.patch(`/v1/projects/${projectId}/kms`, {
         kms: updatedData
       });
 
@@ -93,7 +93,7 @@ export const useLoadProjectKmsBackup = (projectId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (backup: string) => {
-      const { data } = await apiRequest.post(`/api/v1/projects/${projectId}/kms/backup`, {
+      const { data } = await apiRequest.post(`/v1/projects/${projectId}/kms/backup`, {
         backup
       });
 

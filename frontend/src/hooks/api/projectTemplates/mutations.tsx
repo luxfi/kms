@@ -29,7 +29,7 @@ export const useUpdateProjectTemplate = () => {
   return useMutation({
     mutationFn: async ({ templateId, ...params }: TUpdateProjectTemplateDTO) => {
       const { data } = await apiRequest.patch<TProjectTemplateResponse>(
-        `/api/v1/project-templates/${templateId}`,
+        `/v1/project-templates/${templateId}`,
         params
       );
 
@@ -46,7 +46,7 @@ export const useDeleteProjectTemplate = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ templateId }: TDeleteProjectTemplateDTO) => {
-      const { data } = await apiRequest.delete(`/api/v1/project-templates/${templateId}`);
+      const { data } = await apiRequest.delete(`/v1/project-templates/${templateId}`);
 
       return data;
     },

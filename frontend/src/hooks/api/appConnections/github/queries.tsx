@@ -39,7 +39,7 @@ export const useGitHubConnectionListRepositories = (
     queryKey: githubConnectionKeys.listRepositories(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TGitHubConnectionListRepositoriesResponse>(
-        `/api/v1/app-connections/github/${connectionId}/repositories`
+        `/v1/app-connections/github/${connectionId}/repositories`
       );
 
       return data.repositories;
@@ -64,7 +64,7 @@ export const useGitHubConnectionListOrganizations = (
     queryKey: githubConnectionKeys.listOrganizations(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<TGitHubConnectionListOrganizationsResponse>(
-        `/api/v1/app-connections/github/${connectionId}/organizations`
+        `/v1/app-connections/github/${connectionId}/organizations`
       );
 
       return data.organizations;
@@ -89,7 +89,7 @@ export const useGitHubConnectionListEnvironments = (
     queryKey: githubConnectionKeys.listEnvironments({ connectionId, repo, owner }),
     queryFn: async () => {
       const { data } = await apiRequest.get<TGitHubConnectionListEnvironmentsResponse>(
-        `/api/v1/app-connections/github/${connectionId}/environments`,
+        `/v1/app-connections/github/${connectionId}/environments`,
         {
           params: {
             repo,

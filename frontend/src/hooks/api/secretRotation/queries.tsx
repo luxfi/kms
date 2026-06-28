@@ -20,7 +20,7 @@ export const secretRotationKeys = {
 
 const fetchSecretRotationProviders = async ({ workspaceId }: TGetSecretRotationProviders) => {
   const { data } = await apiRequest.get<TSecretRotationProviderList>(
-    `/api/v1/secret-rotation-providers/${workspaceId}`
+    `/v1/secret-rotation-providers/${workspaceId}`
   );
   return data;
 };

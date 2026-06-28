@@ -53,7 +53,7 @@ export const useRenewDynamicSecretLease = () => {
   return useMutation<object, object, TRenewDynamicSecretLeaseDTO>({
     mutationFn: async (dto) => {
       const { data } = await apiRequest.post<{ lease: TDynamicSecretLease }>(
-        `/api/v1/dynamic-secrets/leases/${dto.leaseId}/renew`,
+        `/v1/dynamic-secrets/leases/${dto.leaseId}/renew`,
         dto
       );
       return data.lease;
@@ -77,7 +77,7 @@ export const useRevokeDynamicSecretLease = () => {
   return useMutation<object, object, TRevokeDynamicSecretLeaseDTO>({
     mutationFn: async (dto) => {
       const { data } = await apiRequest.delete<{ lease: TDynamicSecretLease }>(
-        `/api/v1/dynamic-secrets/leases/${dto.leaseId}`,
+        `/v1/dynamic-secrets/leases/${dto.leaseId}`,
         { data: dto }
       );
       return data.lease;

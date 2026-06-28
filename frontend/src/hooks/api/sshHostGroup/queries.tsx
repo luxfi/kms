@@ -23,7 +23,7 @@ export const useGetSshHostGroupById = (sshHostGroupId: string) => {
     queryKey: sshHostGroupKeys.getSshHostGroupById(sshHostGroupId),
     queryFn: async () => {
       const { data: sshHostGroup } = await apiRequest.get<TSshHostGroup>(
-        `/api/v1/ssh/host-groups/${sshHostGroupId}`
+        `/v1/ssh/host-groups/${sshHostGroupId}`
       );
       return sshHostGroup;
     },
@@ -46,7 +46,7 @@ export const useListSshHostGroupHosts = ({
       });
 
       const { data } = await apiRequest.get<TListSshHostGroupHostsResponse>(
-        `/api/v1/ssh/host-groups/${sshHostGroupId}/hosts`,
+        `/v1/ssh/host-groups/${sshHostGroupId}/hosts`,
         {
           params
         }

@@ -31,7 +31,7 @@ export const useUpdateSshCertTemplate = () => {
   return useMutation<TSshCertificateTemplate, object, TUpdateSshCertificateTemplateDTO>({
     mutationFn: async (data) => {
       const { data: certificateTemplate } = await apiRequest.patch<TSshCertificateTemplate>(
-        `/api/v1/ssh/certificate-templates/${data.id}`,
+        `/v1/ssh/certificate-templates/${data.id}`,
         data
       );
 
@@ -48,7 +48,7 @@ export const useDeleteSshCertTemplate = () => {
   return useMutation<TSshCertificateTemplate, object, TDeleteSshCertificateTemplateDTO>({
     mutationFn: async (data) => {
       const { data: certificateTemplate } = await apiRequest.delete<TSshCertificateTemplate>(
-        `/api/v1/ssh/certificate-templates/${data.id}`
+        `/v1/ssh/certificate-templates/${data.id}`
       );
       return certificateTemplate;
     },

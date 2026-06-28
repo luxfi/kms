@@ -48,7 +48,7 @@ export const useUpdateGroup = () => {
       slug?: string;
       role?: string;
     }) => {
-      const { data: group } = await apiRequest.patch<TGroup>(`/api/v1/groups/${id}`, {
+      const { data: group } = await apiRequest.patch<TGroup>(`/v1/groups/${id}`, {
         name,
         slug,
         role
@@ -67,7 +67,7 @@ export const useDeleteGroup = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id }: { id: string }) => {
-      const { data: group } = await apiRequest.delete<TGroup>(`/api/v1/groups/${id}`);
+      const { data: group } = await apiRequest.delete<TGroup>(`/v1/groups/${id}`);
 
       return group;
     },
@@ -89,7 +89,7 @@ export const useAddUserToGroup = () => {
       username: string;
       slug: string;
     }) => {
-      const { data } = await apiRequest.post<TGroup>(`/api/v1/groups/${groupId}/users/${username}`);
+      const { data } = await apiRequest.post<TGroup>(`/v1/groups/${groupId}/users/${username}`);
 
       return data;
     },
@@ -112,7 +112,7 @@ export const useRemoveUserFromGroup = () => {
       groupId: string;
     }) => {
       const { data } = await apiRequest.delete<TGroup>(
-        `/api/v1/groups/${groupId}/users/${username}`
+        `/v1/groups/${groupId}/users/${username}`
       );
 
       return data;
@@ -137,7 +137,7 @@ export const useAddIdentityToGroup = () => {
       slug: string;
     }) => {
       const { data } = await apiRequest.post<Pick<TGroupMachineIdentity, "id" | "name">>(
-        `/api/v1/groups/${groupId}/machine-identities/${identityId}`
+        `/v1/groups/${groupId}/machine-identities/${identityId}`
       );
 
       return data;
@@ -161,7 +161,7 @@ export const useRemoveIdentityFromGroup = () => {
       slug: string;
     }) => {
       const { data } = await apiRequest.delete<Pick<TGroupMachineIdentity, "id" | "name">>(
-        `/api/v1/groups/${groupId}/machine-identities/${identityId}`
+        `/v1/groups/${groupId}/machine-identities/${identityId}`
       );
 
       return data;

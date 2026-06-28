@@ -24,7 +24,7 @@ export const useTestWebhook = () => {
 
   return useMutation<object, object, TTestWebhookDTO>({
     mutationFn: async ({ webhookId }) => {
-      const { data } = await apiRequest.post(`/api/v1/webhooks/${webhookId}/test`);
+      const { data } = await apiRequest.post(`/v1/webhooks/${webhookId}/test`);
       return data;
     },
     onSuccess: (_, { projectId }) => {
@@ -41,7 +41,7 @@ export const useUpdateWebhook = () => {
 
   return useMutation<object, object, TUpdateWebhookDto>({
     mutationFn: async (dto) => {
-      const { data } = await apiRequest.patch(`/api/v1/webhooks/${dto.webhookId}`, {
+      const { data } = await apiRequest.patch(`/v1/webhooks/${dto.webhookId}`, {
         isDisabled: dto.isDisabled
       });
       return data;
@@ -57,7 +57,7 @@ export const useDeleteWebhook = () => {
 
   return useMutation<object, object, TDeleteWebhookDto>({
     mutationFn: async (dto) => {
-      const { data } = await apiRequest.delete(`/api/v1/webhooks/${dto.webhookId}`);
+      const { data } = await apiRequest.delete(`/v1/webhooks/${dto.webhookId}`);
       return data;
     },
     onSuccess: (_, { projectId }) => {

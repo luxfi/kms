@@ -29,7 +29,7 @@ export const useNorthflankConnectionListProjects = (
     queryKey: northflankConnectionKeys.listProjects(connectionId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ projects: TNorthflankProject[] }>(
-        `/api/v1/app-connections/northflank/${connectionId}/projects`
+        `/v1/app-connections/northflank/${connectionId}/projects`
       );
 
       return data.projects;
@@ -55,7 +55,7 @@ export const useNorthflankConnectionListSecretGroups = (
     queryKey: northflankConnectionKeys.listSecretGroups(connectionId, projectId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ secretGroups: TNorthflankSecretGroup[] }>(
-        `/api/v1/app-connections/northflank/${connectionId}/projects/${projectId}/secret-groups`
+        `/v1/app-connections/northflank/${connectionId}/projects/${projectId}/secret-groups`
       );
 
       return data.secretGroups;

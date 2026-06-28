@@ -37,7 +37,7 @@ export const useUpdatePkiCollection = () => {
   return useMutation<TPkiCollection, object, TUpdatePkiCollectionTO>({
     mutationFn: async ({ collectionId, ...body }) => {
       const { data: pkiCollection } = await apiRequest.patch<TPkiCollection>(
-        `/api/v1/pki/collections/${collectionId}`,
+        `/v1/pki/collections/${collectionId}`,
         body
       );
       return pkiCollection;
@@ -58,7 +58,7 @@ export const useDeletePkiCollection = () => {
   return useMutation<TPkiCollection, object, TDeletePkiCollectionDTO>({
     mutationFn: async ({ collectionId }) => {
       const { data: pkiCollection } = await apiRequest.delete<TPkiCollection>(
-        `/api/v1/pki/collections/${collectionId}`
+        `/v1/pki/collections/${collectionId}`
       );
       return pkiCollection;
     },
@@ -78,7 +78,7 @@ export const useAddItemToPkiCollection = () => {
   return useMutation<TPkiCollectionItem, object, TAddItemToPkiCollectionDTO>({
     mutationFn: async ({ collectionId, type, itemId }) => {
       const { data: pkiCollectionItem } = await apiRequest.post<TPkiCollectionItem>(
-        `/api/v1/pki/collections/${collectionId}/items`,
+        `/v1/pki/collections/${collectionId}/items`,
         {
           type,
           itemId
@@ -99,7 +99,7 @@ export const useRemoveItemFromPkiCollection = () => {
   return useMutation<TPkiCollectionItem, object, TRemoveItemFromPkiCollectionDTO>({
     mutationFn: async ({ collectionId, itemId }) => {
       const { data: pkiCollectionItem } = await apiRequest.delete<TPkiCollectionItem>(
-        `/api/v1/pki/collections/${collectionId}/items/${itemId}`
+        `/v1/pki/collections/${collectionId}/items/${itemId}`
       );
       return pkiCollectionItem;
     },

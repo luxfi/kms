@@ -112,7 +112,7 @@ export const useGetPkiSync = (
   return useQuery({
     queryKey: pkiSyncKeys.byId(syncId, projectId),
     queryFn: async () => {
-      const { data } = await apiRequest.get<TPkiSync>(`/api/v1/cert-manager/syncs/${syncId}`, {
+      const { data } = await apiRequest.get<TPkiSync>(`/v1/cert-manager/syncs/${syncId}`, {
         params: { projectId }
       });
 
@@ -140,7 +140,7 @@ export const useListPkiSyncCertificates = (
   return useQuery({
     queryKey: pkiSyncKeys.certificates(syncId, { offset, limit }),
     queryFn: async () => {
-      const { data } = await apiRequest.get(`/api/v1/cert-manager/syncs/${syncId}/certificates`, {
+      const { data } = await apiRequest.get(`/v1/cert-manager/syncs/${syncId}/certificates`, {
         params: { offset, limit }
       });
       return {

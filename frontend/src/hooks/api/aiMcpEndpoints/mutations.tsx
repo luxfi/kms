@@ -44,7 +44,7 @@ export const useUpdateAiMcpEndpoint = () => {
   return useMutation({
     mutationFn: async ({ endpointId, ...dto }: TUpdateAiMcpEndpointDTO) => {
       const { data } = await apiRequest.patch<{ endpoint: TAiMcpEndpoint }>(
-        `/api/v1/ai/mcp/endpoints/${endpointId}`,
+        `/v1/ai/mcp/endpoints/${endpointId}`,
         dto
       );
       return data.endpoint;
@@ -66,7 +66,7 @@ export const useDeleteAiMcpEndpoint = () => {
   return useMutation({
     mutationFn: async ({ endpointId }: TDeleteAiMcpEndpointDTO) => {
       const { data } = await apiRequest.delete<{ endpoint: TAiMcpEndpoint }>(
-        `/api/v1/ai/mcp/endpoints/${endpointId}`
+        `/v1/ai/mcp/endpoints/${endpointId}`
       );
       return data.endpoint;
     },
@@ -84,7 +84,7 @@ export const useEnableEndpointTool = () => {
   return useMutation({
     mutationFn: async ({ endpointId, serverToolId }: TEnableEndpointToolDTO) => {
       const { data } = await apiRequest.post<{ tool: TAiMcpEndpointToolConfig }>(
-        `/api/v1/ai/mcp/endpoints/${endpointId}/tools/${serverToolId}`
+        `/v1/ai/mcp/endpoints/${endpointId}/tools/${serverToolId}`
       );
       return data.tool;
     },
@@ -101,7 +101,7 @@ export const useDisableEndpointTool = () => {
 
   return useMutation({
     mutationFn: async ({ endpointId, serverToolId }: TDisableEndpointToolDTO) => {
-      await apiRequest.delete(`/api/v1/ai/mcp/endpoints/${endpointId}/tools/${serverToolId}`);
+      await apiRequest.delete(`/v1/ai/mcp/endpoints/${endpointId}/tools/${serverToolId}`);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
@@ -117,7 +117,7 @@ export const useBulkUpdateEndpointTools = () => {
   return useMutation({
     mutationFn: async ({ endpointId, tools }: TBulkUpdateEndpointToolsDTO) => {
       const { data } = await apiRequest.patch<{ tools: TAiMcpEndpointToolConfig[] }>(
-        `/api/v1/ai/mcp/endpoints/${endpointId}/tools/bulk`,
+        `/v1/ai/mcp/endpoints/${endpointId}/tools/bulk`,
         { tools }
       );
       return data.tools;
@@ -134,7 +134,7 @@ export const useFinalizeMcpEndpointOAuth = () => {
   return useMutation({
     mutationFn: async ({ endpointId, ...body }: TFinalizeMcpEndpointOAuthDTO) => {
       const { data } = await apiRequest.post<{ callbackUrl: string }>(
-        `/api/v1/ai/mcp/endpoints/${endpointId}/oauth/finalize`,
+        `/v1/ai/mcp/endpoints/${endpointId}/oauth/finalize`,
         body
       );
       return data;
@@ -146,7 +146,7 @@ export const useInitiateServerOAuth = () => {
   return useMutation({
     mutationFn: async ({ endpointId, serverId }: TInitiateServerOAuthDTO) => {
       const { data } = await apiRequest.post<{ authUrl: string; sessionId: string }>(
-        `/api/v1/ai/mcp/endpoints/${endpointId}/servers/${serverId}/oauth/initiate`
+        `/v1/ai/mcp/endpoints/${endpointId}/servers/${serverId}/oauth/initiate`
       );
       return data;
     }
@@ -157,7 +157,7 @@ export const useVerifyServerBearerToken = () => {
   return useMutation({
     mutationFn: async ({ endpointId, serverId, accessToken }: TVerifyServerBearerTokenDTO) => {
       const { data } = await apiRequest.post<TVerifyServerBearerTokenResponse>(
-        `/api/v1/ai/mcp/endpoints/${endpointId}/servers/${serverId}/verify-token`,
+        `/v1/ai/mcp/endpoints/${endpointId}/servers/${serverId}/verify-token`,
         { accessToken }
       );
       return data;
@@ -171,7 +171,7 @@ export const useSaveUserServerCredential = () => {
   return useMutation({
     mutationFn: async ({ endpointId, serverId, ...body }: TSaveUserServerCredentialDTO) => {
       const { data } = await apiRequest.post<{ success: boolean }>(
-        `/api/v1/ai/mcp/endpoints/${endpointId}/servers/${serverId}/credentials`,
+        `/v1/ai/mcp/endpoints/${endpointId}/servers/${serverId}/credentials`,
         body
       );
       return data;

@@ -15,7 +15,7 @@ const serviceTokenKeys = {
 
 const fetchWorkspaceServiceTokens = async (projectID: string) => {
   const { data } = await apiRequest.get<{ serviceTokenData: ServiceToken[] }>(
-    `/api/v1/projects/${projectID}/service-token-data`
+    `/v1/projects/${projectID}/service-token-data`
   );
 
   return data.serviceTokenData;
@@ -55,7 +55,7 @@ export const useDeleteServiceToken = () => {
 
   return useMutation<DeleteServiceTokenRes, object, string>({
     mutationFn: async (serviceTokenId) => {
-      const { data } = await apiRequest.delete(`/api/v2/service-token/${serviceTokenId}`);
+      const { data } = await apiRequest.delete(`/v2/service-token/${serviceTokenId}`);
       return data;
     },
     onSuccess: ({ serviceTokenData: { projectId } }) => {

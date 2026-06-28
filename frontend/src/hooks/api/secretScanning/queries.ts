@@ -19,7 +19,7 @@ export const secretScanningQueryKeys = {
 
 const fetchSecretScanningInstallationStatus = async (organizationId: string) => {
   const { data } = await apiRequest.get<{ appInstallationCompleted: boolean }>(
-    `/api/v1/secret-scanning/installation-status/organization/${organizationId}`
+    `/v1/secret-scanning/installation-status/organization/${organizationId}`
   );
   return data;
 };
@@ -51,7 +51,7 @@ const fetchSecretScanningRisksByOrgId = async (
     risks: TSecretScanningGitRisks[];
     totalCount: number;
     repos: string[];
-  }>(`/api/v1/secret-scanning/organization/${organizationId}/risks`, {
+  }>(`/v1/secret-scanning/organization/${organizationId}/risks`, {
     params
   });
   return data;

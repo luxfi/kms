@@ -72,7 +72,7 @@ export const useViewSecretRotationV2GeneratedCredentials = <T extends SecretRota
     queryKey: secretRotationV2Keys.viewGeneratedCredentials({ rotationId, type }),
     queryFn: async () => {
       const { data } = await apiRequest.get<TViewSecretRotationGeneratedCredentialsResponse>(
-        `/api/v2/secret-rotations/${type}/${rotationId}/generated-credentials`
+        `/v2/secret-rotations/${type}/${rotationId}/generated-credentials`
       );
 
       return data as TSecretRotationGeneratedCredentialsResponseMap[T];

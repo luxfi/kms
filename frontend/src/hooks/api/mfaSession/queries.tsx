@@ -14,7 +14,7 @@ export const useMfaSessionStatus = (mfaSessionId: string, enabled = true) => {
     queryKey: ["mfa-session-status", mfaSessionId],
     queryFn: async () => {
       const { data } = await apiRequest.get<TMfaSessionStatusResponse>(
-        `/api/v2/mfa-sessions/${mfaSessionId}/status`
+        `/v2/mfa-sessions/${mfaSessionId}/status`
       );
       return data;
     },
@@ -33,7 +33,7 @@ export const useVerifyMfaSession = () => {
   return useMutation({
     mutationFn: async ({ mfaSessionId, mfaToken, mfaMethod }: TVerifyMfaSessionRequest) => {
       const { data } = await apiRequest.post<TVerifyMfaSessionResponse>(
-        `/api/v2/mfa-sessions/${mfaSessionId}/verify`,
+        `/v2/mfa-sessions/${mfaSessionId}/verify`,
         {
           mfaToken,
           mfaMethod

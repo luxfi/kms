@@ -16,7 +16,7 @@ export const useGetSshCaById = (caId: string) => {
     queryFn: async () => {
       const {
         data: { ca }
-      } = await apiRequest.get<{ ca: TSshCertificateAuthority }>(`/api/v1/ssh/ca/${caId}`);
+      } = await apiRequest.get<{ ca: TSshCertificateAuthority }>(`/v1/ssh/ca/${caId}`);
       return ca;
     },
     enabled: Boolean(caId)
@@ -29,7 +29,7 @@ export const useGetSshCaCertTemplates = (caId: string) => {
     queryFn: async () => {
       const { data } = await apiRequest.get<{
         certificateTemplates: TSshCertificateTemplate[];
-      }>(`/api/v1/ssh/ca/${caId}/certificate-templates`);
+      }>(`/v1/ssh/ca/${caId}/certificate-templates`);
       return data;
     },
     enabled: Boolean(caId)

@@ -38,7 +38,7 @@ export const useUpdateOrgIdentity = () => {
     mutationFn: async ({ identityId, name, role, hasDeleteProtection, metadata }) => {
       const {
         data: { identity }
-      } = await apiRequest.patch(`/api/v1/identities/${identityId}`, {
+      } = await apiRequest.patch(`/v1/identities/${identityId}`, {
         name,
         role,
         hasDeleteProtection,
@@ -81,7 +81,7 @@ export const useUpdateOrgIdentity = () => {
 //   return useMutation({
 //     mutationFn: async ({ identityId, ...updates }: TUpdateOrgIdentityDTO) => {
 //       const { data } = await apiRequest.patch<{ identity: TOrgIdentity }>(
-//         `/api/v1/organization/identities/${identityId}`,
+//         `/v1/organization/identities/${identityId}`,
 //         updates
 //       );
 //       return data;
@@ -97,7 +97,7 @@ export const useDeleteOrgIdentity = () => {
   return useMutation({
     mutationFn: async ({ identityId }: TDeleteOrgIdentityDTO) => {
       const { data } = await apiRequest.delete<{ identity: TOrgIdentity }>(
-        `/api/v1/identities/${identityId}`
+        `/v1/identities/${identityId}`
       );
       return data;
     },

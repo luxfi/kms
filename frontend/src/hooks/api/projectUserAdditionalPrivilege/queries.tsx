@@ -16,7 +16,7 @@ const fetchProjectUserPrivilegeDetails = async (privilegeId: string) => {
     data: { privilege }
   } = await apiRequest.get<{
     privilege: Omit<TProjectUserPrivilege, "permissions"> & { permissions: TProjectPermission[] };
-  }>(`/api/v1/user-project-additional-privilege/${privilegeId}`);
+  }>(`/v1/user-project-additional-privilege/${privilegeId}`);
   return privilege;
 };
 

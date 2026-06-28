@@ -57,7 +57,7 @@ export const useHasCustomMigrationAvailable = (provider: ExternalMigrationProvid
     queryKey: externalMigrationQueryKeys.customMigrationAvailable(provider),
     queryFn: () =>
       apiRequest.get<{ enabled: boolean }>(
-        `/api/v3/external-migration/custom-migration-enabled/${provider}`
+        `/v3/external-migration/custom-migration-enabled/${provider}`
       )
   });
 };

@@ -130,7 +130,7 @@ export const useUpdateVaultExternalMigrationConfig = () => {
   >({
     mutationFn: async ({ id, connectionId, namespace }) => {
       const { data } = await apiRequest.put<{ config: TVaultExternalMigrationConfig }>(
-        `/api/v3/external-migration/vault/configs/${id}`,
+        `/v3/external-migration/vault/configs/${id}`,
         {
           connectionId,
           namespace
@@ -152,7 +152,7 @@ export const useDeleteVaultExternalMigrationConfig = () => {
   return useMutation<TVaultExternalMigrationConfig, Error, { id: string }>({
     mutationFn: async ({ id }) => {
       const { data } = await apiRequest.delete<{ config: TVaultExternalMigrationConfig }>(
-        `/api/v3/external-migration/vault/configs/${id}`
+        `/v3/external-migration/vault/configs/${id}`
       );
       return data.config;
     },

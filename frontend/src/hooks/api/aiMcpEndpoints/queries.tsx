@@ -40,7 +40,7 @@ export const useGetAiMcpEndpointById = ({ endpointId }: { endpointId: string }) 
     queryKey: aiMcpEndpointKeys.byId(endpointId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ endpoint: TAiMcpEndpointWithServerIds }>(
-        `/api/v1/ai/mcp/endpoints/${endpointId}`
+        `/v1/ai/mcp/endpoints/${endpointId}`
       );
       return data.endpoint;
     },
@@ -53,7 +53,7 @@ export const useListEndpointTools = ({ endpointId }: { endpointId: string }) => 
     queryKey: aiMcpEndpointKeys.tools(endpointId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ tools: TAiMcpEndpointToolConfig[] }>(
-        `/api/v1/ai/mcp/endpoints/${endpointId}/tools`
+        `/v1/ai/mcp/endpoints/${endpointId}/tools`
       );
       return data.tools;
     },
@@ -66,7 +66,7 @@ export const useGetServersRequiringAuth = ({ endpointId }: { endpointId: string 
     queryKey: aiMcpEndpointKeys.serversRequiringAuth(endpointId),
     queryFn: async () => {
       const { data } = await apiRequest.get<{ servers: TServerAuthStatus[] }>(
-        `/api/v1/ai/mcp/endpoints/${endpointId}/servers-requiring-auth`
+        `/v1/ai/mcp/endpoints/${endpointId}/servers-requiring-auth`
       );
       return data.servers;
     },

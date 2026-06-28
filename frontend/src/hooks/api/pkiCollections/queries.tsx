@@ -32,7 +32,7 @@ export const useGetPkiCollectionById = (collectionId: string) => {
     queryKey: pkiCollectionKeys.getPkiCollectionById(collectionId),
     queryFn: async () => {
       const { data: pkiCollection } = await apiRequest.get<TPkiCollection>(
-        `/api/v1/pki/collections/${collectionId}`
+        `/v1/pki/collections/${collectionId}`
       );
       return pkiCollection;
     },
@@ -74,7 +74,7 @@ export const useListPkiCollectionItems = ({
           friendlyName: string;
         })[];
         totalCount: number;
-      }>(`/api/v1/pki/collections/${collectionId}/items`, {
+      }>(`/v1/pki/collections/${collectionId}/items`, {
         params
       });
 

@@ -60,7 +60,7 @@ export const useGetOrgIdentityMembershipById = (identityId: string) => {
       const {
         data: { identity }
       } = await apiRequest.get<{ identity: IdentityMembershipOrg }>(
-        `/api/v1/identities/${identityId}`
+        `/v1/identities/${identityId}`
       );
       return identity;
     }
@@ -96,7 +96,7 @@ export const useGetIdentityProjectMemberships = (identityId: string) => {
       const {
         data: { identityMemberships }
       } = await apiRequest.get<{ identityMemberships: IdentityProjectMembershipV1[] }>(
-        `/api/v1/identities/${identityId}/identity-memberships`
+        `/v1/identities/${identityId}/identity-memberships`
       );
       return identityMemberships;
     }
@@ -113,7 +113,7 @@ export const useGetIdentityUniversalAuth = (
       const {
         data: { identityUniversalAuth }
       } = await apiRequest.get<{ identityUniversalAuth: IdentityUniversalAuth }>(
-        `/api/v1/auth/universal-auth/identities/${identityId}`
+        `/v1/auth/universal-auth/identities/${identityId}`
       );
       return identityUniversalAuth;
     },
@@ -132,7 +132,7 @@ export const useGetIdentityUniversalAuthClientSecrets = (identityId: string) => 
       const {
         data: { clientSecretData }
       } = await apiRequest.get<{ clientSecretData: ClientSecretData[] }>(
-        `/api/v1/auth/universal-auth/identities/${identityId}/client-secrets`
+        `/v1/auth/universal-auth/identities/${identityId}/client-secrets`
       );
       return clientSecretData;
     }
@@ -149,7 +149,7 @@ export const useGetIdentityGcpAuth = (
       const {
         data: { identityGcpAuth }
       } = await apiRequest.get<{ identityGcpAuth: IdentityGcpAuth }>(
-        `/api/v1/auth/gcp-auth/identities/${identityId}`
+        `/v1/auth/gcp-auth/identities/${identityId}`
       );
       return identityGcpAuth;
     },
@@ -170,7 +170,7 @@ export const useGetIdentityAwsAuth = (
       const {
         data: { identityAwsAuth }
       } = await apiRequest.get<{ identityAwsAuth: IdentityAwsAuth }>(
-        `/api/v1/auth/aws-auth/identities/${identityId}`
+        `/v1/auth/aws-auth/identities/${identityId}`
       );
       return identityAwsAuth;
     },
@@ -191,7 +191,7 @@ export const useGetIdentityTlsCertAuth = (
       const {
         data: { identityTlsCertAuth }
       } = await apiRequest.get<{ identityTlsCertAuth: IdentityTlsCertAuth }>(
-        `/api/v1/auth/tls-cert-auth/identities/${identityId}`
+        `/v1/auth/tls-cert-auth/identities/${identityId}`
       );
       return identityTlsCertAuth;
     },
@@ -212,7 +212,7 @@ export const useGetIdentityOciAuth = (
       const {
         data: { identityOciAuth }
       } = await apiRequest.get<{ identityOciAuth: IdentityOciAuth }>(
-        `/api/v1/auth/oci-auth/identities/${identityId}`
+        `/v1/auth/oci-auth/identities/${identityId}`
       );
       return identityOciAuth;
     },
@@ -233,7 +233,7 @@ export const useGetIdentityAliCloudAuth = (
       const {
         data: { identityAliCloudAuth }
       } = await apiRequest.get<{ identityAliCloudAuth: IdentityAliCloudAuth }>(
-        `/api/v1/auth/alicloud-auth/identities/${identityId}`
+        `/v1/auth/alicloud-auth/identities/${identityId}`
       );
       return identityAliCloudAuth;
     },
@@ -254,7 +254,7 @@ export const useGetIdentityAzureAuth = (
       const {
         data: { identityAzureAuth }
       } = await apiRequest.get<{ identityAzureAuth: IdentityAzureAuth }>(
-        `/api/v1/auth/azure-auth/identities/${identityId}`
+        `/v1/auth/azure-auth/identities/${identityId}`
       );
       return identityAzureAuth;
     },
@@ -275,7 +275,7 @@ export const useGetIdentityKubernetesAuth = (
       const {
         data: { identityKubernetesAuth }
       } = await apiRequest.get<{ identityKubernetesAuth: IdentityKubernetesAuth }>(
-        `/api/v1/auth/kubernetes-auth/identities/${identityId}`
+        `/v1/auth/kubernetes-auth/identities/${identityId}`
       );
       return identityKubernetesAuth;
     },
@@ -296,7 +296,7 @@ export const useGetIdentityTokenAuth = (
       const {
         data: { identityTokenAuth }
       } = await apiRequest.get<{ identityTokenAuth: IdentityTokenAuth }>(
-        `/api/v1/auth/token-auth/identities/${identityId}`
+        `/v1/auth/token-auth/identities/${identityId}`
       );
       return identityTokenAuth;
     },
@@ -317,7 +317,7 @@ export const useGetIdentityLdapAuth = (
       const {
         data: { identityLdapAuth }
       } = await apiRequest.get<{ identityLdapAuth: IdentityLdapAuth }>(
-        `/api/v1/auth/ldap-auth/identities/${identityId}`
+        `/v1/auth/ldap-auth/identities/${identityId}`
       );
       return identityLdapAuth;
     },
@@ -336,7 +336,7 @@ export const useGetIdentityTokensTokenAuth = (identityId: string) => {
       const {
         data: { tokens }
       } = await apiRequest.get<{ tokens: IdentityAccessToken[] }>(
-        `/api/v1/auth/token-auth/identities/${identityId}/tokens`
+        `/v1/auth/token-auth/identities/${identityId}/tokens`
       );
       return tokens;
     }
@@ -353,7 +353,7 @@ export const useGetIdentityOidcAuth = (
       const {
         data: { identityOidcAuth }
       } = await apiRequest.get<{ identityOidcAuth: IdentityOidcAuth }>(
-        `/api/v1/auth/oidc-auth/identities/${identityId}`
+        `/v1/auth/oidc-auth/identities/${identityId}`
       );
       return identityOidcAuth;
     },
@@ -374,7 +374,7 @@ export const useGetIdentityJwtAuth = (
       const {
         data: { identityJwtAuth }
       } = await apiRequest.get<{ identityJwtAuth: IdentityJwtAuth }>(
-        `/api/v1/auth/jwt-auth/identities/${identityId}`
+        `/v1/auth/jwt-auth/identities/${identityId}`
       );
 
       return identityJwtAuth;

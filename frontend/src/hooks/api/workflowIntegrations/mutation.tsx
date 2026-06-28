@@ -20,7 +20,7 @@ export const useUpdateSlackIntegration = () => {
 
   return useMutation<object, object, TUpdateSlackIntegrationDTO>({
     mutationFn: async (dto) => {
-      const { data } = await apiRequest.patch(`/api/v1/workflow-integrations/slack/${dto.id}`, dto);
+      const { data } = await apiRequest.patch(`/v1/workflow-integrations/slack/${dto.id}`, dto);
 
       return data;
     },
@@ -39,7 +39,7 @@ export const useUpdateMicrosoftTeamsIntegration = () => {
   return useMutation<object, object, TUpdateMicrosoftTeamsIntegrationDTO>({
     mutationFn: async (dto) => {
       const { data } = await apiRequest.patch(
-        `/api/v1/workflow-integrations/microsoft-teams/${dto.id}`,
+        `/v1/workflow-integrations/microsoft-teams/${dto.id}`,
         dto
       );
 
@@ -79,7 +79,7 @@ export const useDeleteSlackIntegration = () => {
 
   return useMutation<object, object, TDeleteSlackIntegrationDTO>({
     mutationFn: async (dto) => {
-      const { data } = await apiRequest.delete(`/api/v1/workflow-integrations/slack/${dto.id}`);
+      const { data } = await apiRequest.delete(`/v1/workflow-integrations/slack/${dto.id}`);
 
       return data;
     },
@@ -96,7 +96,7 @@ export const useDeleteMicrosoftTeamsIntegration = () => {
   return useMutation<object, object, TDeleteMicrosoftTeamsIntegrationDTO>({
     mutationFn: async (dto) => {
       const { data } = await apiRequest.delete(
-        `/api/v1/workflow-integrations/microsoft-teams/${dto.id}`
+        `/v1/workflow-integrations/microsoft-teams/${dto.id}`
       );
 
       return data;
@@ -118,7 +118,7 @@ export const useUpdateProjectWorkflowIntegrationConfig = () => {
   return useMutation({
     mutationFn: async (dto: TUpdateProjectWorkflowIntegrationConfigDTO) => {
       const { data } = await apiRequest.put(
-        `/api/v1/projects/${dto.projectId}/workflow-integration`,
+        `/v1/projects/${dto.projectId}/workflow-integration`,
         dto
       );
 
@@ -138,7 +138,7 @@ export const useDeleteProjectWorkflowIntegration = () => {
   return useMutation({
     mutationFn: async (dto: TDeleteProjectWorkflowIntegrationDTO) => {
       const { data } = await apiRequest.delete(
-        `/api/v1/projects/${dto.projectId}/workflow-integration/${dto.integration}/${dto.integrationId}`
+        `/v1/projects/${dto.projectId}/workflow-integration/${dto.integration}/${dto.integrationId}`
       );
 
       return data;
@@ -157,7 +157,7 @@ export const useCheckMicrosoftTeamsIntegrationInstallationStatus = () => {
   return useMutation({
     mutationFn: async (dto: TCheckMicrosoftTeamsIntegrationInstallationStatusDTO) => {
       const { data } = await apiRequest.post(
-        `/api/v1/workflow-integrations/microsoft-teams/${dto.workflowIntegrationId}/installation-status`
+        `/v1/workflow-integrations/microsoft-teams/${dto.workflowIntegrationId}/installation-status`
       );
 
       return data;
