@@ -15,7 +15,7 @@ export const orgIdentityQuery = {
       queryKey: orgIdentityQuery.getByIdKey(params),
       queryFn: async () => {
         const { data } = await apiRequest.get<{ identity: TOrgIdentity }>(
-          `/v1/organization/identities/${params.identityId}`
+          `/v1/org-identities/${params.identityId}`
         );
         return data.identity;
       }
@@ -27,7 +27,7 @@ export const orgIdentityQuery = {
         const { data } = await apiRequest.get<{
           identities: TOrgIdentity[];
           totalCount: number;
-        }>("/v1/organization/identities", {
+        }>("/v1/org-identities", {
           params: {
             offset: params.offset,
             limit: params.limit,
