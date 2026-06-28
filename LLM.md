@@ -393,3 +393,55 @@ kms module's own packages from the local tree, and MVS upgrades any
 consumer past the phantom to a real kms tag. The server (cmd/kms uses
 the in-repo `pkg/keys`) and operator compile ZERO external luxfi/keys —
 no keys content ships in either image.
+
+## Finishing the web UI (the go:embed SPA) — plan + status (2026-06-28)
+
+`cmd/kms/main.go` `//go:embed all:web` serves the Vite SPA (`frontend/` =
+`@hanzo/kms-frontend`); `make build` = copy `frontend/dist`→`cmd/kms/web` +
+`go build`. Canonical image = `Dockerfile` (frontend `pnpm vite build` → embed →
+one binary, UI+API same-origin). `Dockerfile.server` SKIPS the frontend
+(headless) — that's what hanzo-k8s currently runs, so its `/` 404s and a Node
+Infisical app was bolted on. **Direction (locked): finish the Go go:embed app,
+ZapDB-backed, NO Postgres/Redis/Node, NO Infisical, NO hanzo-kms.**
+
+**SPA API surface = 834 endpoints / 79 groups** (Infisical-derived). Versions are
+LITERAL, not aliased: single-secret CRUD is `/v4/secrets/{key}`, folder mutate
+`/v2/folders/{id}`, list `/v1/...`. `/v1/kms/keys/*` in the SPA = a **CMEK transit
+surface** (encrypt/decrypt/sign/verify on named keys) — COLLIDES with the existing
+validator-keyset/MPC routes at the same path; namespace them apart before wiring
+the SPA's KMS page.
+
+**MVP to make the UI load→login→org/project→secrets CRUD ≈ 45 endpoints:**
+- Tier 0 (renders): `GET /v1/admin/config` (DONE — Suspense gate) + `GET /v1/status`.
+- Tier 1 (login): `POST /v1/auth/login` (loginV3), `/v1/auth/select-organization`,
+  `GET /v1/user` + `/v1/users/me`, `POST /v1/auth/logout`; first-run `POST
+  /v1/admin/signup`. Bridge to IAM JWT (existing `orgClaims`) or local users in
+  ZapDB (HASH passwords — argon2id, never plaintext).
+- Tier 2 (shell): `GET /v1/organization{,/{id},/{id}/my-workspaces}`, `POST
+  /v1/organizations`, `GET/POST /v1/projects`, `GET /v1/projects/{id}`,
+  `/{id}/environment-folder-tree`, `POST /v1/projects/{id}/environments`.
+- Tier 3 (secrets): `GET /v1/folders`,`POST /v1/folders`,`PATCH|DELETE
+  /v2/folders/{id}`; `GET /v1/secrets`, `/v1/dashboard/secrets-overview|details|
+  secret-value`; `POST|PATCH|DELETE /v4/secrets/{key}`; `/v1/secrets/batch`,`/move`.
+- Advanced (≈490: app-connections, cert-manager, pki, ssh, pam, ai/mcp, syncs,
+  rotations, scanning, approvals, kmip, billing): stub `[]`/404 so dashboard tabs
+  don't error; implement on demand.
+
+**Data model on ZapDB (Badger KV):** map Infisical project→env→folder→secret onto
+the existing `pkg/store.SecretStore` (key `kms/secrets/{path}/{env}/{name}`):
+project≈org/workspace, environment=`env` field, folder=`path` prefix, secret=`name`.
+Store orgs/projects/environments/folders/users/memberships as JSON KV entities
+(follow `pkg/store/store.go`+`secrets.go` badger txn pattern; add a generic
+collection store `kms/<collection>/{id}`). Secrets keep the AES-256-GCM envelope
+under the MPC-rooted REK (`pkg/store/crypto.go`).
+
+**Build/test env (was blocked — now unblocked):** `CGO_ENABLED=1
+GOFLAGS=-mod=mod go build -tags "sqlite_fts5 sqlcipher" ./cmd/kms` + need
+`libsqlcipher-dev`. `-mod=vendor` FAILS (strips blst.h); use `-mod=mod` (module
+cache has blst's C headers). go.sum re-tag drift (`age@v1.5.0`,`keys@v1.1.0` —
+benign per "Build (CI)" §) fixed by updating the two `h1:` lines to GitHub's
+authoritative hashes (NEVER bypass the sum check).
+
+**Shipped this pass:** PR luxfi/kms#6 = `/v1`-only sweep (dropped `/api/` from ~590
+SPA call-sites; external Datadog URLs kept). de-Infisical already on `main`. go.sum
+re-tag fix (this commit) restores buildability.
