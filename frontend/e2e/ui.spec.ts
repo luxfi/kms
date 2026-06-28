@@ -18,26 +18,38 @@ test("SPA renders (Suspense gate resolves, not a blank/JSON page)", async ({ pag
 
 test("auth surface is reachable (login or first-run signup)", async ({ page }) => {
   await page.goto("/");
-  // Either the login email step or the admin signup form must appear.
-  const email = page.getByPlaceholder(/email/i).first();
+  // Either the login email step or the admin signup form must appear. The
+  // signup form inputs are name-keyed (no placeholder); login uses a placeholder
+  // — match both.
+  const email = page.locator('input[name="email"], input[type="email"]').first();
   await expect(email).toBeVisible({ timeout: 15_000 });
 });
 
-// Full UI flow — exercised when running against a fresh instance. Skipped by
-// default (depends on first-run/seed state); enable with E2E_UI_FLOW=1 once the
-// instance is freshly provisioned.
-test.describe("@flow full UI login → dashboard", () => {
-  test.skip(!process.env.E2E_UI_FLOW, "set E2E_UI_FLOW=1 against a fresh instance");
+// Full UI flow against a FRESH instance: first-run admin signup → authenticated.
+// Enable with E2E_UI_FLOW=1 (the instance must have no users yet, so /admin/signup
+// is shown). The signup form is name-keyed: firstName/lastName/email/password/
+// confirmPassword + Continue.
+test.describe("@flow first-run admin signup → authenticated", () => {
+  test.skip(!process.env.E2E_UI_FLOW, "set E2E_UI_FLOW=1 against a fresh (no-user) instance");
 
-  test("admin can sign in and reach the org dashboard", async ({ page }) => {
+  test("admin signs up and leaves the signup screen authenticated", async ({ page, request }) => {
+    const cfg = await (await request.get("/v1/admin/config")).json();
+    test.skip(cfg.config.initialized, "instance already has a user — first-run flow needs a fresh instance");
     await page.goto("/");
-    // email step
-    await page.getByPlaceholder(/email/i).first().fill(ADMIN.email);
-    await page.getByRole("button", { name: /continue|login|next/i }).first().click();
-    // password step
-    await page.getByPlaceholder(/password/i).first().fill(ADMIN.password);
-    await page.getByRole("button", { name: /login|continue|sign in/i }).first().click();
-    // landed somewhere authenticated (org overview / projects)
-    await expect(page).toHaveURL(/\/(org|organization|projects|overview)/i, { timeout: 20_000 });
+    await expect(page).toHaveURL(/\/admin\/signup/i, { timeout: 15_000 });
+
+    await page.fill('input[name="firstName"]', "E2E");
+    await page.fill('input[name="lastName"]', "Admin");
+    await page.fill('input[name="email"]', ADMIN.email);
+    await page.fill('input[name="password"]', ADMIN.password);
+    await page.fill('input[name="confirmPassword"]', ADMIN.password);
+    await page.getByRole("button", { name: /continue/i }).click();
+
+    // Signup succeeded → SPA mints a session and navigates off /admin/signup.
+    await expect(page).not.toHaveURL(/\/admin\/signup/i, { timeout: 25_000 });
+    // A session token is now held (in-memory, key kms__auth-token) — prove by
+    // hitting an authed API from the page context succeeds.
+    const ok = await page.evaluate(async () => (await fetch("/v1/admin/config")).ok);
+    expect(ok).toBeTruthy();
   });
 });

@@ -182,6 +182,23 @@ func main() {
 	registerProjectAPI(mux, db)
 	// Tier 3 — folders + secrets CRUD. See api_secrets.go.
 	registerSecretsAPI(mux, db)
+	// Full web-UI API surface — swarm-implemented areas (each api_<area>.go).
+	registerIdentitiesAPI(mux, db)
+	registerOrgMembersAPI(mux, db)
+	registerGroupsScimAPI(mux, db)
+	registerTokensAPI(mux, db)
+	registerSecretMetaAPI(mux, db)
+	registerDynRotationAPI(mux, db)
+	registerSyncsConnAPI(mux, db)
+	registerPkiAPI(mux, db)
+	registerSshAPI(mux, db)
+	registerPamAPI(mux, db)
+	registerAiMcpAPI(mux, db)
+	registerKmsKmipAPI(mux, db)
+	registerApprovalsAPI(mux, db)
+	registerAuditScanAPI(mux, db)
+	registerAuthConfigAPI(mux, db)
+	registerMiscAPI(mux, db)
 
 	// Machine identity auth via IAM.
 	mux.HandleFunc("POST /v1/kms/auth/login", func(w http.ResponseWriter, r *http.Request) {
