@@ -178,6 +178,8 @@ func main() {
 	// Postgres/Redis/Node/IAM. See api_core.go + webauth.go. The /v1/admin/config
 	// `initialized` flag now reflects whether any user exists (first-run gate).
 	registerCoreAPI(mux, db, defaultOrgSlug)
+	// Tier 2 — projects + environments (the secrets-manager shell). See api_projects.go.
+	registerProjectAPI(mux, db)
 
 	// Machine identity auth via IAM.
 	mux.HandleFunc("POST /v1/kms/auth/login", func(w http.ResponseWriter, r *http.Request) {
