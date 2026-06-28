@@ -5,7 +5,8 @@ FROM golang:1.26.4-bookworm AS builder
 ENV GOTOOLCHAIN=auto
 ARG GITHUB_TOKEN
 RUN git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
-ENV GOPRIVATE=github.com/luxfi/*,github.com/hanzoai/*
+# No GOPRIVATE — luxfi/hanzoai Go modules are PUBLIC; resolve via public proxy +
+# sumdb (immutable). GOPRIVATE would route `direct` and re-poison go.sum.
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates tzdata \
