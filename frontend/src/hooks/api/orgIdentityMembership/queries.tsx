@@ -18,7 +18,7 @@ export const orgIdentityMembershipQuery = {
       queryFn: async () => {
         const { data } = await apiRequest.get<{
           identities: TAvailableOrganizationIdentities;
-        }>("/v1/organization/available-identities", {
+        }>("/v1/org-available-identities", {
           params: {
             offset: params.offset,
             limit: params.limit,
