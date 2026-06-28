@@ -18,7 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ARG GITHUB_TOKEN
 RUN git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
-ENV GOPRIVATE=github.com/luxfi/*,github.com/hanzoai/*
+# No GOPRIVATE — luxfi/hanzoai Go modules are PUBLIC, so go resolves them via the
+# default public proxy + sumdb (immutable hashes a force-moved tag can't break).
+# GOPRIVATE would route them `direct` (git) and re-introduce go.sum poisoning.
 
 WORKDIR /build
 COPY go.mod go.sum ./
