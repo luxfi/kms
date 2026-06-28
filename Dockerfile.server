@@ -11,7 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ARG GITHUB_TOKEN
 RUN git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
-ENV GOPRIVATE=github.com/luxfi/*,github.com/hanzoai/*
+# No GOPRIVATE — luxfi/hanzoai Go modules are PUBLIC; resolve via public proxy +
+# sumdb (immutable). GOPRIVATE would route `direct` and re-poison go.sum.
 
 WORKDIR /build
 COPY go.mod go.sum ./
