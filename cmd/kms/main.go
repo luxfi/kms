@@ -172,27 +172,12 @@ func main() {
 	// to /v1/sso/oidc/login?orgSlug=<this>. Read from env so the same image
 	// white-labels per-deployment via KMS_DEFAULT_ORG_SLUG.
 	defaultOrgSlug := envOr("KMS_DEFAULT_ORG_SLUG", "")
-	mux.HandleFunc("GET /v1/admin/config", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{
-			"config": map[string]any{
-				"initialized":               true,
-				"allowSignUp":               true,
-				"allowedSignUpDomain":       nil,
-				"trustSamlEmails":           false,
-				"trustLdapEmails":           false,
-				"trustOidcEmails":           true,
-				"defaultAuthOrgId":          "",
-				"defaultAuthOrgSlug":        defaultOrgSlug,
-				"isSecretScanningDisabled":  false,
-				"isMigrationModeOn":         false,
-				"enabledLoginMethods":       []string{"oidc"},
-				"slackClientId":             "",
-				"isSmtpConfigured":          false,
-				"isSecretApprovalDisabled":  false,
-				"identityRevocationEnabled": true,
-			},
-		})
-	})
+	// Core web-UI API — SPA bootstrap (status, admin/config), first-admin
+	// signup, email/password login + org selection, and the current-user/org
+	// endpoints. Backed by the ZapDB webStore + a KMS-local session JWT; no
+	// Postgres/Redis/Node/IAM. See api_core.go + webauth.go. The /v1/admin/config
+	// `initialized` flag now reflects whether any user exists (first-run gate).
+	registerCoreAPI(mux, db, defaultOrgSlug)
 
 	// Machine identity auth via IAM.
 	mux.HandleFunc("POST /v1/kms/auth/login", func(w http.ResponseWriter, r *http.Request) {
