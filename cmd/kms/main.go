@@ -180,6 +180,8 @@ func main() {
 	registerCoreAPI(mux, db, defaultOrgSlug)
 	// Tier 2 — projects + environments (the secrets-manager shell). See api_projects.go.
 	registerProjectAPI(mux, db)
+	// Tier 3 — folders + secrets CRUD. See api_secrets.go.
+	registerSecretsAPI(mux, db)
 
 	// Machine identity auth via IAM.
 	mux.HandleFunc("POST /v1/kms/auth/login", func(w http.ResponseWriter, r *http.Request) {
