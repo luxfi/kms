@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/hero.svg" alt="kms" width="880"></p>
+
 # KMS
 
 MPC-backed key management service for the Lux Network. Manages validator keys, threshold signing, and key rotation using distributed MPC (Multi-Party Computation).
