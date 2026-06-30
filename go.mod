@@ -5,6 +5,7 @@ go 1.26.4
 require (
 	github.com/cloudflare/circl v1.6.3
 	github.com/go-jose/go-jose/v4 v4.1.4
+	github.com/luxfi/go-bip39 v1.1.2
 	github.com/luxfi/ids v1.2.15
 	github.com/luxfi/keys v1.1.0
 	github.com/luxfi/log v1.4.1
@@ -55,7 +56,6 @@ require (
 	github.com/luxfi/formatting v1.0.1 // indirect
 	github.com/luxfi/geth v1.16.98 // indirect
 	github.com/luxfi/go-bip32 v1.0.2 // indirect
-	github.com/luxfi/go-bip39 v1.1.2 // indirect
 	github.com/luxfi/math v1.4.1 // indirect
 	github.com/luxfi/math/big v0.1.0 // indirect
 	github.com/luxfi/mdns v0.1.1 // indirect
