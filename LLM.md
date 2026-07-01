@@ -393,3 +393,20 @@ kms module's own packages from the local tree, and MVS upgrades any
 consumer past the phantom to a real kms tag. The server (cmd/kms uses
 the in-repo `pkg/keys`) and operator compile ZERO external luxfi/keys —
 no keys content ships in either image.
+
+## Web UI (the go:embed SPA) — shipped
+
+`cmd/kms/main.go` `//go:embed all:web` serves the Vite SPA from the one Go
+binary (UI + `/v1` API same-origin). The full surface is implemented as 16
+area-groups, each an `api_<area>.go` with a `register<Area>API(mux, db)`
+registered in `main.go`: Identities, OrgMembers, GroupsScim, Tokens,
+SecretMeta, DynRotation, SyncsConn, Pki, Ssh, Pam, AiMcp, KmsKmip, Approvals,
+AuditScan, AuthConfig, Misc — on top of the Core/Project/Secrets MVP tiers.
+All persist to ZapDB (Badger KV); secrets keep the AES-256-GCM envelope under
+the MPC-rooted REK (`pkg/store/crypto.go`). Passwords are hashed (argon2id),
+never plaintext. Routes are `/v1`-only. e2e green, deployed.
+
+Canonical image: `ghcr.io/luxfi/kms` (Lux) and its Hanzo white-label fork
+`ghcr.io/hanzoai/kms` (same Go source, branded by domain). Built by CI from
+the `Dockerfile` (frontend `pnpm vite build` → embed → one binary). NO
+Postgres, NO Redis, NO Node, NO Infisical.
