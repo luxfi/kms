@@ -77,9 +77,9 @@ type Server struct {
 	// configured" (mirrors the fail-open MPC posture of the key
 	// routes). The KMS never holds full key material — the backend
 	// delegates to the luxfi/mpc t-of-n cluster.
-	signer    SignBackend
-	log       log.Logger
-	now       func() time.Time
+	signer SignBackend
+	log    log.Logger
+	now    func() time.Time
 
 	// Per-peer hybrid handshake sessions. Keyed by ZAP NodeID. A peer
 	// with no entry has not run the application-layer hybrid handshake
@@ -104,9 +104,10 @@ type Config struct {
 	Authorizer ConsensusAuthorizer
 	// NonceLedger ledgers (NodeID, Nonce) tuples and rejects duplicates
 	// within the freshness window. nil → an in-memory ledger is
-	// constructed with envelope defaults (TTL = MaxClockSkew + 1m).
-	// Pass an explicit NonceLedger to share state across replicas (e.g.
-	// a disk-backed impl for HA kmsd) or to tune TTL / GC cadence.
+	// constructed with envelope defaults (TTL = 2*MaxClockSkew + 1m,
+	// capped at DefaultNonceLedgerMaxEntries). Pass an explicit
+	// NonceLedger to share state across replicas (e.g. a disk-backed impl
+	// for HA kmsd) or to tune TTL / GC cadence / cap.
 	NonceLedger NonceLedger
 	// Signer is the optional threshold-signing backend for the OpSign /
 	// OpVerify ops on the /v1/sdk surface. nil ⇒ sign/verify return
@@ -141,12 +142,18 @@ func New(cfg Config) *Server {
 	if cfg.NonceLedger == nil {
 		// Boot-time default — every kmsd gets replay defence even if
 		// the caller forgets to wire one. The package-level constants
-		// pin the production TTL (MaxClockSkew + 1m) and GC cadence
-		// (TTL/4 = 90s).
+		// pin the production TTL (2*MaxClockSkew + 1m), GC cadence
+		// (TTL/4), and live-entry cap (DefaultNonceLedgerMaxEntries).
 		cfg.NonceLedger = NewMemoryNonceLedger(MemoryNonceLedgerConfig{})
 	}
+	// The production verifier binds the envelope's public key to its
+	// claimed identity digest BEFORE checking the signature. Without this
+	// binding a signature-valid envelope can impersonate any NodeID (see
+	// envelope.NewBoundVerifier). keys.ServiceChainID is the chain ID every
+	// service derives its NodeID under; a bare keys.VerifyServiceEnvelope
+	// here would re-open the impersonation hole.
 	verifier, err := envelope.NewVerifierWithLedger(envelope.VerifierWithLedgerConfig{
-		Verifier: keys.VerifyServiceEnvelope,
+		Verifier: envelope.NewBoundVerifier(keys.ServiceChainID, keys.VerifyServiceEnvelope),
 		Ledger:   cfg.NonceLedger,
 	})
 	if err != nil {
@@ -233,12 +240,17 @@ func (s *Server) Register(n *zap.Node) {
 				"from", from,
 				"reason", decisionErr.Error(),
 			)
-			return s.respondMaybeSealed(from, statusForbid, errJSON(decisionErr.Error())), nil
+			// Wire body carries only the wire-safe reason (replay is masked
+			// to a generic "forbidden"); the verbose reason is audit-logged
+			// above. Matches handleHTTP's forbidReason mapping.
+			return s.respondMaybeSealed(from, statusForbid, errJSON(forbidReason(decisionErr))), nil
 		}
 		status, body, err := s.dispatch(ctx, ident, op, innerReq)
 		if err != nil {
+			// Handler-internal failure (store/badger/decrypt). Audit-log
+			// the detail; never leak it to the client. Matches handleHTTP.
 			s.log.Warn("kms.zap handler error (mux)", "ident", ident.String(), "op", Op(op).String(), "err", err)
-			return s.respondMaybeSealed(from, statusError, errJSON(err.Error())), nil
+			return s.respondMaybeSealed(from, statusError, errJSON("internal error")), nil
 		}
 		return s.respondMaybeSealed(from, status, body), nil
 	})
@@ -392,12 +404,17 @@ func (s *Server) wrap(op uint16, h handlerFn) zap.Handler {
 				"from", from,
 				"reason", decisionErr.Error(),
 			)
-			return s.respondMaybeSealed(from, statusForbid, errJSON(decisionErr.Error())), nil
+			// Wire body carries only the wire-safe reason (replay is masked
+			// to a generic "forbidden"); the verbose reason is audit-logged
+			// above. Matches handleHTTP's forbidReason mapping.
+			return s.respondMaybeSealed(from, statusForbid, errJSON(forbidReason(decisionErr))), nil
 		}
 		status, body, err := h(ctx, ident, innerReq)
 		if err != nil {
+			// Handler-internal failure (store/badger/decrypt). Audit-log
+			// the detail; never leak it to the client. Matches handleHTTP.
 			s.log.Warn("kms.zap handler error", "ident", ident.String(), "op", Op(op).String(), "err", err)
-			return s.respondMaybeSealed(from, statusError, errJSON(err.Error())), nil
+			return s.respondMaybeSealed(from, statusError, errJSON("internal error")), nil
 		}
 		return s.respondMaybeSealed(from, status, body), nil
 	}

@@ -178,6 +178,26 @@ func (f AuthorityProviderFunc) Members(ctx context.Context) ([]ids.NodeID, error
 	return f(ctx)
 }
 
+// ScopedAuthorityProvider is an AuthorityProvider that additionally
+// confines each member NodeID to a path prefix. When a provider implements
+// it, the authorizer enforces least privilege: the addressed secret path
+// MUST fall within the member's granted scope, so a single compromised
+// service key cannot reach the entire secret tree.
+//
+// Soundness: the scope is AUTHORITY-side data — it rides the same
+// consensus snapshot that lists membership, keyed by the cryptographically
+// bound NodeID. It is NEVER derived from the envelope's self-declared
+// ServicePath, which a key-holder can set to anything. A flat
+// (non-scope-aware) provider leaves members unconfined, preserving the
+// pre-existing role-based posture.
+type ScopedAuthorityProvider interface {
+	AuthorityProvider
+	// Scope returns the path prefix NodeID is confined to and ok=true iff
+	// NodeID is a member. An empty prefix means "unconfined" (root). A
+	// non-member returns ("", false).
+	Scope(ctx context.Context, node ids.NodeID) (prefix string, ok bool)
+}
+
 // InProcessAuthorizerConfig wires the in-process ConsensusAuthorizer
 // from two authority providers and an optional cache TTL.
 //
@@ -261,7 +281,15 @@ func (a *InProcessAuthorizer) Authorize(ctx context.Context, ident Identity, pat
 		return Deny("not-a-validator"), nil
 	}
 
+	addressed := normalizePath(path)
+
 	if !op.IsWrite() {
+		// Read: confine to the validator authority's granted scope. A
+		// flat (unscoped) validator authority leaves the member
+		// unconfined (root) — the pre-existing broad-read posture.
+		if !a.withinAuthorityScope(ctx, a.validators, ident.NodeID, addressed) {
+			return Deny("path-outside-scope"), nil
+		}
 		return Allow("validator-read"), nil
 	}
 
@@ -272,8 +300,49 @@ func (a *InProcessAuthorizer) Authorize(ctx context.Context, ident Identity, pat
 	if _, ok := operators[ident.NodeID]; !ok {
 		return Deny("not-an-operator"), nil
 	}
-	_ = strings.TrimSpace(path) // path bound at envelope verify; reserved
+	// Write: confine to the OPERATOR authority's granted (write) scope —
+	// that is the write grant, tighter than the read grant. Unscoped
+	// operator authority → unconfined write (pre-existing posture).
+	if !a.withinAuthorityScope(ctx, a.operator, ident.NodeID, addressed) {
+		return Deny("path-outside-scope"), nil
+	}
 	return Allow("operator-write"), nil
+}
+
+// withinAuthorityScope reports whether addressed is inside the path scope
+// the given authority grants node. A flat (non-scope-aware) provider
+// leaves the member unconfined (returns true) — back-compat with the
+// role-based authorities. A scope-aware provider that no longer lists the
+// node (snapshot/scope race) fails closed (returns false).
+func (a *InProcessAuthorizer) withinAuthorityScope(ctx context.Context, p AuthorityProvider, node ids.NodeID, addressed string) bool {
+	sp, ok := p.(ScopedAuthorityProvider)
+	if !ok {
+		return true // flat authority → unconfined
+	}
+	scope, member := sp.Scope(ctx, node)
+	if !member {
+		return false // scope-aware authority dropped this node → fail closed
+	}
+	return pathWithinScope(addressed, scope)
+}
+
+// normalizePath trims surrounding whitespace and slashes so scope
+// containment compares canonical "/"-joined paths.
+func normalizePath(p string) string {
+	return strings.Trim(strings.TrimSpace(p), "/")
+}
+
+// pathWithinScope reports whether the addressed path is at or under the
+// scope prefix. An empty scope is unconfined (root). The boundary is a
+// full path segment: scope "hanzo/commerce" admits "hanzo/commerce" and
+// "hanzo/commerce/db" but NOT "hanzo/commerce-evil" (no sibling straddle)
+// and NOT the parent "hanzo".
+func pathWithinScope(addressed, scope string) bool {
+	scope = normalizePath(scope)
+	if scope == "" {
+		return true
+	}
+	return addressed == scope || strings.HasPrefix(addressed, scope+"/")
 }
 
 // snapshotValidators returns the current validator authority. Cached
@@ -356,18 +425,67 @@ func isEmptyNodeID(n ids.NodeID) bool {
 // authority members at time T". Refresh = re-apply.
 type StaticAuthorityProvider struct {
 	members []ids.NodeID
+	// scopes optionally confines each member NodeID to a path prefix. nil
+	// means the provider is flat (every member unconfined); non-nil opts
+	// the whole provider into least-privilege scoping, and a member absent
+	// from the map is denied (explicit grant required — fail closed).
+	scopes map[ids.NodeID]string
 }
 
-// NewStaticAuthorityProvider returns a provider over the given NodeID
-// set. Defensive copy: the caller may mutate the slice after this
-// returns without affecting the provider.
+// NewStaticAuthorityProvider returns a flat provider over the given NodeID
+// set (every member unconfined). Defensive copy: the caller may mutate the
+// slice after this returns without affecting the provider.
 func NewStaticAuthorityProvider(members []ids.NodeID) *StaticAuthorityProvider {
 	c := make([]ids.NodeID, len(members))
 	copy(c, members)
 	return &StaticAuthorityProvider{members: c}
 }
 
+// NewScopedAuthorityProvider returns a least-privilege provider: it lists
+// members AND confines each to a path prefix. scopes maps NodeID → allowed
+// prefix (empty prefix = unconfined root for that member). A NodeID in
+// members but absent from scopes is denied every path (explicit grant
+// required); a NodeID in scopes but not members is ignored.
+//
+// The scope data is a consensus-snapshot fact — the operator knows each
+// service's derived path when it builds the authority — so it is
+// authoritative and cannot be spoofed by the caller's envelope.
+func NewScopedAuthorityProvider(members []ids.NodeID, scopes map[ids.NodeID]string) *StaticAuthorityProvider {
+	c := make([]ids.NodeID, len(members))
+	copy(c, members)
+	sc := make(map[ids.NodeID]string, len(scopes))
+	for k, v := range scopes {
+		sc[k] = v
+	}
+	return &StaticAuthorityProvider{members: c, scopes: sc}
+}
+
 // Members returns the static snapshot.
 func (s *StaticAuthorityProvider) Members(_ context.Context) ([]ids.NodeID, error) {
 	return s.members, nil
+}
+
+// Scope implements ScopedAuthorityProvider. Membership is answered from the
+// member set; the confinement prefix comes from the scope map. A flat
+// provider (nil scopes) reports every member as unconfined (""). A scoped
+// provider denies (ok=false) any member lacking an explicit grant.
+func (s *StaticAuthorityProvider) Scope(_ context.Context, node ids.NodeID) (string, bool) {
+	member := false
+	for _, m := range s.members {
+		if m == node {
+			member = true
+			break
+		}
+	}
+	if !member {
+		return "", false
+	}
+	if s.scopes == nil {
+		return "", true // flat provider → unconfined
+	}
+	scope, granted := s.scopes[node]
+	if !granted {
+		return "", false // scoped provider requires an explicit grant
+	}
+	return scope, true
 }

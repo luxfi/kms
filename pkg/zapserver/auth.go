@@ -75,7 +75,9 @@ func ParseEnvelope(raw []byte) (*Envelope, error) {
 // (which holds a VerifierWithLedger) — this function does NOT check for
 // replays.
 func VerifyEnvelope(env *Envelope, now time.Time) (Identity, error) {
-	v, err := envelope.Verify(env, now, keys.VerifyServiceEnvelope)
+	// Same pubkey→identity binding as the production Server verifier: a
+	// bare keys.VerifyServiceEnvelope would accept forged identities.
+	v, err := envelope.Verify(env, now, envelope.NewBoundVerifier(keys.ServiceChainID, keys.VerifyServiceEnvelope))
 	if err != nil {
 		return Identity{}, err
 	}

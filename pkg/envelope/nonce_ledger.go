@@ -19,10 +19,16 @@
 //     (NodeID, Nonce). This matches the wire reality: nonces are
 //     caller-fresh, not globally coordinated.
 //
-//   - TTL = MaxClockSkew + 1m. Once an entry has aged past TTL, the
-//     clock-skew check would reject any envelope bearing the matching
-//     timestamp anyway, so reusing the nonce after TTL is safe and the
-//     ledger can GC the entry.
+//   - TTL = 2*MaxClockSkew + 1m. An entry MUST outlive the longest time a
+//     single timestamp stays fresh. Freshness is symmetric
+//     (|now-ts| <= MaxClockSkew), so one ts is acceptable across a
+//     2*MaxClockSkew real-time span (ts-MaxClockSkew .. ts+MaxClockSkew).
+//     A ledger entry ages from FIRST-SEEN, so a maximally future-dated
+//     envelope first seen at the earliest acceptable instant is still fresh
+//     2*MaxClockSkew later. With the old TTL (MaxClockSkew+1m) the entry
+//     GC'd while the envelope was still fresh and the SAME envelope
+//     replayed (RED finding). The trailing minute is GC margin so the
+//     boundary (entry-age == freshness-edge) still rejects.
 //
 //   - First-write-wins. SeenOrInsert returns true (duplicate) for every
 //     call after the first within TTL. The first caller wins; the second
@@ -39,20 +45,39 @@
 //
 // Production sizing (informational, no enforcement)
 //
-//   100 services × 60 envelopes/min × 6m TTL ≈ 36 000 live entries.
+//   100 services × 60 envelopes/min × 11m TTL ≈ 66 000 live entries.
 //   sync.Map overhead per entry ≈ 80 bytes (key 36 + value 8 + Go map
-//   overhead). Working set ≈ 3 MB. Well within budget for an in-process
+//   overhead). Working set ≈ 5 MB. Well within budget for an in-process
 //   ledger; no need to fall back to disk-backed storage at this scale.
+//
+// Bounded (enforcement, not informational)
+//
+//   An unbounded ledger is a memory-DoS surface: an attacker holding one
+//   valid key can emit fresh-nonce envelopes to grow the map without limit.
+//   MaxEntries caps live entries (default 1e6 ≈ 80 MB). At the cap
+//   SeenOrInsert fails CLOSED (ErrLedgerFull) — a KMS that cannot ledger a
+//   nonce cannot prove it isn't a replay, so it must reject, never accept
+//   without replay defence. Availability-fail-closed on the secrets plane
+//   is the correct trade: reject under flood, never OOM the daemon.
 
 package envelope
 
 import (
 	"context"
+	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/luxfi/ids"
 )
+
+// ErrLedgerFull is returned by SeenOrInsert when the ledger is at its
+// MaxEntries cap and the (node, nonce) tuple is not already present. The
+// verifier treats it as fail-closed: a nonce that cannot be ledgered
+// cannot be proven fresh, so the request is rejected. Distinct from a
+// replay so audit logs can tell a flood apart from a resubmission.
+var ErrLedgerFull = errors.New("envelope: nonce ledger at capacity")
 
 // NonceLedger is the contract the envelope verifier talks to. Production
 // impls are typically the in-memory ledger; deployments that need
@@ -78,10 +103,18 @@ type NonceLedger interface {
 	SeenOrInsert(ctx context.Context, node ids.NodeID, nonce string, now time.Time) (bool, error)
 }
 
-// DefaultNonceLedgerTTL is the per-entry lifetime. Slightly larger than
-// MaxClockSkew so an envelope arriving at the edge of the skew window
-// still finds the prior copy in the ledger.
-const DefaultNonceLedgerTTL = MaxClockSkew + time.Minute
+// DefaultNonceLedgerTTL is the per-entry lifetime. It MUST strictly exceed
+// 2*MaxClockSkew — the longest real-time span over which a single
+// (symmetrically-fresh) timestamp is acceptable — so a ledger entry, which
+// ages from first-seen, can never GC while its envelope is still fresh.
+// The trailing minute is GC margin against the exact boundary.
+const DefaultNonceLedgerTTL = 2*MaxClockSkew + time.Minute
+
+// DefaultNonceLedgerMaxEntries caps live entries in the in-memory ledger.
+// ~66k live entries is the expected production working set (see sizing
+// note above); 1e6 (≈ 80 MB) leaves generous headroom while bounding a
+// nonce-flood memory DoS. At the cap SeenOrInsert fails closed.
+const DefaultNonceLedgerMaxEntries = 1_000_000
 
 // DefaultNonceLedgerGCInterval is the sweep cadence for the background
 // GC goroutine. Smaller values reduce peak memory but burn CPU; the
@@ -101,8 +134,10 @@ type nonceKey struct {
 type MemoryNonceLedger struct {
 	ttl        time.Duration
 	gcInterval time.Duration
+	max        int64 // live-entry cap; <= 0 means unbounded
 
-	entries sync.Map // map[nonceKey]time.Time — first-seen wall-clock
+	entries sync.Map     // map[nonceKey]time.Time — first-seen wall-clock
+	count   atomic.Int64 // live-entry counter, kept in step with entries
 
 	stopCh chan struct{}
 	stopMu sync.Mutex
@@ -115,6 +150,10 @@ type MemoryNonceLedgerConfig struct {
 	TTL time.Duration
 	// GCInterval is the background sweep cadence. 0 → DefaultNonceLedgerGCInterval.
 	GCInterval time.Duration
+	// MaxEntries caps live entries. 0 → DefaultNonceLedgerMaxEntries.
+	// A negative value disables the cap (unbounded) — tests only; never
+	// run a production ledger unbounded.
+	MaxEntries int64
 }
 
 // NewMemoryNonceLedger returns a fresh in-memory ledger and starts its
@@ -130,9 +169,18 @@ func NewMemoryNonceLedger(cfg MemoryNonceLedgerConfig) *MemoryNonceLedger {
 	if gc <= 0 {
 		gc = DefaultNonceLedgerGCInterval
 	}
+	// 0 → default cap; negative → unbounded (tests only).
+	max := cfg.MaxEntries
+	if max == 0 {
+		max = DefaultNonceLedgerMaxEntries
+	}
+	if max < 0 {
+		max = 0 // unbounded sentinel
+	}
 	l := &MemoryNonceLedger{
 		ttl:        ttl,
 		gcInterval: gc,
+		max:        max,
 		stopCh:     make(chan struct{}),
 	}
 	go l.gcLoop()
@@ -148,13 +196,23 @@ func (l *MemoryNonceLedger) SeenOrInsert(_ context.Context, node ids.NodeID, non
 	// atomically — exactly one returns (_, false).
 	prev, loaded := l.entries.LoadOrStore(k, now)
 	if !loaded {
+		// A brand-new entry. Charge it against the cap; if that pushes us
+		// over, undo the insert and fail closed. We check AFTER inserting
+		// (not before) so a concurrent replay of the SAME key is still
+		// detected at the cap — only genuinely-new keys are rejected.
+		if l.max > 0 && l.count.Add(1) > l.max {
+			l.entries.Delete(k)
+			l.count.Add(-1)
+			return false, ErrLedgerFull
+		}
 		return false, nil
 	}
 	// A prior entry exists. If it has aged past TTL we treat the slot
 	// as expired — the GC just hasn't swept it yet — and overwrite with
-	// the new wall-clock. Concurrent overwrites collapse to last-write-
-	// wins; either outcome leaves a fresh entry, which is what the
-	// caller would have gotten from a clean ledger.
+	// the new wall-clock. The key already exists, so the live-entry count
+	// is unchanged. Concurrent overwrites collapse to last-write-wins;
+	// either outcome leaves a fresh entry, which is what the caller would
+	// have gotten from a clean ledger.
 	if prevTS, ok := prev.(time.Time); ok && now.Sub(prevTS) >= l.ttl {
 		l.entries.Store(k, now)
 		return false, nil
@@ -210,8 +268,12 @@ func (l *MemoryNonceLedger) gcOnce(now time.Time) {
 			// CompareAndDelete protects against a concurrent
 			// SeenOrInsert that re-inserted a fresh entry at the
 			// same key after we read it: only delete the exact
-			// stale value.
-			l.entries.CompareAndDelete(k, ts)
+			// stale value. Decrement the live counter only on a
+			// delete we actually performed, so count stays in step
+			// with the map (and the cap stays honest).
+			if l.entries.CompareAndDelete(k, ts) {
+				l.count.Add(-1)
+			}
 		}
 		return true
 	})
