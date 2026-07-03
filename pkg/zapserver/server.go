@@ -49,6 +49,12 @@ const (
 	OpSecretPut    uint16 = 0x0041
 	OpSecretList   uint16 = 0x0042
 	OpSecretDelete uint16 = 0x0043
+
+	// Threshold key ops. Dispatched to the SignBackend (luxfi/mpc
+	// t-of-n cluster). Exposed on the HTTP /v1/sdk surface; the KMS
+	// process never holds full key material.
+	OpSign   uint16 = 0x0050
+	OpVerify uint16 = 0x0051
 )
 
 // status byte values in the response.
@@ -66,6 +72,12 @@ type Server struct {
 	masterKey []byte
 	authz     ConsensusAuthorizer
 	verifier  *envelope.VerifierWithLedger
+	// signer is the optional threshold-signing backend for OpSign /
+	// OpVerify. nil ⇒ the sign/verify ops return a clear "signing not
+	// configured" (mirrors the fail-open MPC posture of the key
+	// routes). The KMS never holds full key material — the backend
+	// delegates to the luxfi/mpc t-of-n cluster.
+	signer    SignBackend
 	log       log.Logger
 	now       func() time.Time
 
@@ -96,6 +108,11 @@ type Config struct {
 	// Pass an explicit NonceLedger to share state across replicas (e.g.
 	// a disk-backed impl for HA kmsd) or to tune TTL / GC cadence.
 	NonceLedger NonceLedger
+	// Signer is the optional threshold-signing backend for the OpSign /
+	// OpVerify ops on the /v1/sdk surface. nil ⇒ sign/verify return
+	// statusError("signing not configured"). Never holds full key
+	// material; delegates to luxfi/mpc.
+	Signer SignBackend
 	// Logger is the luxfi/log Logger. nil falls back to the package
 	// root logger (log.Root()).
 	Logger log.Logger
@@ -143,6 +160,7 @@ func New(cfg Config) *Server {
 		masterKey: cfg.MasterKey,
 		authz:     cfg.Authorizer,
 		verifier:  verifier,
+		signer:    cfg.Signer,
 		log:       cfg.Logger,
 		now:       cfg.Now,
 		sessions:  make(map[string]*kmszap.Session),
@@ -172,14 +190,10 @@ func (s *Server) Register(n *zap.Node) {
 	n.Handle(kmszap.OpClientHello, s.handleHandshake)
 
 	// Universal handler at type 0: reads opcode from body, dispatches
-	// through the same wrap() path so envelope verification and
-	// consensus authorization run identically to the per-opcode case.
-	handlers := map[uint16]handlerFn{
-		OpSecretGet:    s.handleGet,
-		OpSecretPut:    s.handlePut,
-		OpSecretList:   s.handleList,
-		OpSecretDelete: s.handleDelete,
-	}
+	// through the same verify→authorize→dispatch path so envelope
+	// verification and consensus authorization run identically to the
+	// per-opcode case. The op→handler routing is s.dispatch — the one
+	// router shared with the HTTP /v1/sdk transport.
 	n.Handle(0, func(ctx context.Context, from string, msg *zap.Message) (*zap.Message, error) {
 		raw := msg.Root().Bytes(0)
 		if raw == nil {
@@ -198,10 +212,6 @@ func (s *Server) Register(n *zap.Node) {
 		// Hybrid handshake on the universal mux path too.
 		if op == kmszap.OpClientHello {
 			return s.respondHandshake(from, payload), nil
-		}
-		h, ok := handlers[op]
-		if !ok {
-			return respond(statusError, errJSON("unknown opcode")), nil
 		}
 		// If this peer already negotiated a session, the payload is
 		// expected to be AEAD-sealed; open it before dispatch and seal
@@ -225,13 +235,38 @@ func (s *Server) Register(n *zap.Node) {
 			)
 			return s.respondMaybeSealed(from, statusForbid, errJSON(decisionErr.Error())), nil
 		}
-		status, body, err := h(ctx, ident, innerReq)
+		status, body, err := s.dispatch(ctx, ident, op, innerReq)
 		if err != nil {
 			s.log.Warn("kms.zap handler error (mux)", "ident", ident.String(), "op", Op(op).String(), "err", err)
 			return s.respondMaybeSealed(from, statusError, errJSON(err.Error())), nil
 		}
 		return s.respondMaybeSealed(from, status, body), nil
 	})
+}
+
+// dispatch is the single op→handler router shared by every transport
+// (the ZAP universal mux and the HTTP /v1/sdk surface). It runs AFTER
+// verifyAndAuthorize has proven the caller's identity and authority, so
+// it does not re-check auth. Unknown ops return statusError as
+// defence-in-depth — the authorizer has already rejected any op outside
+// the allowed set before dispatch is reached.
+func (s *Server) dispatch(ctx context.Context, ident Identity, op uint16, inner []byte) (byte, []byte, error) {
+	switch op {
+	case OpSecretGet:
+		return s.handleGet(ctx, ident, inner)
+	case OpSecretPut:
+		return s.handlePut(ctx, ident, inner)
+	case OpSecretList:
+		return s.handleList(ctx, ident, inner)
+	case OpSecretDelete:
+		return s.handleDelete(ctx, ident, inner)
+	case OpSign:
+		return s.handleSign(ctx, ident, inner)
+	case OpVerify:
+		return s.handleVerify(ctx, ident, inner)
+	default:
+		return statusError, errJSON("unknown opcode"), nil
+	}
 }
 
 // session returns the active hybrid session for a peer, or nil if the

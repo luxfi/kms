@@ -86,6 +86,7 @@ import (
 
 	"github.com/luxfi/kms/pkg/keys"
 	"github.com/luxfi/kms/pkg/mpc"
+	"github.com/luxfi/kms/pkg/sdksign"
 	"github.com/luxfi/kms/pkg/store"
 	"github.com/luxfi/kms/pkg/store/mpcrek"
 	"github.com/luxfi/kms/pkg/zapserver"
@@ -343,6 +344,12 @@ func main() {
 	// outage took down KMS too — the secrets surface is independent and
 	// must keep serving. Routes that require MPC return 503 via the
 	// mpcAvailable flag wired into healthOK / registerKMSRoutes.
+	//
+	// signBackend, when non-nil, enables the OpSign/OpVerify ops on the
+	// /v1/sdk surface. It wraps the MPC-backed key Manager; the KMS holds
+	// no full key material. nil ⇒ sign/verify return "signing not
+	// configured".
+	var signBackend zapserver.SignBackend
 	if vaultID != "" {
 		// Trust at the network boundary (NetworkPolicy + ZAP wire).
 		zapClient, err := mpc.NewZapClient(nodeID, mpcAddr)
@@ -380,6 +387,8 @@ func main() {
 				mpcAvailable = true
 			}
 			mgr := keys.NewManager(zapClient, keyStore, vaultID)
+			// Enable /v1/sdk sign/verify over the same MPC-backed manager.
+			signBackend = sdksign.New(mgr)
 			registerKMSRoutes(mux, mgr, zapClient, &mpcAvailable)
 		}
 	}
@@ -401,40 +410,59 @@ func main() {
 	zapPort, _ := strconv.Atoi(zapPortStr)
 	masterKey := loadREK()
 	defer mpcrek.Zero(masterKey)
-	if masterKey != nil && zapPort > 0 {
-		n := zap.NewNode(zap.NodeConfig{
-			NodeID:      nodeID + "-secrets",
-			ServiceType: "_kms._tcp",
-			Port:        zapPort,
+	if masterKey != nil {
+		// One authorizer + one nonce ledger back BOTH transports (the
+		// in-cluster ZAP wire and the HTTP /v1/sdk surface) — one
+		// verify→authorize→dispatch core, two framings. Both fail closed:
+		// a misconfigured authorizer or ledger is a wire-reachable
+		// security hole (open authorization / re-opened replay window),
+		// so we refuse to boot rather than serve /v1/sdk without
+		// consensus authorization or replay defence.
+		authorizer, err := buildConsensusAuthorizer()
+		if err != nil {
+			log.Fatalf("kms: consensus authorizer init failed: %v", err)
+		}
+		nonceLedger, err := buildNonceLedger()
+		if err != nil {
+			log.Fatalf("kms: nonce ledger init failed: %v", err)
+		}
+		srv := zapserver.New(zapserver.Config{
+			Store:       secStore,
+			MasterKey:   masterKey,
+			Authorizer:  authorizer,
+			NonceLedger: nonceLedger,
+			Signer:      signBackend,
+			Logger:      luxlog.New("component", "kms-sdk"),
 		})
-		if err := n.Start(); err != nil {
-			log.Printf("kms: ZAP secrets-server failed to start on :%d: %v", zapPort, err)
-		} else {
-			authorizer, err := buildConsensusAuthorizer()
-			if err != nil {
-				// Fail-closed: a misconfigured authorizer is a wire-
-				// reachable security hole. Refuse to boot.
-				log.Fatalf("kms: consensus authorizer init failed: %v", err)
-			}
-			nonceLedger, err := buildNonceLedger()
-			if err != nil {
-				// Same fail-closed posture: a misconfigured ledger
-				// silently re-opens the replay window. Refuse to
-				// boot rather than ship a downgrade.
-				log.Fatalf("kms: nonce ledger init failed: %v", err)
-			}
-			zs := zapserver.New(zapserver.Config{
-				Store:       secStore,
-				MasterKey:   masterKey,
-				Authorizer:  authorizer,
-				NonceLedger: nonceLedger,
-				Logger:      luxlog.New("component", "kms-zapserver"),
+
+		// HTTP /v1/sdk — the SDK-facing enveloped secret + threshold-sign
+		// plane. Every request carries an ML-DSA-65-signed envelope;
+		// authorization is consensus-native (validators read, operators
+		// write). Registered before the SPA catch-all so it wins the
+		// route match. Active whenever the REK is loaded, independent of
+		// the ZAP wire port.
+		mux.Handle("/v1/sdk/", srv.HTTPHandler())
+		log.Printf("kms: /v1/sdk enveloped secrets surface mounted (sign=%v)", signBackend != nil)
+
+		// ZAP wire transport (in-cluster binary) — the SAME Server, the
+		// SAME core. Enabled unless ZAP_PORT=0.
+		if zapPort > 0 {
+			n := zap.NewNode(zap.NodeConfig{
+				NodeID:      nodeID + "-secrets",
+				ServiceType: "_kms._tcp",
+				Port:        zapPort,
 			})
-			zs.Register(n)
-			log.Printf("kms: ZAP secrets-server listening on :%d (service=_kms._tcp)", zapPort)
+			if err := n.Start(); err != nil {
+				log.Printf("kms: ZAP secrets-server failed to start on :%d: %v", zapPort, err)
+			} else {
+				srv.Register(n)
+				log.Printf("kms: ZAP secrets-server listening on :%d (service=_kms._tcp)", zapPort)
+			}
+		} else {
+			log.Printf("kms: ZAP wire transport disabled (ZAP_PORT=0); /v1/sdk HTTP surface still active")
 		}
 	} else {
-		log.Printf("kms: ZAP secrets-server disabled (set MPC_REK_ENDPOINT or KMS_MASTER_KEY_B64 and ZAP_PORT to enable)")
+		log.Printf("kms: secrets plane disabled (set MPC_REK_ENDPOINT or KMS_MASTER_KEY_B64 to enable /v1/sdk + ZAP)")
 	}
 
 	// IAM OIDC SSO — /v1/sso/oidc/{login,callback}, /v1/sso/whoami, /v1/sso/logout.

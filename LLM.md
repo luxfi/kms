@@ -166,6 +166,43 @@ KMS no longer log.Fatalf's when MPC is unreachable at boot. If
 Each request to `/v1/kms/keys/*` re-probes MPC, so the same pod
 recovers transparently when MPC comes back; no restart needed.
 
+## /v1/sdk — enveloped secrets + threshold-sign surface (HTTP)
+
+The SDK-facing native secrets plane. It exposes the SAME
+verify→authorize→dispatch core as the in-cluster ZAP wire
+(`pkg/zapserver`) over HTTP — one implementation, two framings
+(`Server.dispatch` is the shared op→handler router; `Server.Register`
+frames it on ZAP, `Server.HTTPHandler` frames it on HTTP). Mounted at
+`/v1/sdk/` by kmsd whenever the REK is loaded, independent of `ZAP_PORT`.
+
+- **One endpoint**: `POST /v1/sdk/secrets`. The body is a signed
+  `envelope.Envelope`; the OPERATION is the SIGNED `op` field, never the
+  URL — so no URL framing can escalate a read identity into a write.
+- **The envelope IS the credential** — no bearer token on this surface.
+  Every request is ML-DSA-65-signed by a mnemonic-derived
+  `keys.ServiceIdentity`; verified for signature + wall-clock freshness
+  (±5m) + replay (per-`(NodeID,nonce)` ledger) before dispatch.
+- **Consensus-native authz** (`InProcessAuthorizer`): validators may read
+  (`OpSecretGet` 0x0040 / `OpSecretList` 0x0042 / `OpVerify` 0x0051);
+  operators additionally may write (`OpSecretPut` 0x0041 — also the
+  rotate op, upsert / `OpSecretDelete` 0x0043 / `OpSign` 0x0050). Same
+  fail-closed authorizer + nonce ledger as ZAP; kmsd refuses to boot
+  without them.
+- **Threshold sign** (`OpSign`/`OpVerify`) dispatches to a
+  `zapserver.SignBackend` (wired by `pkg/sdksign` over the MPC-backed
+  `keys.Manager`). KMS holds NO full key material — signing is t-of-n in
+  luxfi/mpc. Verify is a local public-key check: ed25519 (corona) via
+  stdlib; secp256k1 (bls) is delegated to the chain/precompile layer
+  (`sdksign.ErrVerifyBLSDelegated`) — a documented boundary, not a stub.
+- **Status mapping**: OK→200, not-found→404, forbid→403 (replay masked as
+  generic `forbidden`), error→400, oversize→413 (4 MiB cap), handler
+  failure→500 (no internal detail leaked).
+
+Verified in `pkg/zapserver/http_test.go` (18 httptest cases) +
+`pkg/sdksign/*_test.go` (real ed25519 roundtrip). Live t-of-n signing is
+the MPC integration boundary (KMS-side auth contract is what's proven
+here).
+
 ## Project Overview
 
 KMS is an MPC-backed key management service for the Lux Network. It manages validator keys, threshold signing, secret storage, and key rotation using distributed Multi-Party Computation.

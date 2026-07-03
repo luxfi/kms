@@ -53,13 +53,21 @@ const (
 	OpAuthPut    Op = Op(OpSecretPut)
 	OpAuthList   Op = Op(OpSecretList)
 	OpAuthDelete Op = Op(OpSecretDelete)
+	// Threshold key ops. Deliberate, documented widening of the
+	// authorizer contract (not a silent one): OpSign is a privileged
+	// key operation gated behind the operator (write) authority;
+	// OpVerify is a public-key check gated behind the validator (read)
+	// authority.
+	OpAuthSign   Op = Op(OpSign)
+	OpAuthVerify Op = Op(OpVerify)
 )
 
-// IsWrite reports whether the opcode is a mutation. Used by the
-// in-process authorizer to gate writes behind the admin overlay.
+// IsWrite reports whether the opcode is a mutation (or, for OpSign, a
+// privileged key operation). Used by the in-process authorizer to gate
+// these behind the operator authority.
 func (o Op) IsWrite() bool {
 	switch o {
-	case OpAuthPut, OpAuthDelete:
+	case OpAuthPut, OpAuthDelete, OpAuthSign:
 		return true
 	default:
 		return false
@@ -78,6 +86,10 @@ func (o Op) String() string {
 		return "OpSecretList"
 	case OpAuthDelete:
 		return "OpSecretDelete"
+	case OpAuthSign:
+		return "OpSign"
+	case OpAuthVerify:
+		return "OpVerify"
 	}
 	return fmt.Sprintf("Op_0x%04X", uint16(o))
 }
@@ -232,7 +244,7 @@ type InProcessAuthorizer struct {
 // failure while the wire still sees a clean forbid.
 func (a *InProcessAuthorizer) Authorize(ctx context.Context, ident Identity, path string, op Op) (Decision, error) {
 	switch op {
-	case OpAuthGet, OpAuthPut, OpAuthList, OpAuthDelete:
+	case OpAuthGet, OpAuthPut, OpAuthList, OpAuthDelete, OpAuthSign, OpAuthVerify:
 	default:
 		return Deny(fmt.Sprintf("unknown-opcode-%s", op.String())), nil
 	}

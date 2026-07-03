@@ -80,7 +80,7 @@ func bootConsensusNativeServer(t *testing.T, validators, operators []ids.NodeID)
 	secStore := store.NewSecretStore(db)
 
 	// Pre-populate so an authorized Get returns OK rather than NotFound.
-	sec, err := store.Seal(mk, "hanzo/commerce", "api-key", "prod", []byte("secret-value"))
+	sec, err := store.Seal(mk, "hanzo/commerce", "api-key", "prod", []byte("sk_live_real"))
 	if err != nil {
 		t.Fatalf("store.Seal: %v", err)
 	}
