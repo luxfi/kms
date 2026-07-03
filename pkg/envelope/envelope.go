@@ -242,10 +242,10 @@ func Verify(env *Envelope, now time.Time, verifier VerifierFunc) (VerifiedIdenti
 // kmsd Server wraps a VerifierWithLedger and uses it for every wire
 // request. Tests that don't care about replay defence stay on Verify().
 //
-// Construction:
+// Construction (production MUST bind pubkey→identity — see NewBoundVerifier):
 //
 //	v, err := envelope.NewVerifierWithLedger(envelope.VerifierWithLedgerConfig{
-//	    Verifier: keys.VerifyServiceEnvelope,
+//	    Verifier: envelope.NewBoundVerifier(keys.ServiceChainID, keys.VerifyServiceEnvelope),
 //	    Ledger:   envelope.NewMemoryNonceLedger(envelope.MemoryNonceLedgerConfig{}),
 //	})
 //
@@ -260,8 +260,11 @@ type VerifierWithLedger struct {
 
 // VerifierWithLedgerConfig wires a VerifierWithLedger.
 type VerifierWithLedgerConfig struct {
-	// Verifier is the ML-DSA-65 signature verifier. Production passes
-	// keys.VerifyServiceEnvelope. Required.
+	// Verifier is the ML-DSA-65 signature verifier. Production MUST pass a
+	// binding verifier — NewBoundVerifier(keys.ServiceChainID,
+	// keys.VerifyServiceEnvelope) — so the envelope's public key is proven
+	// to commit to its claimed identity digest. A bare signature verifier
+	// accepts forged identities (see binding.go). Required.
 	Verifier VerifierFunc
 
 	// Ledger records (NodeID, Nonce) tuples and rejects duplicates.
@@ -382,9 +385,9 @@ func canonicalBytes(env *Envelope) ([]byte, error) {
 //   - req:    inner request JSON (already marshalled).
 //   - nonce:  caller-fresh nonce (typically 16 random bytes, base64-
 //     encoded). The verifier ledgers (NodeID, Nonce) for the duration
-//     of MaxClockSkew + 1m and rejects duplicates — callers MUST use a
-//     fresh nonce per envelope. Reusing a nonce within the window
-//     produces ErrReplay at the verifier.
+//     of DefaultNonceLedgerTTL (2*MaxClockSkew + 1m) and rejects
+//     duplicates — callers MUST use a fresh nonce per envelope. Reusing a
+//     nonce within the window produces ErrReplay at the verifier.
 //   - now:    wall-clock at signing time.
 func Build(hdr IdentityHeader, signer Signer, op uint16, req json.RawMessage, nonce string, now time.Time) (*Envelope, error) {
 	if signer == nil {
