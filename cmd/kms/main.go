@@ -271,33 +271,10 @@ func main() {
 		})
 	}))
 
-	// POST /v1/kms/orgs/{org}/secrets — create a secret.
-	mux.HandleFunc("POST /v1/kms/orgs/{org}/secrets", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
-		var req struct {
-			Path  string `json:"path"`
-			Name  string `json:"name"`
-			Env   string `json:"env"`
-			Value string `json:"value"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
-			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "name and value required"})
-			return
-		}
-		if req.Env == "" {
-			req.Env = "default"
-		}
-		sec := &store.Secret{
-			Name:       req.Name,
-			Path:       req.Path,
-			Env:        req.Env,
-			Ciphertext: []byte(req.Value),
-		}
-		if err := secStore.Put(sec); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]any{"message": err.Error()})
-			return
-		}
-		writeJSON(w, http.StatusCreated, map[string]any{"ok": true})
-	}))
+	// POST /v1/kms/orgs/{org}/secrets — create a secret. The handler is a
+	// named func (putSecretHandler) so the env-required contract is unit
+	// testable without standing up the full server.
+	mux.HandleFunc("POST /v1/kms/orgs/{org}/secrets", auth.requireOrgJWT(putSecretHandler(secStore)))
 
 	// DELETE /v1/kms/orgs/{org}/secrets/{rest...}/{name}
 	mux.HandleFunc("DELETE /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
@@ -500,6 +477,48 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
+}
+
+// putSecretHandler serves POST /v1/kms/orgs/{org}/secrets (create/upsert).
+//
+// env is a first-class component of the storage key
+// (kms/secrets/{path}/{env}/{name}); it can never be aliased. A silent
+// "default" would commit the write to a bucket that project/env/path readers
+// (the kms-operator, cluster syncs) never resolve — the exact split that let
+// an IAM z-password land in env=default while prod kept serving the stale
+// value. So a write with no env fails loud (400). Reads (GET) keep a
+// backward-compatible default: a read cannot plant a value another reader
+// later trusts, and legacy readers that omit env must keep working.
+func putSecretHandler(secStore *store.SecretStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Path  string `json:"path"`
+			Name  string `json:"name"`
+			Env   string `json:"env"`
+			Value string `json:"value"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "name and value required"})
+			return
+		}
+		if strings.TrimSpace(req.Env) == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"message": `env is required — set "env" in the request body; there is no default. A silent default would split this write from the project/env/path record readers resolve.`,
+			})
+			return
+		}
+		sec := &store.Secret{
+			Name:       req.Name,
+			Path:       req.Path,
+			Env:        req.Env,
+			Ciphertext: []byte(req.Value),
+		}
+		if err := secStore.Put(sec); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]any{"message": err.Error()})
+			return
+		}
+		writeJSON(w, http.StatusCreated, map[string]any{"ok": true})
+	}
 }
 
 // registerStubKMSRoutes installs 503-only handlers for every /v1/kms/keys/*
