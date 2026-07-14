@@ -254,7 +254,7 @@
                     </div>
                     <div class="legend-item">
                         <div class="legend-color" style="background: #f093fb;"></div>
-                        <span>Corona</span>
+                        <span>Ringtail</span>
                     </div>
                     <div class="legend-item">
                         <div class="legend-color" style="background: #4facfe;"></div>
@@ -340,7 +340,7 @@
                         <td>Level 5</td>
                     </tr>
                     <tr>
-                        <td><strong>Corona (Hybrid)</strong></td>
+                        <td><strong>Ringtail (Hybrid)</strong></td>
                         <td class="good">6,780</td>
                         <td class="good">0.15 ms</td>
                         <td class="good">99.97%</td>
@@ -435,7 +435,7 @@
                         tension: 0.4
                     },
                     {
-                        label: 'Corona',
+                        label: 'Ringtail',
                         data: Array(20).fill(0).map(() => 6500 + Math.random() * 500),
                         borderColor: '#f093fb',
                         tension: 0.4
@@ -456,7 +456,7 @@
         const verificationChart = new Chart(verificationCtx, {
             type: 'bar',
             data: {
-                labels: ['BLS', 'ML-DSA', 'SLH-DSA', 'Corona', 'Verkle'],
+                labels: ['BLS', 'ML-DSA', 'SLH-DSA', 'Ringtail', 'Verkle'],
                 datasets: [{
                     label: 'Average Verification Time',
                     data: [0.08, 0.12, 0.47, 0.15, 0.05],
@@ -488,7 +488,7 @@
         const gasChart = new Chart(gasCtx, {
             type: 'doughnut',
             data: {
-                labels: ['BLS', 'ML-DSA', 'SLH-DSA', 'Corona', 'Verkle', 'Other'],
+                labels: ['BLS', 'ML-DSA', 'SLH-DSA', 'Ringtail', 'Verkle', 'Other'],
                 datasets: [{
                     data: [25, 30, 10, 20, 10, 5],
                     backgroundColor: [
@@ -556,7 +556,7 @@
                 dataset.data.shift();
                 const base = dataset.label === 'BLS' ? 12000 :
                            dataset.label === 'ML-DSA' ? 8000 :
-                           dataset.label === 'Corona' ? 6500 : 18000;
+                           dataset.label === 'Ringtail' ? 6500 : 18000;
                 dataset.data.push(base + Math.random() * 1000);
             });
             signatureChart.update('none');

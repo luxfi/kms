@@ -8,7 +8,10 @@ import (
 var disabledLogger Logger
 
 func init() {
-	SetGlobalLevel(TraceLevel)
+	// Global level defaults to DebugLevel (zero value of Level = 0).
+	// Applications that want trace output must call SetGlobalLevel(TraceLevel).
+	// Do NOT reset to TraceLevel here -- it causes debug spam from dependency
+	// init() functions before the application configures its own log level.
 	disabledLogger = Noop()
 }
 

@@ -308,7 +308,13 @@ func (h *cgoSessionHandle) dex() DEXOps         { return h.dexOps }
 func (h *cgoSessionHandle) createTensor(dtype DType, shape []int) (tensorHandle, error) {
 	t, err := capi.CreateTensor(h.session, int(dtype), shape)
 	if err != nil {
-		return nil, err
+		// Red CRITICAL Probe 9: translate the capi sentinel into the
+		// public accel sentinel so consumers using errors.Is against
+		// accel.ErrInvalidArgument match. Without translateCapiError
+		// the bare capi.ErrInvalidArgument leaks out and errors.Is
+		// returns false (distinct errors.New sentinels at distinct
+		// pointers) → silent CPU fallback in M-1 consumers.
+		return nil, translateCapiError(err)
 	}
 	return &cgoTensorHandle{tensor: t}, nil
 }
@@ -316,7 +322,8 @@ func (h *cgoSessionHandle) createTensor(dtype DType, shape []int) (tensorHandle,
 func (h *cgoSessionHandle) createTensorWithData(dtype DType, shape []int, data []byte) (tensorHandle, error) {
 	t, err := capi.CreateTensorWithData(h.session, int(dtype), shape, data)
 	if err != nil {
-		return nil, err
+		// Red CRITICAL Probe 9: see createTensor above.
+		return nil, translateCapiError(err)
 	}
 	return &cgoTensorHandle{tensor: t}, nil
 }

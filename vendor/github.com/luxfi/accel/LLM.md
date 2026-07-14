@@ -75,6 +75,19 @@ lux/accel/
 - Kyber encapsulation/decapsulation
 - Dilithium signing/verification
 - Polynomial NTT/iNTT
+- ML-DSA batched verify / sign (FIPS 204; modes 2/3/5 = ML-DSA-44/65/87) —
+  routes through `LatticeOps.MLDSAVerifyBatch` / `MLDSASignBatch` (C ABI:
+  `lux_mldsa_verify_batch`, `lux_mldsa_sign_batch`). Stubs return
+  LUX_NO_BACKEND when libluxaccel has no impl; Go-side callers (Pulsar)
+  fall back to per-element CPU verify.
+- `LatticeNTTMLDSABatch` — in-place forward / inverse NTT over
+  Z_q[X]/(X^256+1), q=8380417 (ML-DSA prime), batched across N polynomials.
+  C ABI `lux_lattice_ntt_mldsa_batch`. CPU oracle in
+  `ops/lattice/mldsa_ntt.go` is byte-equal to PQCLEAN_MLDSA65_CLEAN_ntt
+  (the same body GPU plugins ship under lux-private/gpu-kernels/ops/
+  lattice/ntt_mldsa/). `accel.MLDSABatchThreshold = 8` — below this the
+  Go top-level dispatch returns ErrNotSupported so consumers route to
+  the per-poly CPU path.
 
 ### DEX (`ops/dex`)
 - Constant product swaps
@@ -219,6 +232,37 @@ The introspector's probe order:
 go build -tags=accel ./...
 # Enables GPU implementations in ops/*
 ```
+
+### With lux_accel_real tag (link libluxaccel)
+
+The capi layer at `internal/capi/` has TWO mutually-exclusive build
+files. Selector: `lux_accel_real`.
+
+| Build | File compiled | C symbols resolved by |
+|---|---|---|
+| `go build ./...` (default) | `stub_default.go` | in-tree stub bodies returning `LUX_NO_BACKEND` |
+| `go build -tags lux_accel_real ./...` | `real.go` | `-lluxaccel` → `libluxaccel.{so,dylib}` |
+
+```bash
+# Real build (Linux/CUDA, Spark GB10, etc.)
+CGO_LDFLAGS="-L/usr/local/lib -lluxaccel" \
+LD_LIBRARY_PATH=/usr/local/lib \
+  go build -tags lux_accel_real ./...
+
+# Real build (Apple Silicon / Metal)
+CGO_LDFLAGS="-L/opt/homebrew/lib -lluxaccel" \
+DYLD_LIBRARY_PATH=/opt/homebrew/lib \
+  go build -tags lux_accel_real ./...
+```
+
+The earlier scheme used `__attribute__((weak))` on every C stub to
+allow the loader to override at runtime via `LD_PRELOAD`. Modern
+linkers (with `--as-needed` default) resolve the references against
+the in-Go-object weak stubs and drop the `DT_NEEDED` for libluxaccel.
+Result: GPU paths silently ran on CPU. An audit on a Spark GB10
+host (2026-06-05) caught this — full ML-DSA bench ran at SM% 9-10%
+and 16 W. The build-tag flip is the fix: stub bodies and link
+directive can never both be in one build.
 
 ## Related
 

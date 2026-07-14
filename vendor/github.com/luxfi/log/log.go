@@ -593,39 +593,39 @@ func (l *logger) should(lvl Level) bool {
 
 type noopLogger struct{}
 
-func (noopLogger) Trace(string, ...interface{})                    {}
-func (noopLogger) Debug(string, ...interface{})                    {}
-func (noopLogger) Info(string, ...interface{})                     {}
-func (noopLogger) Warn(string, ...interface{})                     {}
-func (noopLogger) Error(string, ...interface{})                    {}
-func (noopLogger) Fatal(string, ...interface{})                    {}
-func (noopLogger) Panic(string, ...interface{})                    {}
-func (noopLogger) Crit(string, ...interface{})                     {}
-func (noopLogger) Verbo(string, ...interface{})                    {}
-func (noopLogger) Log(Level, string, ...interface{})               {}
-func (n noopLogger) With() Context                                 { return Context{} }
-func (n noopLogger) New(...interface{}) Logger                     { return n }
-func (n noopLogger) Output(io.Writer) Logger                       { return n }
-func (n noopLogger) Level(Level) Logger                            { return n }
-func (noopLogger) GetLevel() Level                                 { return Disabled }
-func (noopLogger) IsZero() bool                                    { return true }
-func (noopLogger) Enabled(context.Context, slog.Level) bool        { return false }
-func (noopLogger) Sample(Sampler) Logger                           { return Noop() }
-func (noopLogger) Hook(...Hook) Logger                             { return Noop() }
-func (noopLogger) TraceEvent() *Event                              { return nil }
-func (noopLogger) DebugEvent() *Event                              { return nil }
-func (noopLogger) InfoEvent() *Event                               { return nil }
-func (noopLogger) WarnEvent() *Event                               { return nil }
-func (noopLogger) ErrorEvent() *Event                              { return nil }
-func (noopLogger) FatalEvent() *Event                              { return nil }
-func (noopLogger) PanicEvent() *Event                              { return nil }
-func (noopLogger) Err(error) *Event                                { return nil }
-func (noopLogger) WithLevel(Level) *Event                          { return nil }
-func (noopLogger) LogEvent() *Event                                { return nil }
-func (noopLogger) Print(...interface{})                            {}
-func (noopLogger) Printf(string, ...interface{})                   {}
-func (noopLogger) Write(p []byte) (int, error)                     { return len(p), nil }
-func (noopLogger) SetLogLevel(string) error                        { return nil }
+func (noopLogger) Trace(string, ...interface{})             {}
+func (noopLogger) Debug(string, ...interface{})             {}
+func (noopLogger) Info(string, ...interface{})              {}
+func (noopLogger) Warn(string, ...interface{})              {}
+func (noopLogger) Error(string, ...interface{})             {}
+func (noopLogger) Fatal(string, ...interface{})             {}
+func (noopLogger) Panic(string, ...interface{})             {}
+func (noopLogger) Crit(string, ...interface{})              {}
+func (noopLogger) Verbo(string, ...interface{})             {}
+func (noopLogger) Log(Level, string, ...interface{})        {}
+func (n noopLogger) With() Context                          { return Context{} }
+func (n noopLogger) New(...interface{}) Logger              { return n }
+func (n noopLogger) Output(io.Writer) Logger                { return n }
+func (n noopLogger) Level(Level) Logger                     { return n }
+func (noopLogger) GetLevel() Level                          { return Disabled }
+func (noopLogger) IsZero() bool                             { return true }
+func (noopLogger) Enabled(context.Context, slog.Level) bool { return false }
+func (noopLogger) Sample(Sampler) Logger                    { return Noop() }
+func (noopLogger) Hook(...Hook) Logger                      { return Noop() }
+func (noopLogger) TraceEvent() *Event                       { return nil }
+func (noopLogger) DebugEvent() *Event                       { return nil }
+func (noopLogger) InfoEvent() *Event                        { return nil }
+func (noopLogger) WarnEvent() *Event                        { return nil }
+func (noopLogger) ErrorEvent() *Event                       { return nil }
+func (noopLogger) FatalEvent() *Event                       { return nil }
+func (noopLogger) PanicEvent() *Event                       { return nil }
+func (noopLogger) Err(error) *Event                         { return nil }
+func (noopLogger) WithLevel(Level) *Event                   { return nil }
+func (noopLogger) LogEvent() *Event                         { return nil }
+func (noopLogger) Print(...interface{})                     {}
+func (noopLogger) Printf(string, ...interface{})            {}
+func (noopLogger) Write(p []byte) (int, error)              { return len(p), nil }
+func (noopLogger) SetLogLevel(string) error                 { return nil }
 func (noopLogger) RecoverAndPanic(fn func()) {
 	defer func() {
 		if r := recover(); r != nil {

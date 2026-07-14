@@ -119,6 +119,9 @@ func (o *stubLatticeOps) PolynomialINTT(input, output *UntypedTensor, q uint32) 
 }
 func (o *stubLatticeOps) PolynomialMul(a, b, c *UntypedTensor, q uint32) error { return ErrNoBackends }
 func (o *stubLatticeOps) PolynomialAdd(a, b, c *UntypedTensor, q uint32) error { return ErrNoBackends }
+func (o *stubLatticeOps) LatticeNTTMLDSABatch(polys *UntypedTensor, inverse bool) error {
+	return ErrNoBackends
+}
 
 type stubFHEOps struct{}
 
