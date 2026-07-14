@@ -47,30 +47,45 @@ type KeygenRequest struct {
 // downstream EVM L1s, Hanzo EVM, etc.). The derivation hashes the secp256k1
 // pubkey with Keccak256 — that's HOW. The value IS "EVM-runtime
 // account address" — that's WHAT.
+// Wire tags are snake_case to match the mpcd ZAP keygen response
+// (luxfi/mpc pkg/api/server.go KeygenResult: wallet_id / ecdsa_pub_key /
+// eddsa_pub_key / evm_address / btc_address / sol_address). The ZAP path in
+// zap_client.go is the ONLY live decode path for this struct; the REST Client
+// is unused. Do NOT reintroduce camelCase — that silently decoded to an empty
+// result (the KMS↔MPC wire drift). See mpc.wire_contract_test.go, which fails
+// CI if this diverges from the mpcd contract again.
 type KeygenResult struct {
-	ID           string   `json:"id"`
-	WalletID     string   `json:"walletId"`
-	VaultID      string   `json:"vaultId"`
-	Name         *string  `json:"name"`
-	KeyType      string   `json:"keyType"`
-	Protocol     string   `json:"protocol"`
-	ECDSAPubkey  *string  `json:"ecdsaPubkey"`
-	EDDSAPubkey  *string  `json:"eddsaPubkey"`
-	EVMAddress   *string  `json:"evmAddress,omitempty"`
-	BtcAddress   *string  `json:"btcAddress"`
-	SolAddress   *string  `json:"solAddress"`
-	Threshold    int      `json:"threshold"`
-	Participants []string `json:"participants"`
-	Version      int      `json:"version"`
-	Status       string   `json:"status"`
+	ID           string   `json:"id,omitempty"`
+	WalletID     string   `json:"wallet_id"`
+	VaultID      string   `json:"vault_id,omitempty"`
+	Name         *string  `json:"name,omitempty"`
+	KeyType      string   `json:"key_type,omitempty"`
+	Protocol     string   `json:"protocol,omitempty"`
+	ECDSAPubkey  *string  `json:"ecdsa_pub_key"`
+	EDDSAPubkey  *string  `json:"eddsa_pub_key"`
+	EVMAddress   *string  `json:"evm_address,omitempty"`
+	BtcAddress   *string  `json:"btc_address,omitempty"`
+	SolAddress   *string  `json:"sol_address,omitempty"`
+	Threshold    int      `json:"threshold,omitempty"`
+	Participants []string `json:"participants,omitempty"`
+	Version      int      `json:"version,omitempty"`
+	Status       string   `json:"status,omitempty"`
 }
 
 // SignRequest is the body sent to POST /v1/generate_mpc_sig or through
 // the transaction flow. For validator signing we use the bridge sign endpoint.
+// SignRequest is the KMS→MPC threshold-sign payload. Field names/tags match
+// the mpcd ZAP sign handler (luxfi/mpc pkg/api/zap_kms_server.go
+// kmsZapSignRequest{vault_id, wallet_id, payload}); mpcd requires vault_id AND
+// wallet_id and reads the message from `payload`. VaultID is the MPC org/vault
+// that owns the wallet — the KMS Manager supplies it from MPC_VAULT_ID.
+// KeyType is advisory (mpcd resolves the curve from its key-info store); it is
+// carried for the REST path and ignored by the ZAP server.
 type SignRequest struct {
-	KeyType  string `json:"key_type"`
+	VaultID  string `json:"vault_id"`
 	WalletID string `json:"wallet_id"`
-	Message  []byte `json:"message"`
+	KeyType  string `json:"key_type,omitempty"`
+	Payload  []byte `json:"payload"`
 }
 
 // SignResult is the response from a signing operation.
@@ -188,9 +203,10 @@ func (c *Client) Keygen(ctx context.Context, vaultID string, req KeygenRequest) 
 func (c *Client) Sign(ctx context.Context, req SignRequest) (*SignResult, error) {
 	url := fmt.Sprintf("%s/v1/transactions", c.BaseURL)
 	body, err := json.Marshal(map[string]interface{}{
+		"vault_id":  req.VaultID,
 		"wallet_id": req.WalletID,
 		"key_type":  req.KeyType,
-		"payload":   req.Message,
+		"payload":   req.Payload,
 		"type":      "sign",
 	})
 	if err != nil {
