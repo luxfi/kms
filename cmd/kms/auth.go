@@ -108,7 +108,7 @@ func orgAuthorizes(tokenOrg, requested string) bool {
 // a gateway that rewrites Host.
 type orgJWTAuth struct {
 	jwksURL string
-	issuer  string
+	issuers []string // accepted `iss` values; a white-label KMS trusts every brand IAM that shares its signing keys
 	cache   *jwksCache
 }
 
@@ -118,20 +118,51 @@ type orgJWTAuth struct {
 // iamEndpoint is used (matches the simple single-URL deployment).
 func newOrgJWTAuth(iamEndpoint, expectedIssuer string) *orgJWTAuth {
 	iam := strings.TrimRight(iamEndpoint, "/")
-	iss := strings.TrimRight(expectedIssuer, "/")
-	if iss == "" {
-		iss = iam
+	issuers := parseIssuers(expectedIssuer)
+	if len(issuers) == 0 {
+		issuers = []string{iam}
 	}
 	jwksURL := iam + "/.well-known/jwks"
 	return &orgJWTAuth{
 		jwksURL: jwksURL,
-		issuer:  iss,
+		issuers: issuers,
 		cache: &jwksCache{
 			url:    jwksURL,
 			ttl:    5 * time.Minute,
 			client: &http.Client{Timeout: 10 * time.Second},
 		},
 	}
+}
+
+// parseIssuers normalizes KMS_EXPECTED_ISSUER into the set of accepted
+// `iss` values. A comma-separated list lets one KMS serve multiple
+// white-label brands that share IAM signing keys — e.g. a Lux-brand KMS
+// trusting both `https://hanzo.id` and `https://lux.id`. Order-preserving,
+// de-duplicated, trailing slashes trimmed.
+func parseIssuers(s string) []string {
+	out := []string{}
+	seen := map[string]bool{}
+	for _, part := range strings.Split(s, ",") {
+		v := strings.TrimRight(strings.TrimSpace(part), "/")
+		if v == "" || seen[v] {
+			continue
+		}
+		seen[v] = true
+		out = append(out, v)
+	}
+	return out
+}
+
+// issuerAllowed reports whether a token's `iss` claim is one of the
+// configured accepted issuers (trailing-slash insensitive).
+func issuerAllowed(allowed []string, iss string) bool {
+	iss = strings.TrimRight(iss, "/")
+	for _, a := range allowed {
+		if iss == a {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *orgJWTAuth) validate(ctx context.Context, raw string) (*orgClaims, error) {
@@ -193,12 +224,13 @@ func (a *orgJWTAuth) validate(ctx context.Context, raw string) (*orgClaims, erro
 		}
 		return nil, fmt.Errorf("verify: %w", lastErr)
 	}
-	exp := jwt.Expected{
-		Time:   time.Now(),
-		Issuer: a.issuer,
-	}
-	if err := claims.Claims.Validate(exp); err != nil {
+	// Time/expiry via go-jose; issuer is checked separately so we can accept
+	// a set of white-label brand issuers (go-jose's Expected pins exactly one).
+	if err := claims.Claims.Validate(jwt.Expected{Time: time.Now()}); err != nil {
 		return nil, fmt.Errorf("validate: %w", err)
+	}
+	if !issuerAllowed(a.issuers, claims.Issuer) {
+		return nil, fmt.Errorf("validate: issuer %q not accepted", claims.Issuer)
 	}
 	if len(claims.orgs()) == 0 {
 		return nil, errors.New("token has no resolvable org")
