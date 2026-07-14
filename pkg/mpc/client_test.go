@@ -87,7 +87,7 @@ func TestSign(t *testing.T) {
 	defer srv.Close()
 
 	c, _ := NewClient(srv.URL, "test-token")
-	result, err := c.Sign(context.Background(), SignRequest{WalletID: "wallet-1", KeyType: "secp256k1", Message: []byte("hello")})
+	result, err := c.Sign(context.Background(), SignRequest{VaultID: "vault-1", WalletID: "wallet-1", KeyType: "secp256k1", Payload: []byte("hello")})
 	if err != nil {
 		t.Fatalf("sign: %v", err)
 	}

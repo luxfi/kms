@@ -101,15 +101,18 @@ func mockMPCServer(t *testing.T) *httptest.Server {
 			pub := "04pubkey" + string(rune('0'+keygenCount))
 			edpub := "edpub" + string(rune('0'+keygenCount))
 			w.WriteHeader(http.StatusCreated)
+			// snake_case keys match the mpcd wire (KeygenResult in
+			// luxfi/mpc pkg/api/server.go). camelCase here was the drift that
+			// silently decoded to an empty result.
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"id":           "id-" + string(rune('0'+keygenCount)),
-				"walletId":     "wallet-" + string(rune('0'+keygenCount)),
-				"vaultId":      "vault-1",
-				"ecdsaPubkey":  pub,
-				"eddsaPubkey":  edpub,
-				"threshold":    3,
-				"participants": []string{"node0", "node1", "node2", "node3", "node4"},
-				"status":       "active",
+				"id":            "id-" + string(rune('0'+keygenCount)),
+				"wallet_id":     "wallet-" + string(rune('0'+keygenCount)),
+				"vault_id":      "vault-1",
+				"ecdsa_pub_key": pub,
+				"eddsa_pub_key": edpub,
+				"threshold":     3,
+				"participants":  []string{"node0", "node1", "node2", "node3", "node4"},
+				"status":        "active",
 			})
 		default:
 			w.WriteHeader(http.StatusNotFound)

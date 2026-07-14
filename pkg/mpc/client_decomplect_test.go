@@ -56,15 +56,17 @@ func TestKeygenResult_EVMAddress(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(out)
-	if !strings.Contains(s, `"evmAddress":"`+addr+`"`) {
-		t.Fatalf("missing evmAddress: %s", s)
+	// snake_case matches the mpcd ZAP keygen response (evm_address). camelCase
+	// was the wire drift that silently decoded to empty — see wire_contract_test.go.
+	if !strings.Contains(s, `"evm_address":"`+addr+`"`) {
+		t.Fatalf("missing evm_address: %s", s)
 	}
-	if strings.Contains(s, "keccakAddress") || strings.Contains(s, "ethAddress") {
+	if strings.Contains(s, "keccakAddress") || strings.Contains(s, "ethAddress") || strings.Contains(s, "evmAddress") {
 		t.Fatalf("legacy alias leaked: %s", s)
 	}
 
-	// Unmarshal: evmAddress populates EVMAddress.
-	src := `{"id":"k2","evmAddress":"` + addr + `"}`
+	// Unmarshal: evm_address populates EVMAddress.
+	src := `{"id":"k2","evm_address":"` + addr + `"}`
 	var k2 KeygenResult
 	if err := json.Unmarshal([]byte(src), &k2); err != nil {
 		t.Fatal(err)
