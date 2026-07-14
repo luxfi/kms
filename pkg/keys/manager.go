@@ -156,9 +156,10 @@ func (m *Manager) SignWithBLS(ctx context.Context, validatorID string, message [
 	}
 
 	result, err := m.signer.Sign(ctx, mpc.SignRequest{
+		VaultID:  m.vaultID,
 		WalletID: ks.BLSWalletID,
 		KeyType:  "secp256k1",
-		Message:  message,
+		Payload:  message,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("keys: bls sign: %w", err)
@@ -179,9 +180,10 @@ func (m *Manager) SignWithCorona(ctx context.Context, validatorID string, messag
 	}
 
 	result, err := m.signer.Sign(ctx, mpc.SignRequest{
+		VaultID:  m.vaultID,
 		WalletID: ks.CoronaWalletID,
 		KeyType:  "ed25519",
-		Message:  message,
+		Payload:  message,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("keys: corona sign: %w", err)
