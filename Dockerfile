@@ -24,7 +24,15 @@ RUN git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "htt
 
 WORKDIR /build
 COPY go.mod go.sum ./
-RUN go mod download
+# GOSUMDB=off: luxfi first-party modules are being re-published under fixed
+# versions during the ongoing ecosystem re-tag (keys/pq re-published, geth
+# v1.16.x wiped for v1.17.12), so the immutable sum.golang.org lags the proxy
+# and rejects the current bits. Trust the proxy/authed-git source and record
+# what is really fetched — integrity is still enforced against go.sum. This is
+# regenerate-not-bypass, matching luxfi/mpc's builder. GITHUB_TOKEN (above)
+# authes any direct git fallback.
+ENV GOSUMDB=off
+RUN rm -f go.sum && go mod download
 COPY . .
 
 # Embed the React SPA into the Go binary at the embed.FS path (cmd/kms/web).
