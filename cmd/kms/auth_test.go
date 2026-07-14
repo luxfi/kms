@@ -469,6 +469,61 @@ func TestRequireOrgJWT_splitJwksAndIssuer(t *testing.T) {
 	}
 }
 
+// White-label: one KMS may accept several brand issuers via a
+// comma-separated KMS_EXPECTED_ISSUER. A token minted by ANY listed
+// issuer must validate; one minted by an unlisted issuer must 401. This
+// is the fix that lets the Lux-brand KMS accept lux.id tokens while still
+// honoring hanzo.id (both brands share IAM signing keys).
+func TestRequireOrgJWT_multiIssuerWhiteLabel(t *testing.T) {
+	signer, jwks := newTestSigner(t)
+	jwksHost := httptest.NewServer(jwksHandler(jwks))
+	defer jwksHost.Close()
+
+	// Note the whitespace + trailing slash — parseIssuers must normalize both.
+	auth := newOrgJWTAuth(jwksHost.URL, "https://hanzo.id, https://lux.id/")
+
+	mkTok := func(iss string) string {
+		return signOrgClaims(t, signer, orgClaims{
+			Claims: jwt.Claims{
+				Issuer:  iss,
+				Subject: "admin/sdm-kms",
+				Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+			},
+			Owner: "admin",
+			Name:  "sdm-kms",
+			Type:  "application",
+		})
+	}
+
+	cases := []struct {
+		name string
+		iss  string
+		want int
+	}{
+		{"hanzo.id accepted", "https://hanzo.id", http.StatusOK},
+		{"lux.id accepted", "https://lux.id", http.StatusOK},
+		{"trailing slash tolerated", "https://lux.id/", http.StatusOK},
+		{"unlisted issuer rejected", "https://evil.example.com", http.StatusUnauthorized},
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/v1/kms/orgs/sdm/secrets/staking/staker.crt", nil)
+			req.Header.Set("Authorization", "Bearer "+mkTok(c.iss))
+			rec := httptest.NewRecorder()
+			mux.ServeHTTP(rec, req)
+			if rec.Code != c.want {
+				t.Errorf("iss=%s: got %d want %d; body=%s", c.iss, rec.Code, c.want, rec.Body.String())
+			}
+		})
+	}
+}
+
 func TestBearerToken_extracts(t *testing.T) {
 	cases := []struct {
 		header, want string
