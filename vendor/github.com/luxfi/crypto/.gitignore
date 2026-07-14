@@ -1,32 +1,35 @@
 
-
+__pycache__/
+.DS_Store
+.next/
+.pnpm-store/
+*.log
+**/__pycache__/
+**/dist/
+**/node_modules/
+**/target/
+# hygiene (untrack node_modules, block common build output)
+# mlkem dudect build artifacts
 AGENTS.md
+build/
 CLAUDE.md
+coverage/
+dist/
 GEMINI.md
 GROK.md
-QWEN.md
 grpc-server.log
-
-# hygiene (untrack node_modules, block common build output)
-node_modules/
-**/node_modules/
-.pnpm-store/
-dist/
-build/
-.next/
-coverage/
-playwright-report/
-test-results/
-*.log
-tmp/
-.DS_Store
-
-# mlkem dudect build artifacts
-mlkem/ct/dudect/dudect/
 mlkem/ct/dudect/dudect_decaps
 mlkem/ct/dudect/dudect_encaps
 mlkem/ct/dudect/dudect_keygen
+mlkem/ct/dudect/dudect/
 mlkem/ct/dudect/libmlkem_*.dylib
-mlkem/ct/dudect/libmlkem_*.so
 mlkem/ct/dudect/libmlkem_*.h
+mlkem/ct/dudect/libmlkem_*.so
 mlkem/ct/dudect/results/
+node_modules/
+playwright-report/
+QWEN.md
+target/
+test-results/
+tmp/
+*.eco

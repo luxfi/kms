@@ -1,6 +1,6 @@
 # Lux Post-Quantum Cryptography Makefile
 
-.PHONY: all test bench clean fmt lint install-deps verify build
+.PHONY: all test bench clean fmt lint install-deps verify build gen_kats
 
 # Go parameters
 GOCMD=go
@@ -85,6 +85,20 @@ clean:
 	$(GOCMD) clean
 	rm -f coverage.out
 	@echo "✅ Clean complete"
+
+# Regenerate KAT vector files for crypto/pq/mldsa.
+#
+# The generator is deterministic: a second run produces byte-identical
+# output. The kats package itself has a TestRegen_Deterministic guard
+# that asserts the checked-in vectors_mldsa{44,65,87}.go files match a
+# fresh `go run`. After running this target, commit the regenerated
+# files; the test suite then proves they round-trip.
+gen_kats:
+	@echo "Regenerating ML-DSA KAT vectors..."
+	GOWORK=off $(GOCMD) run ./pq/mldsa/kats/internal/gen -out pq/mldsa/kats
+	@echo "Validating regenerated vectors..."
+	GOWORK=off $(GOTEST) -count=1 ./pq/mldsa/kats/...
+	@echo "✅ KAT vectors regenerated and validated"
 
 # Install CI tools
 install-tools:

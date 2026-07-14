@@ -162,7 +162,16 @@ func PublicKeyToUncompressedBytes(key *PublicKey) []byte {
 // are valid.
 func PublicKeyFromValidUncompressedBytes(pkBytes []byte) *PublicKey {
 	pk := new(blst.P1Affine)
-	pk.Deserialize(pkBytes)
+	if pk.Deserialize(pkBytes) == nil {
+		return nil
+	}
+	// Identity rejection lives at the ONE deserialization boundary (RESIDUAL C):
+	// KeyValidate() rejects the infinity point (and off-curve / wrong-subgroup),
+	// so an identity key never escapes a constructor. Downstream Verify therefore
+	// does NOT re-check for the identity point — the check belongs here, once.
+	if !pk.KeyValidate() {
+		return nil
+	}
 	return &PublicKey{pk: pk}
 }
 
@@ -183,22 +192,20 @@ func AggregatePublicKeys(pks []*PublicKey) (*PublicKey, error) {
 		}
 	}
 
-	return &PublicKey{pk: agg.ToAffine()}, nil
-}
-
-// isIdentityG1 checks if a public key is the identity point (point at infinity).
-// Returns true if the key is the identity, false otherwise.
-func isIdentityG1(pk *blst.P1Affine) bool {
-	// Check if the point is at infinity using blst's built-in check
-	// The identity point in G1 is represented as all zeros in compressed form
-	pkBytes := pk.Compress()
-	// Check for all-zero bytes (identity point encoding)
-	for _, b := range pkBytes {
-		if b != 0 {
-			return false
-		}
+	// Defence in depth: reject an aggregate that is the IDENTITY (point at
+	// infinity). Each INPUT key is a valid non-identity subgroup point (the
+	// constructors call KeyValidate), and the sum of subgroup points stays on-curve
+	// and in-subgroup — but it can still be the identity when the inputs sum to zero
+	// (the canonical rogue-key shape: pk + (-pk) = O). An identity aggregate public
+	// key makes Verify trivially accept the identity signature (a forgery enabler).
+	// blst's KeyValidate rejects the infinity point (and off-curve / wrong-subgroup),
+	// matching the purego path's result.Validate() — fail the aggregate closed rather
+	// than depend on proof-of-possession being enforced upstream everywhere.
+	out := agg.ToAffine()
+	if !out.KeyValidate() {
+		return nil, ErrFailedPublicKeyAggregation
 	}
-	return true
+	return &PublicKey{pk: out}, nil
 }
 
 // Verify the [sig] of [msg] against the [pk].
@@ -206,11 +213,13 @@ func Verify(pk *PublicKey, sig *Signature, msg []byte) bool {
 	if pk == nil || pk.pk == nil || sig == nil || sig.sig == nil {
 		return false
 	}
-	// Check that public key is not the identity point (zero-key)
-	// Identity point verification would trivially pass for any signature
-	if isIdentityG1(pk.pk) {
-		return false
-	}
+	// The identity (zero) public key is rejected at the deserialization boundary
+	// (PublicKeyFromCompressedBytes / PublicKeyFromValidUncompressedBytes call
+	// KeyValidate(), which rejects the infinity point), so a *PublicKey reaching
+	// Verify is already a valid non-identity G1 point. Re-checking here was
+	// redundant — and the old all-zero byte test was WRONG anyway (blst Compress()
+	// of the identity is 0xc0||zeros, not 0x00||zeros, so it never actually
+	// matched) — removed (RESIDUAL C): identity rejection belongs at decode, once.
 	return sig.sig.Verify(true, pk.pk, false, msg, dstSignature)
 }
 
@@ -219,10 +228,7 @@ func VerifyProofOfPossession(pk *PublicKey, sig *Signature, msg []byte) bool {
 	if pk == nil || pk.pk == nil || sig == nil || sig.sig == nil {
 		return false
 	}
-	// Check that public key is not the identity point (zero-key)
-	if isIdentityG1(pk.pk) {
-		return false
-	}
+	// Identity (zero) pubkey already rejected at decode (KeyValidate); see Verify.
 	return sig.sig.Verify(true, pk.pk, false, msg, dstPoP)
 }
 
@@ -247,7 +253,16 @@ func SignatureFromBytes(sigBytes []byte) (*Signature, error) {
 		return nil, ErrFailedSignatureDecompress
 	}
 
-	if !sig.SigValidate(false) {
+	// SigValidate(true) checks BOTH r-torsion subgroup membership AND rejects the
+	// G2 identity (point at infinity) — go_p2_affine_validate(p, infcheck=true) is
+	// `if is_inf(p) return false; return in_g2(p)`. The prior SigValidate(false)
+	// skipped the infinity check, accepting the identity signature (INFO-4); this
+	// makes the blst path symmetric with the purego SignatureFromBytes identity
+	// reject and with the pubkey identity guard at decode (KeyValidate). The
+	// identity sig does not forge
+	// against a real key, but admitting a degenerate point into the verifier is an
+	// asymmetry worth closing.
+	if !sig.SigValidate(true) {
 		return nil, ErrInvalidSignature
 	}
 

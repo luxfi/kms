@@ -271,18 +271,20 @@ func LevelString(l slog.Level) string {
 
 // GlogHandler is a log handler that mimics glog behavior.
 type GlogHandler struct {
-	origin    slog.Handler
-	verbosity slog.Level
-	vmodule   map[string]slog.Level
-	mu        sync.RWMutex
+	origin       slog.Handler
+	verbosity    slog.Level
+	vmodule      map[string]slog.Level
+	patternCache map[string]*regexp.Regexp // cached compiled patterns
+	mu           sync.RWMutex
 }
 
 // NewGlogHandler creates a GlogHandler wrapping the given handler.
 func NewGlogHandler(h slog.Handler) *GlogHandler {
 	return &GlogHandler{
-		origin:    h,
-		verbosity: slogLevelInfo,
-		vmodule:   make(map[string]slog.Level),
+		origin:       h,
+		verbosity:    slogLevelInfo,
+		vmodule:      make(map[string]slog.Level),
+		patternCache: make(map[string]*regexp.Regexp),
 	}
 }
 
@@ -299,6 +301,7 @@ func (h *GlogHandler) Vmodule(pattern string) error {
 	defer h.mu.Unlock()
 
 	h.vmodule = make(map[string]slog.Level)
+	h.patternCache = make(map[string]*regexp.Regexp)
 	if pattern == "" {
 		return nil
 	}
@@ -320,6 +323,10 @@ func (h *GlogHandler) Vmodule(pattern string) error {
 			}
 		}
 		h.vmodule[module] = level
+		// Precompile pattern regex
+		if re, err := compilePattern(module); err == nil {
+			h.patternCache[module] = re
+		}
 	}
 	return nil
 }
@@ -328,13 +335,15 @@ func (h *GlogHandler) Handle(ctx context.Context, r slog.Record) error {
 	h.mu.RLock()
 	verbosity := h.verbosity
 	vmodule := h.vmodule
+	patternCache := h.patternCache
 	h.mu.RUnlock()
 
 	if len(vmodule) > 0 {
 		_, file, _, ok := runtime.Caller(6)
 		if ok {
 			for pattern, level := range vmodule {
-				if matched, _ := matchPattern(pattern, file); matched && r.Level >= level {
+				re := patternCache[pattern]
+				if re != nil && re.MatchString(file) && r.Level >= level {
 					return h.origin.Handle(ctx, r)
 				}
 			}
@@ -347,15 +356,12 @@ func (h *GlogHandler) Handle(ctx context.Context, r slog.Record) error {
 	return nil
 }
 
-func matchPattern(pattern, file string) (bool, error) {
-	pattern = strings.ReplaceAll(pattern, ".", "\\.")
-	pattern = strings.ReplaceAll(pattern, "*", ".*")
-	pattern = strings.ReplaceAll(pattern, "/", "\\/")
-	re, err := regexp.Compile(pattern)
-	if err != nil {
-		return false, err
-	}
-	return re.MatchString(file), nil
+// compilePattern converts a vmodule pattern to a compiled regex.
+func compilePattern(pattern string) (*regexp.Regexp, error) {
+	escaped := strings.ReplaceAll(pattern, ".", "\\.")
+	escaped = strings.ReplaceAll(escaped, "*", ".*")
+	escaped = strings.ReplaceAll(escaped, "/", "\\/")
+	return regexp.Compile(escaped)
 }
 
 func (h *GlogHandler) Enabled(ctx context.Context, level slog.Level) bool {
@@ -372,12 +378,17 @@ func (h *GlogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	for k, v := range h.vmodule {
 		vmodule[k] = v
 	}
+	patternCache := make(map[string]*regexp.Regexp, len(h.patternCache))
+	for k, v := range h.patternCache {
+		patternCache[k] = v
+	}
 	h.mu.RUnlock()
 
 	return &GlogHandler{
-		origin:    h.origin.WithAttrs(attrs),
-		verbosity: verbosity,
-		vmodule:   vmodule,
+		origin:       h.origin.WithAttrs(attrs),
+		verbosity:    verbosity,
+		vmodule:      vmodule,
+		patternCache: patternCache,
 	}
 }
 
@@ -388,12 +399,17 @@ func (h *GlogHandler) WithGroup(name string) slog.Handler {
 	for k, v := range h.vmodule {
 		vmodule[k] = v
 	}
+	patternCache := make(map[string]*regexp.Regexp, len(h.patternCache))
+	for k, v := range h.patternCache {
+		patternCache[k] = v
+	}
 	h.mu.RUnlock()
 
 	return &GlogHandler{
-		origin:    h.origin.WithGroup(name),
-		verbosity: verbosity,
-		vmodule:   vmodule,
+		origin:       h.origin.WithGroup(name),
+		verbosity:    verbosity,
+		vmodule:      vmodule,
+		patternCache: patternCache,
 	}
 }
 
@@ -438,7 +454,24 @@ func (h *TerminalHandler) Enabled(_ context.Context, level slog.Level) bool {
 }
 
 func (h *TerminalHandler) WithGroup(name string) slog.Handler {
-	panic("not implemented")
+	// Create a new handler with the group prefix applied to attribute keys
+	return &TerminalHandler{
+		wr:           h.wr,
+		lvl:          h.lvl,
+		useColor:     h.useColor,
+		attrs:        h.attrs,
+		fieldPadding: make(map[string]int),
+		Prefix: func(r slog.Record) string {
+			prefix := ""
+			if h.Prefix != nil {
+				prefix = h.Prefix(r)
+			}
+			if name != "" {
+				prefix = prefix + name + "."
+			}
+			return prefix
+		},
+	}
 }
 
 func (h *TerminalHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
@@ -818,10 +851,10 @@ func DiscardHandler() slog.Handler {
 
 type discardHandler struct{}
 
-func (h *discardHandler) Handle(_ context.Context, r slog.Record) error { return nil }
+func (h *discardHandler) Handle(_ context.Context, r slog.Record) error    { return nil }
 func (h *discardHandler) Enabled(_ context.Context, level slog.Level) bool { return false }
-func (h *discardHandler) WithGroup(name string) slog.Handler { return h }
-func (h *discardHandler) WithAttrs(attrs []slog.Attr) slog.Handler { return h }
+func (h *discardHandler) WithGroup(name string) slog.Handler               { return h }
+func (h *discardHandler) WithAttrs(attrs []slog.Attr) slog.Handler         { return h }
 
 // TerminalStringer is an interface for custom terminal serialization.
 type TerminalStringer interface {

@@ -57,7 +57,7 @@ import (
 // TLS handshake completes. PubKey + Sig are opaque bytes from
 // zap's perspective; the AttestationVerifier owns the format
 // (FIPS 204 ML-DSA-65 pubkey 1952 bytes, signature 3293 bytes
-// for this network; ML-DSA-87 with different byte counts for
+// for Liquid; ML-DSA-87 with different byte counts for
 // high-value Zoo chains).
 type Attestation struct {
 	// PubKey is the peer's strict-PQ public key. The verifier

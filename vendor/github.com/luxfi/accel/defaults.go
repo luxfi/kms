@@ -85,3 +85,30 @@ func NTTInverse(_, _ []uint64, _ uint64) error {
 func MSM(_, _ [][]byte) ([]byte, error) {
 	return nil, ErrNotSupported
 }
+
+// MLDSAVerifyBatch returns ErrNotSupported in non-CGO builds.
+func MLDSAVerifyBatch(_ int, _, _, _ [][]byte, _ int) ([]bool, error) {
+	return nil, ErrNotSupported
+}
+
+// MLDSASignBatch returns ErrNotSupported in non-CGO builds.
+func MLDSASignBatch(_ int, _, _ [][]byte, _ int) ([][]byte, error) {
+	return nil, ErrNotSupported
+}
+
+// LatticeNTTMLDSABatch returns ErrNotSupported in non-CGO builds.
+func LatticeNTTMLDSABatch(polys [][]int32, _ bool) error {
+	// Validate the batch shape before the (absent) GPU dispatch decision,
+	// matching the cgo path so callers get the same error regardless of
+	// build: a wrong-length poly is ErrShapeMismatch, empty is
+	// ErrBatchSizeMismatch; otherwise no backend → ErrNotSupported.
+	if len(polys) == 0 {
+		return ErrBatchSizeMismatch
+	}
+	for _, p := range polys {
+		if len(p) != MLDSANTTPolyLen {
+			return ErrShapeMismatch
+		}
+	}
+	return ErrNotSupported
+}

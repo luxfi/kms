@@ -1,9 +1,14 @@
 package log
 
 import (
-	"math/rand"
+	"hash/fnv"
+	"sync"
 	"sync/atomic"
 	"time"
+
+	crand "crypto/rand"
+	"encoding/binary"
+	"math/rand/v2"
 )
 
 var (
@@ -13,7 +18,29 @@ var (
 	Sometimes = RandomSampler(100)
 	// Rarely samples log every ~ 1000 events.
 	Rarely = RandomSampler(1000)
+
+	// globalRand is a thread-safe random source
+	globalRand = newLockedRand()
 )
+
+// lockedRand is a thread-safe random number generator
+type lockedRand struct {
+	mu  sync.Mutex
+	rng *rand.Rand
+}
+
+func newLockedRand() *lockedRand {
+	var seed [8]byte
+	_, _ = crand.Read(seed[:])
+	src := rand.NewPCG(binary.LittleEndian.Uint64(seed[:]), binary.LittleEndian.Uint64(seed[:]))
+	return &lockedRand{rng: rand.New(src)}
+}
+
+func (r *lockedRand) Intn(n int) int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.rng.IntN(n)
+}
 
 // Sampler defines an interface to a log sampler.
 type Sampler interface {
@@ -31,7 +58,7 @@ func (s RandomSampler) Sample(lvl Level) bool {
 	if s <= 0 {
 		return false
 	}
-	if rand.Intn(int(s)) != 0 {
+	if globalRand.Intn(int(s)) != 0 {
 		return false
 	}
 	return true
@@ -134,4 +161,145 @@ func (s LevelSampler) Sample(lvl Level) bool {
 		}
 	}
 	return true
+}
+
+// DedupSampler suppresses duplicate log messages within a time window.
+// After the window expires, it emits a summary of suppressed messages.
+type DedupSampler struct {
+	// Window is the deduplication time window. Defaults to 1 minute.
+	Window time.Duration
+	// MaxKeys is the maximum number of unique messages to track. Defaults to 1000.
+	MaxKeys int
+
+	mu      sync.Mutex
+	seen    map[uint64]*dedupEntry
+	cleanup int64 // next cleanup time (unix nano)
+}
+
+type dedupEntry struct {
+	count    int64
+	firstAt  int64
+	lastAt   int64
+	lastEmit int64
+}
+
+// NewDedupSampler creates a dedup sampler with the given window.
+func NewDedupSampler(window time.Duration) *DedupSampler {
+	if window <= 0 {
+		window = time.Minute
+	}
+	return &DedupSampler{
+		Window:  window,
+		MaxKeys: 1000,
+		seen:    make(map[uint64]*dedupEntry),
+	}
+}
+
+// SampleMsg returns true if this message should be logged.
+// It tracks message hashes and suppresses duplicates within the window.
+func (s *DedupSampler) SampleMsg(lvl Level, msg string) bool {
+	return s.SampleMsgWithKey(lvl, msg, "")
+}
+
+// SampleMsgWithKey allows specifying a custom dedup key instead of using msg.
+func (s *DedupSampler) SampleMsgWithKey(lvl Level, msg, key string) bool {
+	if key == "" {
+		key = msg
+	}
+
+	// Hash the level + message for dedup key
+	h := fnv.New64a()
+	h.Write([]byte{byte(lvl)})
+	h.Write([]byte(key))
+	hash := h.Sum64()
+
+	now := TimestampFunc().UnixNano()
+	windowNano := s.Window.Nanoseconds()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Lazy init
+	if s.seen == nil {
+		s.seen = make(map[uint64]*dedupEntry)
+	}
+
+	// Periodic cleanup of old entries
+	if now > s.cleanup {
+		s.cleanupLocked(now, windowNano)
+		s.cleanup = now + windowNano
+	}
+
+	entry, exists := s.seen[hash]
+	if !exists {
+		// First time seeing this message
+		if len(s.seen) >= s.MaxKeys {
+			// Evict oldest entry if at capacity
+			s.evictOldestLocked()
+		}
+		s.seen[hash] = &dedupEntry{
+			count:    1,
+			firstAt:  now,
+			lastAt:   now,
+			lastEmit: now,
+		}
+		return true
+	}
+
+	// Update stats
+	entry.count++
+	entry.lastAt = now
+
+	// Check if window has expired since last emit
+	if now-entry.lastEmit >= windowNano {
+		entry.lastEmit = now
+		return true
+	}
+
+	// Suppress this message
+	return false
+}
+
+// Sample implements the Sampler interface (always returns true for non-dedup use).
+func (s *DedupSampler) Sample(lvl Level) bool {
+	return true
+}
+
+// GetSuppressedCount returns the count of suppressed messages for a key.
+func (s *DedupSampler) GetSuppressedCount(lvl Level, msg string) int64 {
+	h := fnv.New64a()
+	h.Write([]byte{byte(lvl)})
+	h.Write([]byte(msg))
+	hash := h.Sum64()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if entry, exists := s.seen[hash]; exists {
+		return entry.count - 1 // exclude the one we emitted
+	}
+	return 0
+}
+
+func (s *DedupSampler) cleanupLocked(now, windowNano int64) {
+	cutoff := now - windowNano
+	for hash, entry := range s.seen {
+		if entry.lastAt < cutoff {
+			delete(s.seen, hash)
+		}
+	}
+}
+
+func (s *DedupSampler) evictOldestLocked() {
+	var oldestHash uint64
+	var oldestTime int64 = 1<<63 - 1
+	for hash, entry := range s.seen {
+		if entry.lastAt < oldestTime {
+			oldestTime = entry.lastAt
+			oldestHash = hash
+		}
+	}
+	if oldestHash != 0 {
+		delete(s.seen, oldestHash)
+	}
 }

@@ -6,6 +6,7 @@ package log
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strconv"
 	"time"
 )
@@ -26,51 +27,57 @@ type Field struct {
 }
 
 // Field constructors for geth-style logging
-func String(key, val string) Field              { return Field{Key: key, Value: val} }
-func Stringer(key string, val fmt.Stringer) Field { return Field{Key: key, Value: val} }
-func Int(key string, val int) Field             { return Field{Key: key, Value: val} }
-func Int8(key string, val int8) Field           { return Field{Key: key, Value: val} }
-func Int16(key string, val int16) Field         { return Field{Key: key, Value: val} }
-func Int32(key string, val int32) Field         { return Field{Key: key, Value: val} }
-func Int64(key string, val int64) Field         { return Field{Key: key, Value: val} }
-func Uint(key string, val uint) Field           { return Field{Key: key, Value: val} }
-func Uint8(key string, val uint8) Field         { return Field{Key: key, Value: val} }
-func Uint16(key string, val uint16) Field       { return Field{Key: key, Value: val} }
-func Uint32(key string, val uint32) Field       { return Field{Key: key, Value: val} }
-func Uint64(key string, val uint64) Field       { return Field{Key: key, Value: val} }
-func Float32(key string, val float32) Field     { return Field{Key: key, Value: val} }
-func Float64(key string, val float64) Field     { return Field{Key: key, Value: val} }
-func Bool(key string, val bool) Field           { return Field{Key: key, Value: val} }
+func String(key, val string) Field                 { return Field{Key: key, Value: val} }
+func Stringer(key string, val fmt.Stringer) Field  { return Field{Key: key, Value: val} }
+func Int(key string, val int) Field                { return Field{Key: key, Value: val} }
+func Int8(key string, val int8) Field              { return Field{Key: key, Value: val} }
+func Int16(key string, val int16) Field            { return Field{Key: key, Value: val} }
+func Int32(key string, val int32) Field            { return Field{Key: key, Value: val} }
+func Int64(key string, val int64) Field            { return Field{Key: key, Value: val} }
+func Uint(key string, val uint) Field              { return Field{Key: key, Value: val} }
+func Uint8(key string, val uint8) Field            { return Field{Key: key, Value: val} }
+func Uint16(key string, val uint16) Field          { return Field{Key: key, Value: val} }
+func Uint32(key string, val uint32) Field          { return Field{Key: key, Value: val} }
+func Uint64(key string, val uint64) Field          { return Field{Key: key, Value: val} }
+func Float32(key string, val float32) Field        { return Field{Key: key, Value: val} }
+func Float64(key string, val float64) Field        { return Field{Key: key, Value: val} }
+func Bool(key string, val bool) Field              { return Field{Key: key, Value: val} }
 func Duration(key string, val time.Duration) Field { return Field{Key: key, Value: val} }
-func Time(key string, val time.Time) Field      { return Field{Key: key, Value: val} }
-func Err(err error) Field                       { return Field{Key: ErrorFieldName, Value: err} }
-func NamedErr(key string, err error) Field      { return Field{Key: key, Value: err} }
-func Any(key string, val interface{}) Field     { return Field{Key: key, Value: val} }
-func Binary(key string, val []byte) Field       { return Field{Key: key, Value: val} }
-func ByteString(key string, val []byte) Field   { return Field{Key: key, Value: string(val)} }
+func Time(key string, val time.Time) Field         { return Field{Key: key, Value: val} }
+func Err(err error) Field                          { return Field{Key: ErrorFieldName, Value: err} }
+func NamedErr(key string, err error) Field         { return Field{Key: key, Value: err} }
+func Any(key string, val interface{}) Field        { return Field{Key: key, Value: val} }
+func Binary(key string, val []byte) Field          { return Field{Key: key, Value: val} }
+func ByteString(key string, val []byte) Field      { return Field{Key: key, Value: string(val)} }
 
 // Slice field constructors
-func Strings(key string, val []string) Field    { return Field{Key: key, Value: val} }
-func Ints(key string, val []int) Field          { return Field{Key: key, Value: val} }
-func Int64s(key string, val []int64) Field      { return Field{Key: key, Value: val} }
-func Uint64s(key string, val []uint64) Field    { return Field{Key: key, Value: val} }
-func Float64s(key string, val []float64) Field  { return Field{Key: key, Value: val} }
-func Bools(key string, val []bool) Field        { return Field{Key: key, Value: val} }
+func Strings(key string, val []string) Field          { return Field{Key: key, Value: val} }
+func Ints(key string, val []int) Field                { return Field{Key: key, Value: val} }
+func Int64s(key string, val []int64) Field            { return Field{Key: key, Value: val} }
+func Uint64s(key string, val []uint64) Field          { return Field{Key: key, Value: val} }
+func Float64s(key string, val []float64) Field        { return Field{Key: key, Value: val} }
+func Bools(key string, val []bool) Field              { return Field{Key: key, Value: val} }
 func Durations(key string, val []time.Duration) Field { return Field{Key: key, Value: val} }
-func Times(key string, val []time.Time) Field   { return Field{Key: key, Value: val} }
+func Times(key string, val []time.Time) Field         { return Field{Key: key, Value: val} }
 
 // Short-form aliases (matching chaining API style)
-func Str(key, val string) Field                 { return String(key, val) }
-func Dur(key string, val time.Duration) Field   { return Duration(key, val) }
-func AnErr(key string, err error) Field         { return NamedErr(key, err) }
+func Str(key, val string) Field               { return String(key, val) }
+func Dur(key string, val time.Duration) Field { return Duration(key, val) }
+func AnErr(key string, err error) Field       { return NamedErr(key, err) }
 
 // Stack returns a Field with the current stack trace.
 func Stack(key string) Field {
-	return Field{Key: key, Value: "stack"} // Placeholder, actual stack in event
+	buf := make([]byte, 4096)
+	n := runtime.Stack(buf, false)
+	return Field{Key: key, Value: string(buf[:n])}
 }
 
-// defaultLogger is the global logger for geth-style functions
-var defaultLogger = NewWriter(os.Stderr).With().Timestamp().Logger()
+// defaultLogger is the global logger for geth-style functions.
+// Default level is Info — debug/trace messages are suppressed unless
+// explicitly enabled via SetDefault() or SetGlobalLevel(DebugLevel).
+// This prevents dependency init() functions from spamming stderr
+// with debug output before the application configures logging.
+var defaultLogger = NewWriter(os.Stderr).With().Timestamp().Logger().Level(InfoLevel)
 
 // SetDefault sets the default logger for geth-style functions
 func SetDefault(l Logger) {
@@ -268,4 +275,3 @@ func NewTestLogger(level ...Level) Logger {
 	}
 	return l
 }
-

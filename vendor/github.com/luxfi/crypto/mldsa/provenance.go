@@ -50,12 +50,12 @@ func (t DispatchTier) String() string {
 // Provenance is the auditable evidence record for the ML-DSA package.
 // See slhdsa.Provenance — same shape, same purpose.
 type Provenance struct {
-	Tier                  DispatchTier
-	AccelInitialised      bool
-	DeviceAvailable       bool
-	PluginStrongSymbol    bool
-	BatchThresholdN       int
-	ConcurrentThresholdN  int
+	Tier                 DispatchTier
+	AccelInitialised     bool
+	DeviceAvailable      bool
+	PluginStrongSymbol   bool
+	BatchThresholdN      int
+	ConcurrentThresholdN int
 }
 
 // GetProvenance returns the current dispatch provenance.

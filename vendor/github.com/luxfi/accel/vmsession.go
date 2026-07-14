@@ -78,8 +78,8 @@ type VMSession struct {
 	memCap   int64
 
 	// Underlying GPU session. May be shared (pointer to default) or owned.
-	sess   *Session
-	owned  bool
+	sess  *Session
+	owned bool
 
 	// Serialized dispatch queue. Each op runs while holding qMu, guaranteeing
 	// FIFO ordering within this VMSession.

@@ -26,12 +26,12 @@ var concurrentBatchThreshold = 8
 //
 // Dispatch ladder:
 //
-//   1. GPU substrate (accel.LatticeOps.MLDSAVerifyBatch) when n >= BatchThreshold
-//      AND a backend plugin is loaded AND mode is in {44, 65, 87}.
-//   2. Goroutine-parallel CPU verify when n >= concurrentBatchThreshold.
-//      Scales to GOMAXPROCS without GPU substrate. Useful on hosts that
-//      have CPU cores but no GPU plugin (Linux CI, no-Metal Macs, etc).
-//   3. Serial CPU verify as the floor.
+//  1. GPU substrate (accel.LatticeOps.MLDSAVerifyBatch) when n >= BatchThreshold
+//     AND a backend plugin is loaded AND mode is in {44, 65, 87}.
+//  2. Goroutine-parallel CPU verify when n >= concurrentBatchThreshold.
+//     Scales to GOMAXPROCS without GPU substrate. Useful on hosts that
+//     have CPU cores but no GPU plugin (Linux CI, no-Metal Macs, etc).
+//  3. Serial CPU verify as the floor.
 //
 // All paths are byte-equal: each path ends in cloudflare/circl's
 // FIPS 204-conformant Verify. The dispatch choice only affects throughput,
@@ -56,9 +56,21 @@ func BatchVerify(pubs []*PublicKey, msgs [][]byte, sigs [][]byte) []bool {
 	}
 
 	// Tier 1: GPU substrate.
+	//
+	// Red M-1: batchVerifyGPU returns (false, accel.ErrInvalidArgument) when
+	// the C ABI rejects the input as malformed (length / count cap, null
+	// ptr). The CPU oracle may accept what GPU rejects → consensus split.
+	// Panic here — BatchVerify returns no error, and a contract-violating
+	// input deserves the same shape as the existing length-mismatch /
+	// mixed-mode panics above. Recoverable GPU errors (NotSupported,
+	// OutOfMemory, kernel failure) return (false, nil) and fall through.
 	if n >= BatchThreshold {
 		if _, ok := modeToCAPI(mode); ok {
-			if ok, err := batchVerifyGPU(pubs, msgs, sigs, out); ok && err == nil {
+			ok, err := batchVerifyGPU(pubs, msgs, sigs, out)
+			if err != nil {
+				panic("mldsa.BatchVerify: GPU dispatch rejected input as malformed: " + err.Error())
+			}
+			if ok {
 				return out
 			}
 		}
@@ -131,9 +143,9 @@ var ErrBatchLength = errors.New("mldsa: batch input slices have inconsistent len
 //
 // Dispatch ladder mirrors BatchVerify:
 //
-//   1. GPU substrate (accel.LatticeOps.MLDSASignBatch).
-//   2. Goroutine-parallel CPU sign.
-//   3. Serial CPU sign.
+//  1. GPU substrate (accel.LatticeOps.MLDSASignBatch).
+//  2. Goroutine-parallel CPU sign.
+//  3. Serial CPU sign.
 //
 // For deterministic-mode signing (FIPS 204 § Algorithm 2 with rnd=0^256),
 // callers can pass nil for randSource. The CPU path passes deterministic=true
@@ -156,9 +168,17 @@ func BatchSign(randSource io.Reader, privs []*PrivateKey, msgs [][]byte) ([][]by
 	}
 
 	// Tier 1: GPU substrate.
+	//
+	// Red M-1: batchSignGPU returns (false, accel.ErrInvalidArgument) on
+	// malformed input. Propagate as a real error here (BatchSign already
+	// returns error); other GPU errors fall through to CPU silently.
 	if n >= BatchThreshold {
 		if _, ok := modeToCAPI(mode); ok {
-			if ok, err := batchSignGPU(privs, msgs, sigs); ok && err == nil {
+			ok, err := batchSignGPU(privs, msgs, sigs)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
 				return sigs, nil
 			}
 		}
