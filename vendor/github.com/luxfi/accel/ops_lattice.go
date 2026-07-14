@@ -135,4 +135,18 @@ type LatticeOps interface {
 
 	// PolynomialAdd adds polynomials.
 	PolynomialAdd(a, b, c *UntypedTensor, q uint32) error
+
+	// LatticeNTTMLDSABatch performs the in-place forward (inverse=false) or
+	// inverse (inverse=true) NTT over Z_q[X]/(X^256 + 1) with q = 8380417 (the
+	// ML-DSA / FIPS 204 prime), batched across N polynomials.
+	//
+	// Tensor shape:
+	//   polys : LUX_DTYPE_I32, shape [N, 256] — in-place transform
+	//
+	// Byte-equal to PQCLEAN_MLDSA65_CLEAN_ntt (forward) and
+	// PQCLEAN_MLDSA65_CLEAN_invntt_tomont (inverse). Pulsar Round-2 fits the
+	// batch=22 dispatch shape; below the GPU-dispatch threshold the caller
+	// MUST route to the per-poly CPU oracle (the threshold gating lives in
+	// the consumer, not in this primitive).
+	LatticeNTTMLDSABatch(polys *UntypedTensor, inverse bool) error
 }

@@ -21,11 +21,43 @@ const (
 	KyberSharedKeySize  = 32
 )
 
-// Dilithium sizes (ML-DSA-65)
+// Dilithium sizes (ML-DSA-65). The DilithiumSecretKeySize=4016 constant
+// predates the FIPS 204 final fix that pinned the ML-DSA-65 secret key
+// at 4032 bytes; new code should prefer the MLDSA* sizes below.
 const (
 	DilithiumPublicKeySize = 1952
 	DilithiumSecretKeySize = 4016
 	DilithiumSignatureSize = 3309
+)
+
+// ML-DSA / FIPS 204 sizes per NIST level. Mode encoding matches the
+// luxcpp/crypto/mldsa C ABI: 2 = ML-DSA-44, 3 = ML-DSA-65, 5 = ML-DSA-87.
+const (
+	// Mode IDs.
+	MLDSAMode44 = 2
+	MLDSAMode65 = 3
+	MLDSAMode87 = 5
+
+	// Per-mode tensor widths (FIPS 204).
+	MLDSA44PublicKeySize = 1312
+	MLDSA44SecretKeySize = 2560
+	MLDSA44SignatureSize = 2420
+
+	MLDSA65PublicKeySize = 1952
+	MLDSA65SecretKeySize = 4032
+	MLDSA65SignatureSize = 3309
+
+	MLDSA87PublicKeySize = 2592
+	MLDSA87SecretKeySize = 4896
+	MLDSA87SignatureSize = 4627
+
+	// ML-DSA NTT poly width (FIPS 204 fixed at N = 256).
+	MLDSANTTPolyLen = 256
+
+	// MLDSABatchThreshold: minimum batch size at which the GPU
+	// dispatch path is engaged. Below this, callers should fall
+	// through to the per-element CPU oracle to amortise launch cost.
+	MLDSABatchThreshold = 8
 )
 
 var (

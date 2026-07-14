@@ -39,6 +39,8 @@
 package mldsa
 
 import (
+	"errors"
+
 	"github.com/luxfi/accel"
 	"github.com/luxfi/crypto/backend"
 	"github.com/luxfi/crypto/internal/gpuhost"
@@ -66,14 +68,21 @@ func modeToCAPI(m Mode) (int, bool) {
 // API enforces this; this entrypoint is internal and trusts the contract).
 //
 // Returns (true, nil) when the GPU path produced `out`. Returns (false, nil)
-// in any of these cases:
+// in any of these cases (caller may fall back to CPU):
 //
 //   - CRYPTO_BACKEND is not GPU
 //   - gpuhost has no accel session
 //   - the mode is not wired for GPU dispatch
 //   - the substrate returns NotSupported (no plugin loaded)
-//   - any tensor allocation or kernel dispatch failed (we fall through
-//     silently to CPU; the caller's per-element loop is the safety net)
+//   - tensor allocation failed (OutOfMemory) or kernel dispatch failed
+//
+// Returns (false, accel.ErrInvalidArgument) when the C ABI rejects the input
+// as malformed (msg_len > LUX_GPU_MLDSA_MSG_LEN_CAP, count > UINT32_MAX, null
+// pointer with non-zero length). The CPU oracle (cloudflare/circl) may accept
+// what the GPU wrapper rejects (FIPS 204 allows arbitrary-length messages),
+// so silently falling back would produce a verdict on one backend and not the
+// other across the same input — consensus split. Red M-1 contract: callers
+// MUST propagate ErrInvalidArgument as a hard error, never silently fall back.
 //
 // `out` is only written when the function returns (true, nil).
 func batchVerifyGPU(pubs []*PublicKey, msgs [][]byte, sigs [][]byte, out []bool) (bool, error) {
@@ -160,11 +169,22 @@ func batchVerifyGPU(pubs []*PublicKey, msgs [][]byte, sigs [][]byte, out []bool)
 	// Try the new mode-aware MLDSAVerifyBatch first. When ML-DSA-65 is in use
 	// fall back to the legacy DilithiumVerifyBatch for substrates that only
 	// publish the Dilithium3 kernel (the original wiring).
+	//
+	// Red M-1: ErrInvalidArgument is a HARD error. The GPU wrapper rejected
+	// the input as violating the contract (length cap, count cap, null with
+	// non-zero len). The CPU oracle may accept what the GPU wrapper rejects
+	// → consensus split between CPU-only and GPU-accelerated verifiers. Do
+	// not silently fall back; surface the error so the caller can panic /
+	// reject the batch. Other errors (NotSupported, OutOfMemory, kernel
+	// failure) are recoverable — CPU fallback is correct for those.
 	dispatchErr := sess.Lattice().MLDSAVerifyBatch(capiMode, mT.Untyped(), sT.Untyped(), pT.Untyped(), rT.Untyped())
-	if dispatchErr != nil && mode == MLDSA65 {
+	if dispatchErr != nil && mode == MLDSA65 && !errors.Is(dispatchErr, accel.ErrInvalidArgument) {
 		dispatchErr = sess.Lattice().DilithiumVerifyBatch(mT.Untyped(), sT.Untyped(), pT.Untyped(), rT.Untyped())
 	}
 	if dispatchErr != nil {
+		if errors.Is(dispatchErr, accel.ErrInvalidArgument) {
+			return false, dispatchErr
+		}
 		return false, nil
 	}
 	bytes, err := rT.ToSlice()
@@ -257,7 +277,12 @@ func batchSignGPU(privs []*PrivateKey, msgs [][]byte, sigs [][]byte) (bool, erro
 	}
 	defer sigT.Close()
 
+	// Red M-1: ErrInvalidArgument is a HARD error (see batchVerifyGPU). Other
+	// errors silently fall back to CPU.
 	if err := sess.Lattice().MLDSASignBatch(capiMode, mT.Untyped(), skT.Untyped(), sigT.Untyped()); err != nil {
+		if errors.Is(err, accel.ErrInvalidArgument) {
+			return false, err
+		}
 		return false, nil
 	}
 

@@ -87,7 +87,8 @@ type factory struct {
 
 // factoryLogger wraps a Logger with factory-managed level controls.
 type factoryLogger struct {
-	Logger
+	Logger              // current logger with level applied
+	baseLogger   Logger // base logger without level (for SetLogLevel)
 	level        Level
 	displayLevel Level
 	name         string
@@ -120,7 +121,7 @@ func (f *factory) Make(name string) (Logger, error) {
 		return Noop(), nil
 	}
 
-	// Return existing logger if already created
+	// Return existing logger if already created (reflects any SetLogLevel changes)
 	if l, exists := f.loggers[name]; exists {
 		return l.Logger, nil
 	}
@@ -179,12 +180,13 @@ func (f *factory) Make(name string) (Logger, error) {
 		w = io.MultiWriter(writers...)
 	}
 
-	// Create logger
-	logger := NewWriter(w).With().Timestamp().Str("logger", name).Logger()
-	logger = logger.Level(f.config.LogLevel)
+	// Create logger - store base logger separately so SetLogLevel can recreate with new level
+	baseLogger := NewWriter(w).With().Timestamp().Str("logger", name).Logger()
+	logger := baseLogger.Level(f.config.LogLevel)
 
 	fl := &factoryLogger{
 		Logger:       logger,
+		baseLogger:   baseLogger,
 		level:        f.config.LogLevel,
 		displayLevel: f.config.DisplayLevel,
 		name:         name,
@@ -192,7 +194,7 @@ func (f *factory) Make(name string) (Logger, error) {
 	}
 	f.loggers[name] = fl
 
-	return logger, nil
+	return fl.Logger, nil
 }
 
 // MakeChain creates a logger for a blockchain.
@@ -220,6 +222,10 @@ func (f *factory) SetLogLevel(name string, level Level) {
 
 	if l, exists := f.loggers[name]; exists {
 		l.level = level
+		// Recreate logger with new level using the base logger
+		if l.baseLogger != nil {
+			l.Logger = l.baseLogger.Level(level)
+		}
 	}
 }
 
@@ -269,37 +275,37 @@ func (f *factory) Close() {
 // NoLog is a no-op logger for use in tests or when logging is disabled.
 type NoLog struct{}
 
-func (NoLog) Output(io.Writer) Logger        { return Noop() }
-func (NoLog) With() Context                  { return Context{} }
-func (NoLog) Level(Level) Logger             { return Noop() }
-func (NoLog) GetLevel() Level                { return Disabled }
-func (NoLog) New(...interface{}) Logger      { return Noop() }
-func (NoLog) Sample(Sampler) Logger          { return Noop() }
-func (NoLog) Hook(...Hook) Logger            { return Noop() }
-func (NoLog) Trace(string, ...interface{})   {}
-func (NoLog) Debug(string, ...interface{})   {}
-func (NoLog) Info(string, ...interface{})    {}
-func (NoLog) Warn(string, ...interface{})    {}
-func (NoLog) Error(string, ...interface{})   {}
-func (NoLog) Fatal(string, ...interface{})   {}
-func (NoLog) Panic(string, ...interface{})   {}
-func (NoLog) Crit(string, ...interface{})    {}
-func (NoLog) Verbo(string, ...interface{})   {}
+func (NoLog) Output(io.Writer) Logger           { return Noop() }
+func (NoLog) With() Context                     { return Context{} }
+func (NoLog) Level(Level) Logger                { return Noop() }
+func (NoLog) GetLevel() Level                   { return Disabled }
+func (NoLog) New(...interface{}) Logger         { return Noop() }
+func (NoLog) Sample(Sampler) Logger             { return Noop() }
+func (NoLog) Hook(...Hook) Logger               { return Noop() }
+func (NoLog) Trace(string, ...interface{})      {}
+func (NoLog) Debug(string, ...interface{})      {}
+func (NoLog) Info(string, ...interface{})       {}
+func (NoLog) Warn(string, ...interface{})       {}
+func (NoLog) Error(string, ...interface{})      {}
+func (NoLog) Fatal(string, ...interface{})      {}
+func (NoLog) Panic(string, ...interface{})      {}
+func (NoLog) Crit(string, ...interface{})       {}
+func (NoLog) Verbo(string, ...interface{})      {}
 func (NoLog) Log(Level, string, ...interface{}) {}
-func (NoLog) TraceEvent() *Event             { return nil }
-func (NoLog) DebugEvent() *Event             { return nil }
-func (NoLog) InfoEvent() *Event              { return nil }
-func (NoLog) WarnEvent() *Event              { return nil }
-func (NoLog) ErrorEvent() *Event             { return nil }
-func (NoLog) FatalEvent() *Event             { return nil }
-func (NoLog) PanicEvent() *Event             { return nil }
-func (NoLog) Err(error) *Event               { return nil }
-func (NoLog) WithLevel(Level) *Event         { return nil }
-func (NoLog) LogEvent() *Event               { return nil }
-func (NoLog) Print(...interface{})           {}
-func (NoLog) Printf(string, ...interface{})  {}
-func (NoLog) Write(p []byte) (int, error)    { return len(p), nil }
-func (NoLog) SetLogLevel(string) error       { return nil }
+func (NoLog) TraceEvent() *Event                { return nil }
+func (NoLog) DebugEvent() *Event                { return nil }
+func (NoLog) InfoEvent() *Event                 { return nil }
+func (NoLog) WarnEvent() *Event                 { return nil }
+func (NoLog) ErrorEvent() *Event                { return nil }
+func (NoLog) FatalEvent() *Event                { return nil }
+func (NoLog) PanicEvent() *Event                { return nil }
+func (NoLog) Err(error) *Event                  { return nil }
+func (NoLog) WithLevel(Level) *Event            { return nil }
+func (NoLog) LogEvent() *Event                  { return nil }
+func (NoLog) Print(...interface{})              {}
+func (NoLog) Printf(string, ...interface{})     {}
+func (NoLog) Write(p []byte) (int, error)       { return len(p), nil }
+func (NoLog) SetLogLevel(string) error          { return nil }
 func (NoLog) RecoverAndPanic(fn func()) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -308,7 +314,7 @@ func (NoLog) RecoverAndPanic(fn func()) {
 	}()
 	fn()
 }
-func (NoLog) IsZero() bool                           { return true }
+func (NoLog) IsZero() bool                             { return true }
 func (NoLog) Enabled(context.Context, slog.Level) bool { return false }
 
 // ToLevel parses a level string and returns the corresponding Level.
