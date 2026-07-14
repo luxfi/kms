@@ -138,7 +138,31 @@ func (c *ZapClient) call(ctx context.Context, op uint16, payload any) ([]byte, e
 	if len(body) <= zap.HeaderSize+2 {
 		return []byte("{}"), nil
 	}
-	return body[zap.HeaderSize+2:], nil // skip header + opcode
+	respBody := body[zap.HeaderSize+2:] // skip header + opcode
+
+	// Surface server-side errors. mpcd frames failures as {"error":"..."}
+	// under the SAME opcode as the request (pkg/api/zap_kms_server.go errBody).
+	// Without this, the caller would json-decode the error object into a
+	// zero-value SignResult/KeygenResult and return success with empty fields —
+	// the "false-green" empty-signature footgun. Fail closed instead.
+	if msg := zapErrorString(respBody); msg != "" {
+		return nil, fmt.Errorf("mpc: op=0x%04x rejected by daemon: %s", op, msg)
+	}
+	return respBody, nil
+}
+
+// zapErrorString returns the top-level "error" string if body is a JSON object
+// carrying a non-empty one, else "". None of the success payloads
+// (SignResult/KeygenResult/ClusterStatus/Wallet) define an "error" field, so a
+// present, non-empty "error" is unambiguously a daemon-side failure.
+func zapErrorString(body []byte) string {
+	var probe struct {
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal(body, &probe); err != nil {
+		return "" // not a JSON object (or not decodable) → treat as payload
+	}
+	return probe.Error
 }
 
 // Keygen creates a new MPC wallet.
