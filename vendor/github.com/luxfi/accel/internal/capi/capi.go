@@ -14,14 +14,20 @@
 package capi
 
 /*
-// System and homebrew paths for headers
-#cgo CFLAGS: -I/usr/local/include -I/opt/homebrew/include -I${SRCDIR}/../../include
-
-// Fallback to vendored header shipped with this module — works in any
-// fresh-clone / CI environment without luxcpp pre-installed. The vendored
-// header declares the C ABI; the stub.go file provides weak symbols so
-// builds succeed even when libluxaccel is not linked.
+// Header search order — VENDORED FIRST.
+//
+// The vendored c_api.h shipped under ${SRCDIR}/include is the single
+// source of truth for the C ABI. Putting it first guarantees that every
+// declaration (including ones added since the last luxcpp install) is
+// visible to cgo regardless of what version of the public luxcpp header
+// is sitting in /usr/local/include or /opt/homebrew/include. The stub.go
+// file provides matching weak symbols so builds succeed even when
+// libluxaccel is not linked.
 #cgo CFLAGS: -I${SRCDIR}/include
+
+// Optional installed headers (older snapshots are tolerated — they
+// supply nothing the vendored header doesn't already declare).
+#cgo CFLAGS: -I/usr/local/include -I/opt/homebrew/include -I${SRCDIR}/../../include
 
 // Fallback to local luxcpp install (relative to this file)
 #cgo CFLAGS: -I${SRCDIR}/../../../../luxcpp/install/include
@@ -505,29 +511,46 @@ func SLHDSAVerifyBatch(session *Session, mode int, msgs, sigs, pks, results *Ten
 // The results tensor is populated with one uint8 per signature (1 = valid,
 // 0 = invalid).
 //
-// Until the lux-accel C-API exposes lux_mldsa_verify_batch (in development),
-// this returns ErrNotSupported so the Go-side dispatcher falls back to its
-// per-element verify path. The function is wired here so consumers can call
-// it before the substrate ships without breaking the build.
+// The C ABI symbol `lux_mldsa_verify_batch` is declared in c_api.h and
+// resolved at link time. When libluxaccel ships an implementation it
+// runs FIPS 204 batched verify on the active backend; when no native
+// library is linked the weak-symbol stub in stub.go returns
+// LUX_NO_BACKEND, which surfaces here as ErrNoBackends. Either way,
+// callers see the Go-level error and can fall through to the per-
+// element CPU verify path — the substrate boundary is the wire, not a
+// stub.
 func MLDSAVerifyBatch(session *Session, mode int, msgs, sigs, pks, results *Tensor) error {
-	_ = session
-	_ = mode
-	_ = msgs
-	_ = sigs
-	_ = pks
-	_ = results
-	return ErrNotSupported
+	status := C.lux_mldsa_verify_batch(session.handle, C.int(mode), msgs.handle, sigs.handle, pks.handle, results.handle)
+	return statusToError(status)
 }
 
 // MLDSASignBatch batch-signs ML-DSA / Dilithium (FIPS 204) messages.
 // mode as for MLDSAVerifyBatch. See doc on MLDSAVerifyBatch for ABI status.
 func MLDSASignBatch(session *Session, mode int, msgs, sks, sigs *Tensor) error {
-	_ = session
-	_ = mode
-	_ = msgs
-	_ = sks
-	_ = sigs
-	return ErrNotSupported
+	status := C.lux_mldsa_sign_batch(session.handle, C.int(mode), msgs.handle, sks.handle, sigs.handle)
+	return statusToError(status)
+}
+
+// LatticeNTTMLDSABatch performs the in-place forward (inverse=false) or
+// inverse (inverse=true) Number-Theoretic Transform over Z_q[X]/(X^256 + 1)
+// with q = 8380417 (the ML-DSA prime), batched across n polynomials.
+//
+// The polys tensor MUST be LUX_DTYPE_I32 with shape [n, 256]; the transform
+// is in-place. Byte-equal to PQCLEAN_MLDSA65_CLEAN_ntt for the forward
+// direction; the inverse direction (when implemented by the backend) is
+// the matching PQCLEAN_MLDSA65_CLEAN_invntt_tomont.
+//
+// When libluxaccel has not linked an implementation, the weak stub
+// returns LUX_NO_BACKEND which surfaces as ErrNoBackends — callers
+// then route to their per-poly CPU NTT (Pulsar does this via the
+// luxfi/lattice/v7 dispatcher).
+func LatticeNTTMLDSABatch(session *Session, polys *Tensor, inverse bool) error {
+	var inv C.int
+	if inverse {
+		inv = 1
+	}
+	status := C.lux_lattice_ntt_mldsa_batch(session.handle, polys.handle, inv)
+	return statusToError(status)
 }
 
 // FHE operations

@@ -65,8 +65,8 @@ func CryptoSecp256k1Ecrecover(hash, r, s []byte, v byte) ([]byte, error) {
 // (hash || r || s || v_byte) tuples, 97 bytes each.
 //
 // Returns:
-//   * pubkeys: n*64 bytes, recovered uncompressed public keys
-//   * statuses: n bytes, 0 on success, nonzero error code per tuple
+//   - pubkeys: n*64 bytes, recovered uncompressed public keys
+//   - statuses: n bytes, 0 on success, nonzero error code per tuple
 func CryptoSecp256k1EcrecoverBatch(inputs []byte) (pubkeys, statuses []byte, err error) {
 	if len(inputs) == 0 {
 		return nil, nil, nil

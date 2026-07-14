@@ -145,6 +145,23 @@ func PublicKeyToCompressedBytes(pk *PublicKey) []byte {
 }
 
 func PublicKeyFromCompressedBytes(pkBytes []byte) (*PublicKey, error) {
+	if len(pkBytes) != PublicKeyLen {
+		return nil, ErrFailedPublicKeyDecompress
+	}
+	// HIGH-1: reject the malformed "infinity bit set, compression bit clear"
+	// encoding (top byte b[0]&0xC0 == 0x40) BEFORE handing the buffer to CIRCL's
+	// SetBytes. In that branch SetBytes treats the input as UNCOMPRESSED
+	// (length G1Size=96) and slices b[1:96] on this canonical 48-byte compressed
+	// buffer → slice-bounds-out-of-range PANIC (ecc/bls12381/g1.go:53). On a
+	// CGO_ENABLED=0 (purego) node — the canonical image — that is an
+	// unauthenticated, consensus-halting DoS via any PoP / peer-handshake / warp
+	// BLS field. The CGO/blst path returns an error for this input (never
+	// panics); rejecting it here in-band restores parity. The canonical
+	// compressed-infinity form (0xc0) falls through to Validate() below, which
+	// already rejects the identity point — so this guard is additive.
+	if pkBytes[0]&0xC0 == 0x40 {
+		return nil, ErrFailedPublicKeyDecompress
+	}
 	pk := new(blssign.PublicKey[blssign.KeyG1SigG2])
 	if err := pk.UnmarshalBinary(pkBytes); err != nil {
 		return nil, ErrFailedPublicKeyDecompress
@@ -161,7 +178,16 @@ func PublicKeyToUncompressedBytes(key *PublicKey) []byte {
 
 func PublicKeyFromValidUncompressedBytes(pkBytes []byte) *PublicKey {
 	pk := new(blssign.PublicKey[blssign.KeyG1SigG2])
-	_ = pk.UnmarshalBinary(pkBytes)
+	if err := pk.UnmarshalBinary(pkBytes); err != nil {
+		return nil
+	}
+	// Identity rejection lives at the ONE deserialization boundary (RESIDUAL C):
+	// Validate() = !IsIdentity() && IsOnG1(), so an identity (or off-curve) key
+	// never escapes a constructor. Downstream Verify therefore does NOT re-check
+	// for the identity point — the check belongs here, once.
+	if !pk.Validate() {
+		return nil
+	}
 	return &PublicKey{pk: pk}
 }
 
@@ -192,36 +218,32 @@ func AggregatePublicKeys(pks []*PublicKey) (*PublicKey, error) {
 	if err := result.UnmarshalBinary(agg.BytesCompressed()); err != nil {
 		return nil, ErrFailedPublicKeyAggregation
 	}
+	// Defence in depth: reject an aggregate that is the IDENTITY (point at
+	// infinity). Each INPUT key is a valid non-identity subgroup point (the
+	// constructors call Validate), and the sum of subgroup points stays on-curve and
+	// in-subgroup — but it can still be the identity when the inputs sum to zero (the
+	// canonical rogue-key shape: pk + (-pk) = O). An identity aggregate public key
+	// makes Verify trivially accept the identity signature (a forgery enabler).
+	// Proof-of-possession at registration already prevents an attacker contributing a
+	// key it cannot produce, but the verifier must NOT depend on that being enforced
+	// everywhere: Validate() = !IsIdentity() && IsOnG1() fails the aggregate closed.
+	if !result.Validate() {
+		return nil, ErrFailedPublicKeyAggregation
+	}
 	return &PublicKey{pk: result}, nil
-}
-
-// isIdentityG1 checks if a public key is the identity point (point at infinity).
-// Returns true if the key is the identity, false otherwise.
-func isIdentityG1(pk *blssign.PublicKey[blssign.KeyG1SigG2]) bool {
-	// Serialize the public key and check if it's all zeros (compressed identity)
-	pkBytes, err := pk.MarshalBinary()
-	if err != nil {
-		return false
-	}
-	// BLS12-381 G1 compressed identity point is a specific encoding
-	// Check if it matches the identity point encoding
-	for _, b := range pkBytes {
-		if b != 0 {
-			return false
-		}
-	}
-	return true
 }
 
 func Verify(pk *PublicKey, sig *Signature, msg []byte) bool {
 	if pk == nil || pk.pk == nil || sig == nil {
 		return false
 	}
-	// Check that public key is not the identity point (zero-key)
-	// Identity point verification would trivially pass for any signature
-	if isIdentityG1(pk.pk) {
-		return false
-	}
+	// The identity (zero) public key is rejected at the deserialization boundary
+	// (PublicKeyFromCompressedBytes / PublicKeyFromValidUncompressedBytes call
+	// Validate() = !IsIdentity() && IsOnG1()), so a *PublicKey reaching Verify is
+	// already a valid non-identity G1 point. Re-checking here was redundant — and
+	// the old all-zero byte test was WRONG anyway (canonical compressed-G1
+	// infinity is 0xc0||zeros, not 0x00||zeros) — so it is removed (RESIDUAL C):
+	// identity rejection belongs at decode, in one place.
 	return blssign.Verify(pk.pk, msg, sig.sig)
 }
 
@@ -231,10 +253,7 @@ func VerifyProofOfPossession(pk *PublicKey, sig *Signature, msg []byte) bool {
 	if pk == nil || pk.pk == nil || sig == nil {
 		return false
 	}
-	// Check that public key is not the identity point (zero-key)
-	if isIdentityG1(pk.pk) {
-		return false
-	}
+	// Identity (zero) pubkey already rejected at decode (Validate); see Verify.
 
 	// Parse the signature as a G2 point
 	var sigPoint bls12381.G2
@@ -287,12 +306,47 @@ func SignatureFromBytes(sigBytes []byte) (*Signature, error) {
 	if len(sigBytes) != SignatureLen {
 		return nil, ErrFailedSignatureDecompress
 	}
-	for _, b := range sigBytes {
-		if b != 0 {
-			return &Signature{sig: sigBytes}, nil
-		}
+	// HIGH-1: reject the malformed "infinity bit set, compression bit clear"
+	// encoding (top byte b[0]&0xC0 == 0x40) BEFORE SetBytes. In that branch
+	// CIRCL treats the input as UNCOMPRESSED (length G2Size=192) and slices
+	// b[1:192] on this canonical 96-byte compressed buffer → slice-bounds-out-of-
+	// range PANIC (ecc/bls12381/g2.go:53). On a CGO_ENABLED=0 (purego) node that
+	// is an unauthenticated, consensus-halting DoS via any peer/warp/quasar BLS
+	// signature field. blst's Uncompress returns an error for this input (never
+	// panics); rejecting it here in-band restores parity. The canonical
+	// compressed-infinity form (0xc0) falls through to the IsIdentity() check
+	// below — so this guard is additive, not a replacement.
+	if sigBytes[0]&0xC0 == 0x40 {
+		return nil, ErrFailedSignatureDecompress
 	}
-	return nil, ErrFailedSignatureDecompress
+	// Validate that the bytes decode to a point that is on-curve AND in the
+	// prime-order r-torsion subgroup of G2 — the exact contract the CGO/blst
+	// path enforces with Uncompress + SigValidate(false). CIRCL's
+	// bls12381.G2.SetBytes performs both checks: it decodes the compressed
+	// point and then calls IsOnG2() (= isValidProjective && isOnCurve &&
+	// isRTorsion) before returning, rejecting any input that is not a valid
+	// subgroup element. Without this, a length-96 non-zero blob that is not a
+	// real signature point would be accepted here (the prior byte-loop only
+	// rejected all-zero), diverging from blst and admitting garbage signatures
+	// into the verifier.
+	var g bls12381.G2
+	if err := g.SetBytes(sigBytes); err != nil {
+		return nil, ErrFailedSignatureDecompress
+	}
+	// Reject the G2 identity (point at infinity) — symmetric with the pubkey
+	// identity guard at decode (Validate, INFO-4). CIRCL's SetBytes accepts a well-formed
+	// infinity encoding (0xc0 || zeros) and returns at the isInfinity branch BEFORE
+	// IsOnG2, so without this the identity signature would deserialize cleanly; blst
+	// SigValidate(false) likewise skips the infinity check. The identity sig does
+	// not forge against a real key, but accepting it is an asymmetry with the pubkey
+	// path and admits a degenerate point into the verifier — reject it here.
+	if g.IsIdentity() {
+		return nil, ErrFailedSignatureDecompress
+	}
+	// Store the validated compressed bytes; blssign.Signature is the raw
+	// compressed form and blssign.Verify re-derives the point internally, so we
+	// keep the canonical wire bytes (round-trips through SignatureToBytes).
+	return &Signature{sig: sigBytes}, nil
 }
 
 func AggregateSignatures(sigs []*Signature) (*Signature, error) {

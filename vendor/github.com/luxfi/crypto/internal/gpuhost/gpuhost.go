@@ -16,9 +16,9 @@ import (
 )
 
 var (
-	once     sync.Once
-	sess     *accel.Session
-	initErr  error
+	once      sync.Once
+	sess      *accel.Session
+	initErr   error
 	available bool
 )
 

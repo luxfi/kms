@@ -15,7 +15,7 @@ require (
     github.com/stretchr/testify v1.9.0
     github.com/luxfi/geth v1.16.34
     github.com/luxfi/lattice/v6 v6.1.1
-    github.com/luxfi/corona v0.1.0
+    github.com/luxfi/corona v0.7.6
 )
 
 replace (

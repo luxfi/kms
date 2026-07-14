@@ -8,7 +8,7 @@
 // package; it CGO-routes to the lux_crypto_<alg> static libraries.
 //
 // Phase 1: secp256k1 (ecrecover, address derivation). Future phases add
-// bls12381, mldsa, mlkem, slhdsa, corona, frost, cggmp21, sha256,
+// bls12381, mldsa, mlkem, slhdsa, ringtail, frost, cggmp21, sha256,
 // blake2b, blake3, kzg, hpke, ipa, lamport, ecies, etc.
 //
 // Build matrix:

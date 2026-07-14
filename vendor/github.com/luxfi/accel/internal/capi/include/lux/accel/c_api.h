@@ -242,6 +242,79 @@ LUX_API lux_status lux_dilithium_verify(lux_session session, lux_tensor msg,
                                          lux_tensor sig, lux_tensor pk, int* valid);
 
 // =============================================================================
+// ML-DSA / Dilithium (FIPS 204) operations
+// =============================================================================
+//
+// ML-DSA is a module-lattice signature scheme (FIPS 204, formerly Dilithium).
+// The mode encoding follows the luxcpp/crypto/mldsa C ABI:
+//   2 -> ML-DSA-44 (NIST L2)
+//   3 -> ML-DSA-65 (NIST L3)   <-- canonical for Pulsar threshold profile
+//   5 -> ML-DSA-87 (NIST L5)
+//
+// Per FIPS 204, key / signature widths per mode:
+//   ML-DSA-44 : pk=1312  sk=2560  sig=2420
+//   ML-DSA-65 : pk=1952  sk=4032  sig=3309
+//   ML-DSA-87 : pk=2592  sk=4896  sig=4627
+//
+// Tensor shapes (n = batch size):
+//   msgs    : LUX_DTYPE_U8, shape [n, msg_width]
+//   sigs    : LUX_DTYPE_U8, shape [n, sig_bytes]
+//   sks     : LUX_DTYPE_U8, shape [n, sk_bytes]
+//   pks     : LUX_DTYPE_U8, shape [n, pk_bytes]
+//   results : LUX_DTYPE_U8, shape [n]               (1 = valid, 0 = invalid)
+//
+// Verify is deterministic per FIPS 204: GPU and CPU paths produce byte-
+// identical accept/reject decisions per element. The results vector is dense
+// (no early abort) so callers can audit per-signer failures.
+//
+// Sign in hedged mode is deterministic when the deterministic flag is set
+// at the caller boundary; the per-mode implementation MUST select the same
+// hedging mode as the caller-side CPU reference (PQClean ML-DSA-{44,65,87})
+// to remain byte-equal for KAT.
+//
+// Until the libluxaccel implementation links these symbols against the
+// PQClean reference (or the per-backend GPU plugin registers a strong
+// override), the weak-symbol stubs in `internal/capi/stub.go` return
+// LUX_NO_BACKEND. The Go-side dispatcher (LatticeOps.MLDSAVerifyBatch /
+// MLDSASignBatch) then falls back to its per-element CPU verify path,
+// which is byte-equivalent by construction (same FIPS 204 spec, same
+// NIST KATs pass on both sides).
+
+LUX_API lux_status lux_mldsa_sign_batch(lux_session session, int mode,
+                                         lux_tensor msgs, lux_tensor sks,
+                                         lux_tensor sigs);
+LUX_API lux_status lux_mldsa_verify_batch(lux_session session, int mode,
+                                           lux_tensor msgs, lux_tensor sigs,
+                                           lux_tensor pks, lux_tensor results);
+
+// =============================================================================
+// Lattice NTT batched primitives (FIPS 204 ML-DSA-65 forward / inverse)
+// =============================================================================
+//
+// `lux_lattice_ntt_mldsa_batch` performs the in-place forward Number-Theoretic
+// Transform over Z_q[X]/(X^256 + 1) with q = 8380417 (the ML-DSA prime),
+// batched across `n` polynomials. Byte-equal to PQCLEAN_MLDSA65_CLEAN_ntt
+// (Cooley-Tukey butterflies in Montgomery domain, 8 levels, 256-entry zeta
+// table shared across all backends — see lux-private/gpu-kernels/ops/lattice/
+// ntt_mldsa/op.yaml).
+//
+// Pulsar's Round-2 dispatches 22 forward NTTs per party-attempt, which fits
+// the `batch ≥ 8` GPU-dispatch threshold cleanly. Below that threshold the
+// Go-side dispatcher MUST route to its per-poly CPU path to amortise the
+// kernel-launch cost (see `ops/lattice/lattice.go` for the threshold logic).
+//
+// Tensor shape:
+//   polys : LUX_DTYPE_I32, shape [n, 256] — in-place forward NTT
+//
+// `inverse` selects forward (0) vs inverse (non-zero) NTT. The forward path
+// is the load-bearing one for Pulsar; the inverse path is exposed for
+// symmetric polymul use-cases.
+
+LUX_API lux_status lux_lattice_ntt_mldsa_batch(lux_session session,
+                                                lux_tensor polys,
+                                                int inverse);
+
+// =============================================================================
 // SLH-DSA / Magnetar (FIPS 205) operations
 // =============================================================================
 //

@@ -73,5 +73,5 @@ GOWORK=off go test ./...
 * [`lattice/v7/ring`](https://github.com/luxfi/lattice/tree/main/ring)
   — canonical Lattigo-derived NTT/Montgomery body that this module
   delegates to.
-* [`luxcpp/crypto/corona`](https://github.com/luxcpp/crypto/tree/main/corona)
+* [`luxcpp/crypto/ringtail`](https://github.com/luxcpp/crypto/tree/main/ringtail)
   — native C++ Montgomery NTT that Phase 6 mirrors as `math` C++.

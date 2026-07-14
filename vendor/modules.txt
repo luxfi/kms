@@ -4,6 +4,8 @@ filippo.io/hpke
 filippo.io/hpke/crypto
 filippo.io/hpke/crypto/ecdh
 filippo.io/hpke/internal/byteorder
+# github.com/bits-and-blooms/bitset v1.24.4
+## explicit; go 1.16
 # github.com/btcsuite/btcd/btcutil v1.1.6
 ## explicit; go 1.16
 github.com/btcsuite/btcd/btcutil/bech32
@@ -45,6 +47,10 @@ github.com/cloudflare/circl/sign/mldsa/mldsa87/internal
 github.com/cloudflare/circl/simd/keccakf1600
 github.com/cloudflare/circl/xof
 github.com/cloudflare/circl/xof/k12
+# github.com/consensys/gnark-crypto v0.20.1
+## explicit; go 1.25.7
+# github.com/crate-crypto/go-eth-kzg v1.5.0
+## explicit; go 1.22
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
@@ -64,6 +70,8 @@ github.com/dustin/go-humanize
 ## explicit; go 1.13
 github.com/emicklei/go-restful/v3
 github.com/emicklei/go-restful/v3/log
+# github.com/ethereum/c-kzg-4844/v2 v2.1.7
+## explicit; go 1.19
 # github.com/fxamacker/cbor/v2 v2.9.1
 ## explicit; go 1.20
 github.com/fxamacker/cbor/v2
@@ -125,7 +133,7 @@ github.com/josharian/intern
 # github.com/json-iterator/go v1.1.12
 ## explicit; go 1.12
 github.com/json-iterator/go
-# github.com/klauspost/compress v1.18.5
+# github.com/klauspost/compress v1.18.6
 ## explicit; go 1.24
 github.com/klauspost/compress
 github.com/klauspost/compress/fse
@@ -144,8 +152,8 @@ github.com/klauspost/cpuid/v2
 # github.com/klauspost/crc32 v1.3.0
 ## explicit; go 1.23.0
 github.com/klauspost/crc32
-# github.com/luxfi/accel v1.1.9
-## explicit; go 1.26.3
+# github.com/luxfi/accel v1.2.4
+## explicit; go 1.26.4
 github.com/luxfi/accel
 github.com/luxfi/accel/internal/capi
 # github.com/luxfi/address v1.0.1
@@ -167,8 +175,8 @@ github.com/luxfi/constants
 # github.com/luxfi/container v0.0.4
 ## explicit; go 1.25.5
 github.com/luxfi/container
-# github.com/luxfi/crypto v1.19.17
-## explicit; go 1.26.3
+# github.com/luxfi/crypto v1.19.27
+## explicit; go 1.26.4
 github.com/luxfi/crypto
 github.com/luxfi/crypto/backend
 github.com/luxfi/crypto/bls
@@ -185,11 +193,13 @@ github.com/luxfi/crypto/secp256k1/libsecp256k1/include
 github.com/luxfi/crypto/secp256k1/libsecp256k1/src
 github.com/luxfi/crypto/secp256k1/libsecp256k1/src/modules/recovery
 github.com/luxfi/crypto/secret
+# github.com/luxfi/crypto/ipa v1.2.4
+## explicit; go 1.18
 # github.com/luxfi/formatting v1.0.1
 ## explicit; go 1.25.5
 github.com/luxfi/formatting
-# github.com/luxfi/geth v1.16.98
-## explicit; go 1.26.3
+# github.com/luxfi/geth v1.17.12
+## explicit; go 1.26.4
 github.com/luxfi/geth/common
 github.com/luxfi/geth/common/hexutil
 # github.com/luxfi/go-bip32 v1.0.2
@@ -205,8 +215,8 @@ github.com/luxfi/ids
 # github.com/luxfi/keys v1.1.0
 ## explicit; go 1.26.3
 github.com/luxfi/keys
-# github.com/luxfi/log v1.4.1
-## explicit; go 1.24.9
+# github.com/luxfi/log v1.4.3
+## explicit; go 1.26.3
 github.com/luxfi/log
 github.com/luxfi/log/internal/json
 # github.com/luxfi/math v1.4.1
@@ -221,14 +231,16 @@ github.com/luxfi/math/big
 # github.com/luxfi/mdns v0.1.1
 ## explicit; go 1.26.3
 github.com/luxfi/mdns
-# github.com/luxfi/metric v1.5.7
+# github.com/luxfi/metric v1.5.8
 ## explicit; go 1.26.3
 github.com/luxfi/metric
 github.com/luxfi/metric/client
 # github.com/luxfi/mock v0.1.1
 ## explicit; go 1.25.5
 github.com/luxfi/mock/gomock
-# github.com/luxfi/proto v1.0.0
+# github.com/luxfi/pq v1.0.3
+## explicit; go 1.23.0
+# github.com/luxfi/proto v1.3.4
 ## explicit; go 1.26.3
 github.com/luxfi/proto/p/signer
 # github.com/luxfi/sampler v1.1.0
@@ -237,8 +249,8 @@ github.com/luxfi/sampler
 # github.com/luxfi/tls v1.0.3
 ## explicit; go 1.25.5
 github.com/luxfi/tls
-# github.com/luxfi/vm v1.2.0
-## explicit; go 1.26.3
+# github.com/luxfi/vm v1.2.3
+## explicit; go 1.26.4
 github.com/luxfi/vm/components/verify
 # github.com/luxfi/zap v0.7.2
 ## explicit; go 1.26.3
@@ -259,11 +271,11 @@ github.com/luxfi/zapdb/y
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
-# github.com/mattn/go-colorable v0.1.14
+# github.com/mattn/go-colorable v0.1.15
 ## explicit; go 1.18
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.20
-## explicit; go 1.15
+# github.com/mattn/go-isatty v0.0.22
+## explicit; go 1.21
 github.com/mattn/go-isatty
 # github.com/miekg/dns v1.1.72
 ## explicit; go 1.24.0
@@ -296,8 +308,8 @@ github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee
 ## explicit; go 1.12
 github.com/modern-go/reflect2
-# github.com/mr-tron/base58 v1.2.0
-## explicit; go 1.12
+# github.com/mr-tron/base58 v1.3.0
+## explicit; go 1.11
 github.com/mr-tron/base58/base58
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
@@ -384,7 +396,7 @@ golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/ripemd160
 golang.org/x/crypto/scrypt
 golang.org/x/crypto/sha3
-# golang.org/x/exp v0.0.0-20260312153236-7ab1446f8b90
+# golang.org/x/exp v0.0.0-20260529124908-c761662dc8c9
 ## explicit; go 1.25.0
 golang.org/x/exp/constraints
 # golang.org/x/mod v0.36.0
