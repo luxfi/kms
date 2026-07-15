@@ -3,6 +3,28 @@
 **Project**: Lux Key Management Service (KMS)
 **Organization**: Lux Network
 
+## 2026-07-15 — KMS↔MPC wire fix (v1.12.3) + authorizer-coupling caveat
+
+- **v1.12.3** (wire-fix commit `7105376`) realigns the KMS↔MPC ZAP signing wire to the mpcd
+  contract: `SignRequest{vault_id,wallet_id,payload}`, snake_case `KeygenResult`, and
+  `ZapClient.call()` surfaces a daemon `{"error":…}` as a REAL error — killing the false-green
+  empty-signature-with-nil-error path. Cross-repo guard `pkg/mpc/wire_contract_test.go`.
+  End-to-end proven on the zoo ring (ephemeral pod: keygen made a degree-2 wallet, sign
+  verified). `luxfi/kms:v1.12.3` image is built.
+- **`lux-kms-go` (ns `lux-kms-go`, statefulset `kms`, currently `v1.11.11`) upgrade to v1.12.3
+  is STAGED.** It is secrets-only (`MPC_VAULT_ID` empty, `ZAP_PORT=0`) with a legacy
+  `KMS_MASTER_KEY_B64` REK → it does NOT MPC-sign, so it is NOT exposed to the false-green bug.
+- **CAVEAT (complecting):** v1.12.3 bundles the wire fix with the native `/v1/sdk` enveloped-
+  secrets plane (commit `d557576`), whose consensus authorizer (`buildConsensusAuthorizer`,
+  "refusing to boot fail-open") fires whenever a REK/master key is loaded — and in v1.12.3
+  that gate is `masterKey != nil`, INDEPENDENT of `ZAP_PORT` (v1.11.11 gated it behind ZAP,
+  which is why lux-kms-go boots today). So any KMS with a legacy `KMS_MASTER_KEY_B64` and no
+  `KMS_CONSENSUS_VALIDATORS`/`KMS_CONSENSUS_OPERATORS` (or `KMS_CONSENSUS_FILE`) will crashloop
+  on v1.12.3. Deploy plan for a live KMS keeping its master key: set consensus authority first,
+  then roll; or migrate the REK to `MPC_REK_ENDPOINT`. The security-critical wire fix would
+  ideally be decoupled from the authorizer so it can ship to secrets-only KMSes without
+  standing up `/v1/sdk` authority.
+
 ## One KMS per org. Env is a field, not a hostname.
 
 There is one KMS endpoint per org. Every caller — devnet, testnet,
