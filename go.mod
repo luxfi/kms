@@ -6,10 +6,10 @@ require (
 	github.com/cloudflare/circl v1.6.3
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/luxfi/go-bip39 v1.1.2
-	github.com/luxfi/ids v1.2.15
-	github.com/luxfi/keys v1.1.0
+	github.com/luxfi/ids v1.3.2
+	github.com/luxfi/keys v1.4.1
 	github.com/luxfi/log v1.4.3
-	github.com/luxfi/zap v0.7.2
+	github.com/luxfi/zap v1.2.6
 	github.com/luxfi/zapdb v1.10.0
 	golang.org/x/crypto v0.52.0
 	k8s.io/api v0.34.0
@@ -51,26 +51,26 @@ require (
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/klauspost/crc32 v1.3.0 // indirect
 	github.com/luxfi/accel v1.2.4 // indirect
-	github.com/luxfi/address v1.0.1 // indirect
+	github.com/luxfi/address v1.1.1 // indirect
 	github.com/luxfi/age v1.5.0 // indirect
-	github.com/luxfi/cache v1.2.1 // indirect
-	github.com/luxfi/constants v1.5.8 // indirect
-	github.com/luxfi/container v0.0.4 // indirect
-	github.com/luxfi/crypto v1.19.27 // indirect
+	github.com/luxfi/cache v1.3.1 // indirect
+	github.com/luxfi/constants v1.6.2 // indirect
+	github.com/luxfi/container v0.2.1 // indirect
+	github.com/luxfi/crypto v1.20.2 // indirect
 	github.com/luxfi/crypto/ipa v1.2.4 // indirect
-	github.com/luxfi/formatting v1.0.1 // indirect
-	github.com/luxfi/geth v1.17.12 // indirect
+	github.com/luxfi/formatting v1.1.1 // indirect
+	github.com/luxfi/geth v1.20.1 // indirect
 	github.com/luxfi/go-bip32 v1.0.2 // indirect
-	github.com/luxfi/math v1.4.1 // indirect
+	github.com/luxfi/math v1.5.1 // indirect
 	github.com/luxfi/math/big v0.1.0 // indirect
 	github.com/luxfi/mdns v0.1.1 // indirect
-	github.com/luxfi/metric v1.5.8 // indirect
+	github.com/luxfi/metric v1.8.1 // indirect
 	github.com/luxfi/mock v0.1.1 // indirect
 	github.com/luxfi/pq v1.0.3 // indirect
-	github.com/luxfi/proto v1.3.4 // indirect
+	github.com/luxfi/proto v1.4.2 // indirect
 	github.com/luxfi/sampler v1.1.0 // indirect
-	github.com/luxfi/tls v1.0.3 // indirect
-	github.com/luxfi/vm v1.2.3 // indirect
+	github.com/luxfi/tls v1.1.1 // indirect
+	github.com/luxfi/vm v1.3.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
