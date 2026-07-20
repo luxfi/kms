@@ -366,7 +366,7 @@ func main() {
 			mgr := keys.NewManager(zapClient, keyStore, vaultID)
 			// Enable /v1/sdk sign/verify over the same MPC-backed manager.
 			signBackend = sdksign.New(mgr)
-			registerKMSRoutes(mux, mgr, zapClient, &mpcAvailable)
+			registerKMSRoutes(mux, auth, mgr, zapClient, &mpcAvailable)
 		}
 	}
 	if vaultID == "" {
@@ -574,11 +574,16 @@ func healthHandler(vaultID string, mpcAvailable *bool) http.HandlerFunc {
 	}
 }
 
-func registerKMSRoutes(mux *http.ServeMux, mgr *keys.Manager, mpcBackend keys.MPCBackend, mpcAvailable *bool) {
-	// KMS key routes are unprotected at the HTTP layer — auth is enforced
-	// by the Gateway (JWT validation + X-IAM-Roles header injection).
-	// In-cluster callers (ATS, BD, TA) go through Gateway; direct access
-	// is blocked by K8s NetworkPolicy (only Gateway can reach port 8080).
+func registerKMSRoutes(mux *http.ServeMux, auth *orgJWTAuth, mgr *keys.Manager, mpcBackend keys.MPCBackend, mpcAvailable *bool) {
+	// KMS validator-key routes (keygen / sign / rotate / metadata reads)
+	// are gated by app-layer IAM JWT auth (auth.requireKeyAuth: kms-admin
+	// role, fail closed). This is defense in depth BEHIND the Gateway and
+	// NetworkPolicy — never a substitute for them. A caller that reaches
+	// :8080 directly (NetworkPolicy gap, port-forward, pod compromise,
+	// SSRF) still cannot keygen/sign/rotate without a valid IAM signature,
+	// because the signature is verified here and no injected header is
+	// trusted. The /v1/kms/status health probe stays open (no key
+	// material; consumed by circuit-breakers that hold no token).
 	//
 	// requireMPC short-circuits with 503 + a re-probe attempt when the
 	// boot-time MPC handshake failed. The re-probe lets KMS recover
@@ -605,7 +610,7 @@ func registerKMSRoutes(mux *http.ServeMux, mgr *keys.Manager, mpcBackend keys.MP
 		return true
 	}
 
-	mux.HandleFunc("POST /v1/kms/keys/generate", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /v1/kms/keys/generate", auth.requireKeyAuth(func(w http.ResponseWriter, r *http.Request) {
 		if !requireMPC(w, r) {
 			return
 		}
@@ -644,17 +649,17 @@ func registerKMSRoutes(mux *http.ServeMux, mgr *keys.Manager, mpcBackend keys.MP
 		log.Printf("kms: audit: keygen OK validator_id=%s bls_wallet=%s corona_wallet=%s threshold=%d parties=%d",
 			ks.ValidatorID, ks.BLSWalletID, ks.CoronaWalletID, ks.Threshold, ks.Parties)
 		writeJSON(w, http.StatusCreated, ks)
-	})
+	}))
 
-	mux.HandleFunc("GET /v1/kms/keys", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /v1/kms/keys", auth.requireKeyAuth(func(w http.ResponseWriter, r *http.Request) {
 		list := mgr.List()
 		if list == nil {
 			list = []*keys.ValidatorKeySet{}
 		}
 		writeJSON(w, http.StatusOK, list)
-	})
+	}))
 
-	mux.HandleFunc("GET /v1/kms/keys/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /v1/kms/keys/{id}", auth.requireKeyAuth(func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		ks, err := mgr.Get(id)
 		if err != nil {
@@ -662,9 +667,9 @@ func registerKMSRoutes(mux *http.ServeMux, mgr *keys.Manager, mpcBackend keys.MP
 			return
 		}
 		writeJSON(w, http.StatusOK, ks)
-	})
+	}))
 
-	mux.HandleFunc("POST /v1/kms/keys/{id}/sign", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /v1/kms/keys/{id}/sign", auth.requireKeyAuth(func(w http.ResponseWriter, r *http.Request) {
 		if !requireMPC(w, r) {
 			return
 		}
@@ -701,9 +706,9 @@ func registerKMSRoutes(mux *http.ServeMux, mgr *keys.Manager, mpcBackend keys.MP
 		}
 		log.Printf("kms: audit: sign OK validator_id=%s key_type=%s", id, req.KeyType)
 		writeJSON(w, http.StatusOK, resp)
-	})
+	}))
 
-	mux.HandleFunc("POST /v1/kms/keys/{id}/rotate", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /v1/kms/keys/{id}/rotate", auth.requireKeyAuth(func(w http.ResponseWriter, r *http.Request) {
 		if !requireMPC(w, r) {
 			return
 		}
@@ -731,7 +736,7 @@ func registerKMSRoutes(mux *http.ServeMux, mgr *keys.Manager, mpcBackend keys.MP
 		log.Printf("kms: audit: rotate OK validator_id=%s new_threshold=%d new_parties=%d",
 			id, ks.Threshold, ks.Parties)
 		writeJSON(w, http.StatusOK, ks)
-	})
+	}))
 
 	mux.HandleFunc("GET /v1/kms/status", func(w http.ResponseWriter, r *http.Request) {
 		status, err := mpcBackend.Status(r.Context())

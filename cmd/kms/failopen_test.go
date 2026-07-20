@@ -79,6 +79,25 @@ func (f *fakeBackend) Decrypt(context.Context, string, []byte) (*mpc.DecryptResu
 	return nil, errors.New("decrypt unused in failopen tests")
 }
 
+// authedPost issues a POST carrying a kms-admin bearer — the credential
+// the validator-key routes now require. These tests pin the requireMPC
+// behaviour, which sits BEHIND requireKeyAuth, so they authenticate first;
+// an unauthenticated request would 401 before reaching requireMPC.
+func authedPost(t *testing.T, url, bearer, body string) *http.Response {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(body))
+	if err != nil {
+		t.Fatalf("build req: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+bearer)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do post %s: %v", url, err)
+	}
+	return resp
+}
+
 // requireMPC must short-circuit signing routes with 503 and a structured
 // error body when MPC is unreachable. Without this, a degraded KMS would
 // quietly invoke MPC and surface 500s with cryptic ZAP errors instead of
@@ -87,18 +106,17 @@ func TestRegisterKMSRoutes_SignReturns503WhenMPCDown(t *testing.T) {
 	backend := &fakeBackend{}
 	backend.setErr(errors.New("connection reset by peer"))
 
+	auth, bearer, cleanup := newTestKeyAuth(t, roleKMSAdmin)
+	defer cleanup()
 	mgr := keys.NewManager(backend, nil, "vault-1")
 	mux := http.NewServeMux()
 	mpcAvailable := false
-	registerKMSRoutes(mux, mgr, backend, &mpcAvailable)
+	registerKMSRoutes(mux, auth, mgr, backend, &mpcAvailable)
 
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	resp, err := http.Post(srv.URL+"/v1/kms/keys/v-1/sign", "application/json", strings.NewReader(`{"key_type":"bls","message":"aGVsbG8="}`))
-	if err != nil {
-		t.Fatalf("post sign: %v", err)
-	}
+	resp := authedPost(t, srv.URL+"/v1/kms/keys/v-1/sign", bearer, `{"key_type":"bls","message":"aGVsbG8="}`)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusServiceUnavailable {
@@ -126,29 +144,25 @@ func TestRegisterKMSRoutes_KeygenAndRotateAlsoGated(t *testing.T) {
 	backend := &fakeBackend{}
 	backend.setErr(errors.New("dial tcp: i/o timeout"))
 
+	auth, bearer, cleanup := newTestKeyAuth(t, roleKMSAdmin)
+	defer cleanup()
 	mgr := keys.NewManager(backend, nil, "vault-1")
 	mux := http.NewServeMux()
 	mpcAvailable := false
-	registerKMSRoutes(mux, mgr, backend, &mpcAvailable)
+	registerKMSRoutes(mux, auth, mgr, backend, &mpcAvailable)
 
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	keygenResp, err := http.Post(srv.URL+"/v1/kms/keys/generate", "application/json",
-		strings.NewReader(`{"validator_id":"v-1","threshold":2,"parties":3}`))
-	if err != nil {
-		t.Fatalf("post generate: %v", err)
-	}
+	keygenResp := authedPost(t, srv.URL+"/v1/kms/keys/generate", bearer,
+		`{"validator_id":"v-1","threshold":2,"parties":3}`)
 	defer keygenResp.Body.Close()
 	if keygenResp.StatusCode != http.StatusServiceUnavailable {
 		t.Fatalf("generate status: got %d want 503", keygenResp.StatusCode)
 	}
 
-	rotateResp, err := http.Post(srv.URL+"/v1/kms/keys/v-1/rotate", "application/json",
-		strings.NewReader(`{"new_threshold":3}`))
-	if err != nil {
-		t.Fatalf("post rotate: %v", err)
-	}
+	rotateResp := authedPost(t, srv.URL+"/v1/kms/keys/v-1/rotate", bearer,
+		`{"new_threshold":3}`)
 	defer rotateResp.Body.Close()
 	if rotateResp.StatusCode != http.StatusServiceUnavailable {
 		t.Fatalf("rotate status: got %d want 503", rotateResp.StatusCode)
@@ -165,10 +179,12 @@ func TestRegisterKMSRoutes_RecoversAfterMPCComesUp(t *testing.T) {
 	backend := &fakeBackend{}
 	backend.setErr(errors.New("temporary outage"))
 
+	auth, bearer, cleanup := newTestKeyAuth(t, roleKMSAdmin)
+	defer cleanup()
 	mgr := keys.NewManager(backend, nil, "vault-1")
 	mux := http.NewServeMux()
 	mpcAvailable := false
-	registerKMSRoutes(mux, mgr, backend, &mpcAvailable)
+	registerKMSRoutes(mux, auth, mgr, backend, &mpcAvailable)
 
 	// Wrap with a recovery middleware so the inner mgr.SignWithBLS panic
 	// (nil store, expected for this minimal test rig) doesn't kill the
@@ -185,11 +201,7 @@ func TestRegisterKMSRoutes_RecoversAfterMPCComesUp(t *testing.T) {
 	defer srv.Close()
 
 	// First call: still down, expect 503 + a re-probe.
-	resp1, err := http.Post(srv.URL+"/v1/kms/keys/v-1/sign", "application/json",
-		strings.NewReader(`{"key_type":"bls","message":"aGVsbG8="}`))
-	if err != nil {
-		t.Fatalf("first post: %v", err)
-	}
+	resp1 := authedPost(t, srv.URL+"/v1/kms/keys/v-1/sign", bearer, `{"key_type":"bls","message":"aGVsbG8="}`)
 	resp1.Body.Close()
 	if resp1.StatusCode != http.StatusServiceUnavailable {
 		t.Fatalf("first call: got %d want 503", resp1.StatusCode)
@@ -207,11 +219,7 @@ func TestRegisterKMSRoutes_RecoversAfterMPCComesUp(t *testing.T) {
 	// Sign error). Either way the request crossed requireMPC, which is
 	// what we're pinning.
 	backend.setErr(nil)
-	resp2, err := http.Post(srv.URL+"/v1/kms/keys/v-1/sign", "application/json",
-		strings.NewReader(`{"key_type":"bls","message":"aGVsbG8="}`))
-	if err != nil {
-		t.Fatalf("second post: %v", err)
-	}
+	resp2 := authedPost(t, srv.URL+"/v1/kms/keys/v-1/sign", bearer, `{"key_type":"bls","message":"aGVsbG8="}`)
 	resp2.Body.Close()
 	if resp2.StatusCode == http.StatusServiceUnavailable {
 		t.Fatalf("second call: got 503 after MPC recovered; want any non-503")
@@ -224,11 +232,7 @@ func TestRegisterKMSRoutes_RecoversAfterMPCComesUp(t *testing.T) {
 	}
 
 	// Third call: flag is now true, requireMPC must skip the re-probe.
-	resp3, err := http.Post(srv.URL+"/v1/kms/keys/v-1/sign", "application/json",
-		strings.NewReader(`{"key_type":"bls","message":"aGVsbG8="}`))
-	if err != nil {
-		t.Fatalf("third post: %v", err)
-	}
+	resp3 := authedPost(t, srv.URL+"/v1/kms/keys/v-1/sign", bearer, `{"key_type":"bls","message":"aGVsbG8="}`)
 	resp3.Body.Close()
 	if got := backend.statusCalls.Load(); got != 2 {
 		t.Fatalf("status probe count must NOT increase after flag is up: got %d want 2", got)
@@ -342,18 +346,16 @@ func TestRegisterKMSRoutes_NilFlagFallsBackToProbe(t *testing.T) {
 	backend := &fakeBackend{}
 	backend.setErr(errors.New("down"))
 
+	auth, bearer, cleanup := newTestKeyAuth(t, roleKMSAdmin)
+	defer cleanup()
 	mgr := keys.NewManager(backend, nil, "vault-1")
 	mux := http.NewServeMux()
-	registerKMSRoutes(mux, mgr, backend, nil)
+	registerKMSRoutes(mux, auth, mgr, backend, nil)
 
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	resp, err := http.Post(srv.URL+"/v1/kms/keys/v-1/sign", "application/json",
-		strings.NewReader(`{"key_type":"bls","message":"aGVsbG8="}`))
-	if err != nil {
-		t.Fatalf("post: %v", err)
-	}
+	resp := authedPost(t, srv.URL+"/v1/kms/keys/v-1/sign", bearer, `{"key_type":"bls","message":"aGVsbG8="}`)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusServiceUnavailable {
 		t.Fatalf("nil flag: got %d want 503", resp.StatusCode)
