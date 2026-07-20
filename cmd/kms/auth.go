@@ -297,6 +297,60 @@ func (a *orgJWTAuth) requireOrgJWT(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// requireKeyAuth wraps a validator-key-management handler (keygen, sign,
+// rotate, and the key-metadata reads) with app-layer IAM JWT verification.
+//
+// Unlike requireOrgJWT there is no {org} path param to bind to: validator
+// key custody is a cluster-admin operation, not an org-scoped secret. It is
+// gated on the kms-admin role (superadmin is the break-glass override),
+// granted in IAM — the same authority the zapserver /v1/sdk sign op and the
+// mpc KMS handlers enforce for their write path.
+//
+// Fail closed at every step:
+//   - nil receiver (IAM not wired)     => 503, never open
+//   - missing / malformed bearer       => 401
+//   - bad signature / issuer / expiry  => 401
+//   - authenticated but missing role   => 403
+//
+// The JWT signature is verified HERE against IAM's JWKS. We deliberately do
+// NOT trust a gateway-injected role header (e.g. X-IAM-Roles): a caller that
+// reaches :8080 directly — NetworkPolicy gap, port-forward, pod compromise,
+// SSRF — could forge such a header but cannot forge an IAM signature. This
+// is the defense-in-depth layer that stands even if the NetworkPolicy fails,
+// not a replacement for it.
+func (a *orgJWTAuth) requireKeyAuth(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if a == nil {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]any{
+				"statusCode": 503, "message": "auth not configured",
+			})
+			return
+		}
+		raw := bearerToken(r)
+		if raw == "" {
+			writeJSON(w, http.StatusUnauthorized, map[string]any{
+				"statusCode": 401, "message": "missing bearer token",
+			})
+			return
+		}
+		claims, err := a.validate(r.Context(), raw)
+		if err != nil {
+			log.Printf("kms: key-auth reject: %v (path=%s)", err, r.URL.Path)
+			writeJSON(w, http.StatusUnauthorized, map[string]any{
+				"statusCode": 401, "message": "invalid token",
+			})
+			return
+		}
+		if !hasRole(claims.Roles, roleKMSAdmin) && !hasRole(claims.Roles, roleSuperadmin) {
+			writeJSON(w, http.StatusForbidden, map[string]any{
+				"statusCode": 403, "message": "kms key operations require the kms-admin role",
+			})
+			return
+		}
+		next(w, r)
+	}
+}
+
 func bearerToken(r *http.Request) string {
 	h := r.Header.Get("Authorization")
 	if h == "" {

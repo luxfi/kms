@@ -524,6 +524,99 @@ func TestRequireOrgJWT_multiIssuerWhiteLabel(t *testing.T) {
 	}
 }
 
+// newTestKeyAuth returns an *orgJWTAuth backed by a stub IAM plus a bearer
+// token carrying the given roles — the credential the validator-key routes
+// require. Caller defers cleanup() to shut the stub IAM down.
+func newTestKeyAuth(t *testing.T, roles ...string) (auth *orgJWTAuth, bearer string, cleanup func()) {
+	t.Helper()
+	signer, jwks := newTestSigner(t)
+	iam := httptest.NewServer(jwksHandler(jwks))
+	auth = newOrgJWTAuth(iam.URL, "")
+	bearer = signOrgClaims(t, signer, orgClaims{
+		Claims: jwt.Claims{
+			Issuer:  iam.URL,
+			Subject: "ops",
+			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+		Owner: "operator-org",
+		Roles: roles,
+	})
+	return auth, bearer, iam.Close
+}
+
+// serveKeyAuth drives one request through requireKeyAuth-wrapped handler
+// and returns the recorder. bearer=="" sends no Authorization header.
+func serveKeyAuth(t *testing.T, auth *orgJWTAuth, bearer string) *httptest.ResponseRecorder {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /v1/kms/keys/{id}/sign", auth.requireKeyAuth(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	req := httptest.NewRequest(http.MethodPost, "/v1/kms/keys/v-1/sign", strings.NewReader(`{}`))
+	if bearer != "" {
+		req.Header.Set("Authorization", "Bearer "+bearer)
+	}
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	return rec
+}
+
+// The validator-key routes must fail CLOSED when auth cannot be
+// established. This is the fix for the /sign hole: a caller reaching
+// :8080 directly (NetworkPolicy gap, port-forward, SSRF) is rejected
+// before any signing occurs.
+
+func TestRequireKeyAuth_missingBearer(t *testing.T) {
+	rec := serveKeyAuth(t, newOrgJWTAuth("https://iam.example.com", ""), "")
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("no token: got %d want 401; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestRequireKeyAuth_malformedTokenRejected(t *testing.T) {
+	rec := serveKeyAuth(t, newOrgJWTAuth("https://iam.example.com", ""), "not-a-jwt")
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("garbage token: got %d want 401; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+// nil auth (IAM_ENDPOINT unwired) must 503 — NEVER fall open to signing.
+func TestRequireKeyAuth_nilAuthFailsClosed(t *testing.T) {
+	rec := serveKeyAuth(t, (*orgJWTAuth)(nil), "")
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Errorf("nil auth: got %d want 503 (fail closed); body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+// A validly-signed token that lacks kms-admin/superadmin must 403 — a
+// bearer of ANY IAM token cannot sign validator keys.
+func TestRequireKeyAuth_validTokenWithoutRoleForbidden(t *testing.T) {
+	auth, bearer, cleanup := newTestKeyAuth(t) // no roles
+	defer cleanup()
+	rec := serveKeyAuth(t, auth, bearer)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("no role: got %d want 403; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestRequireKeyAuth_kmsAdminAllowed(t *testing.T) {
+	auth, bearer, cleanup := newTestKeyAuth(t, roleKMSAdmin)
+	defer cleanup()
+	rec := serveKeyAuth(t, auth, bearer)
+	if rec.Code != http.StatusOK {
+		t.Errorf("kms-admin: got %d want 200; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestRequireKeyAuth_superadminAllowed(t *testing.T) {
+	auth, bearer, cleanup := newTestKeyAuth(t, roleSuperadmin)
+	defer cleanup()
+	rec := serveKeyAuth(t, auth, bearer)
+	if rec.Code != http.StatusOK {
+		t.Errorf("superadmin: got %d want 200; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestBearerToken_extracts(t *testing.T) {
 	cases := []struct {
 		header, want string
