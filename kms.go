@@ -1,9 +1,9 @@
 // Package kms is the canonical Go client for KMS.
 //
 // Transport: native luxfi/zap binary protocol on port 9999. There is no
-// HTTP fallback in this package — services that need cross-cluster reach
-// can shell out to /v1/kms/secrets/{name} via curl, but in-cluster Go is
-// always ZAP.
+// HTTP fallback in this package — services that need cross-cluster reach use
+// the org-scoped HTTP surface (GET /v1/kms/orgs/{org}/secrets/{path}/{name}
+// with an IAM bearer), but in-cluster Go is always ZAP.
 //
 // Defaults read from environment:
 //
