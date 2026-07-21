@@ -1,10 +1,44 @@
 package zapclient
 
 import (
+	"context"
+	"strings"
 	"testing"
 
 	"github.com/luxfi/zap"
 )
+
+// H2 fail-closed backstop: with RequireSession set and no session established,
+// call() must refuse BEFORE building or transmitting any envelope — so a secret
+// opcode can never ride a plaintext channel. The guard is the first check in
+// call(), so a bare Client (no node, no signer) exercises it without network.
+func TestCall_RequireSessionRefusesWhenNoSession(t *testing.T) {
+	c := &Client{requireSession: true} // session == nil
+	_, err := c.call(context.Background(), OpSecretGet, []byte(`{}`))
+	if err == nil {
+		t.Fatal("expected refusal when RequireSession set and session==nil")
+	}
+	if !strings.Contains(err.Error(), "secure session required") {
+		t.Fatalf("wrong error: %v", err)
+	}
+}
+
+// Without RequireSession the session guard does not fire; call() proceeds to the
+// identity check instead (proving the guard is gated strictly on requireSession,
+// not unconditionally rejecting sessionless clients used by dev/loopback peers).
+func TestCall_NoRequireSessionFallsToIdentityCheck(t *testing.T) {
+	c := &Client{requireSession: false} // session == nil, no signer
+	_, err := c.call(context.Background(), OpSecretGet, []byte(`{}`))
+	if err == nil {
+		t.Fatal("expected an error (no identity wired)")
+	}
+	if strings.Contains(err.Error(), "secure session required") {
+		t.Fatalf("session guard fired without RequireSession: %v", err)
+	}
+	if !strings.Contains(err.Error(), "no identity wired") {
+		t.Fatalf("expected identity error, got: %v", err)
+	}
+}
 
 func TestOpcodes_MatchServer(t *testing.T) {
 	cases := []struct {

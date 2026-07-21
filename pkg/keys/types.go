@@ -37,8 +37,15 @@ type SignRequest struct {
 }
 
 // SignResponse contains the signature from a threshold signing operation.
+//
+// For secp256k1/ECDSA ("bls" slot): Signature is the canonical 65-byte
+// r‖s‖v (ecrecover-ready), R/S are the EIP-2 low-S components, and V is the
+// recovery id ("0" or "1"). A caller building an EVM tx uses V directly
+// (legacy: 27+V; EIP-155: chainID*2+35+V). For ed25519/FROST ("corona"
+// slot): Signature is the 64-byte blob and R/S/V are empty.
 type SignResponse struct {
 	Signature string `json:"signature"`
 	R         string `json:"r,omitempty"`
 	S         string `json:"s,omitempty"`
+	V         string `json:"v,omitempty"`
 }

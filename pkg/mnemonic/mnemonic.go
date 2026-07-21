@@ -68,7 +68,15 @@ type Reader interface {
 // mnemonic being loaded is itself the root every later identity
 // derives from).
 var dialKMS = func(ctx context.Context, addr string, identity *keys.ServiceIdentity) (Reader, error) {
-	cfg := zapclient.Config{PeerAddr: addr}
+	// The deploy mnemonic is the ROOT secret from which every derived
+	// validator/service key descends — it must never traverse a plaintext
+	// channel. RequireSession makes the dial fail closed unless the hybrid
+	// handshake establishes an AEAD session, defeating an on-path
+	// plaintext-downgrade that would otherwise let an attacker forge the
+	// mnemonic response. Every current KMS advertises the ML-KEM-768 handshake,
+	// so this is transparent for real peers; a peer that cannot establish a
+	// session is refused rather than trusted in the clear.
+	cfg := zapclient.Config{PeerAddr: addr, RequireSession: true}
 	if identity != nil {
 		cfg.IdentityHeader = envelope.IdentityHeader{
 			NodeID:      identity.NodeID,

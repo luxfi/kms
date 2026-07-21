@@ -169,6 +169,7 @@ func (m *Manager) SignWithBLS(ctx context.Context, validatorID string, message [
 		Signature: result.Signature,
 		R:         result.R,
 		S:         result.S,
+		V:         result.V,
 	}, nil
 }
 
@@ -193,6 +194,7 @@ func (m *Manager) SignWithCorona(ctx context.Context, validatorID string, messag
 		Signature: result.Signature,
 		R:         result.R,
 		S:         result.S,
+		V:         result.V,
 	}, nil
 }
 
