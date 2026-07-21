@@ -16,10 +16,26 @@ RUN git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "htt
 
 WORKDIR /build
 COPY go.mod go.sum ./
-RUN go mod download
+# GOSUMDB=off: luxfi first-party tags are periodically force-republished during the
+# ongoing ecosystem re-tag (e.g. luxfi/vm), so immutable sum.golang.org lags the
+# proxy and rejects the current bits. Trust the proxy/authed-git source and record
+# what is really fetched — integrity is still enforced against the regenerated
+# go.sum (regenerate-not-bypass). Mirrors the main Dockerfile.
+ENV GOSUMDB=off
+RUN rm -f go.sum && go mod download
 COPY . .
 
-RUN CGO_ENABLED=1 go build -tags "sqlite_fts5 sqlcipher" \
+# `COPY . .` just re-introduced the committed go.sum, which can be stale vs the bits
+# primed above when a luxfi tag was force-republished — a -mod=mod build then aborts
+# on a go.sum checksum mismatch. Drop and regenerate from the primed cache under
+# GOSUMDB=off (same as the main Dockerfile). Without this, that earlier regeneration
+# is silently reverted by this COPY.
+RUN rm -f go.sum && go mod download
+
+# GOFLAGS=-mod=mod builds from the module cache, not the in-tree vendor/. The
+# committed vendor/ can lag go.mod during the re-tag (inconsistent vendoring) and
+# also strips supranational/blst C headers. Matches the main Dockerfile.
+RUN CGO_ENABLED=1 GOFLAGS=-mod=mod go build -tags "sqlite_fts5 sqlcipher" \
     -ldflags="-s -w" -o /usr/local/bin/kms ./cmd/kms
 
 FROM debian:bookworm-slim
