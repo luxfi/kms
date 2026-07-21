@@ -68,6 +68,15 @@ type Client struct {
 	// nil means handshake skipped (peer didn't speak the new opcode set
 	// or LocalCaps disabled the bit) — request bodies remain plaintext.
 	session *kmszap.Session
+	// sessionHybrid records whether the established session ran ML-KEM-768
+	// (true) or fell back to classical X25519-only (false). Consulted by the
+	// RequireSession downgrade guard.
+	sessionHybrid bool
+	// requireSession, when set, makes the client FAIL CLOSED rather than
+	// transmit or accept any secret over a plaintext (no-session) channel.
+	// Set by callers routing high-value secrets — the staking identity and
+	// the root deploy mnemonic. See Config.RequireSession.
+	requireSession bool
 	// Capability bitmap the client offers in ClientHello. Defaults to
 	// CapMLKEM768 in DialWithConfig; set to 0 in Config.LocalCaps to
 	// force a classical-only path for testing the fallback.
@@ -109,6 +118,29 @@ type Config struct {
 	// entirely. Reserved for talking to legacy peers that don't speak
 	// OpClientHello. The connection then falls back to plaintext payloads.
 	SkipHandshake bool
+
+	// RequireSession makes the dial FAIL CLOSED unless an AEAD session is
+	// established by the hybrid handshake. It is the defense against the
+	// plaintext-downgrade attack: an on-path adversary who drops or rejects
+	// the ClientHello would otherwise force session=nil and the client would
+	// send the request — and ACCEPT the response — in unauthenticated
+	// plaintext, letting the adversary forge the reply (a valid-BIP39
+	// mnemonic, or a staking-identity blob with a recomputed checksum). With
+	// RequireSession set:
+	//   - DialWithConfig errors (does not proceed) when the handshake is
+	//     skipped/fails and no session results;
+	//   - a classical-only negotiated session is refused when this client
+	//     offered ML-KEM-768 (post-quantum-downgrade guard);
+	//   - call() refuses any secret opcode while session==nil, so the
+	//     response is ALWAYS AEAD-opened, never read as plaintext.
+	// NOTE: the hybrid handshake is unauthenticated ephemeral key agreement;
+	// RequireSession closes the plaintext downgrade and forces an AEAD
+	// channel, but it does NOT by itself authenticate the server. Full MITM
+	// resistance additionally requires the server to sign the ServerHello /
+	// transcript with a pinned static identity — a bilateral protocol change
+	// tracked separately. Callers must still trust the peer address (K8s
+	// NetworkPolicy / in-cluster boundary) for server authenticity today.
+	RequireSession bool
 
 	// IdentityHeader is the public block embedded in every envelope.
 	// Required for the secret-opcode surface; absent → the wire path
@@ -163,6 +195,7 @@ func DialWithConfig(ctx context.Context, cfg Config) (*Client, error) {
 		localCaps:      caps,
 		identityHeader: cfg.IdentityHeader,
 		signer:         cfg.Signer,
+		requireSession: cfg.RequireSession,
 	}
 
 	if cfg.PeerAddr != "" {
@@ -204,14 +237,38 @@ func DialWithConfig(ctx context.Context, cfg Config) (*Client, error) {
 	// connection runs an X25519 + ML-KEM-768 hybrid key agreement
 	// before any secret opcode flows. A peer that doesn't speak
 	// OpClientHello returns a ZAP error and we fall back to plaintext.
+	var hsErr error
 	if !cfg.SkipHandshake {
 		if err := c.handshake(ctx); err != nil {
+			hsErr = err
 			c.log.Warn("zapclient: handshake skipped — proceeding plaintext",
 				"peer", c.peerID, "err", err)
 			// Forward-compat: don't tear down the client; some legacy
 			// peers may not speak OpClientHello yet. The connection still
 			// works for opcodes that don't expect AEAD-sealed bodies.
 			c.session = nil
+		}
+	}
+
+	// Fail-closed session requirement. Callers routing high-value secrets
+	// (staking identity, root deploy mnemonic) set RequireSession so the
+	// plaintext-downgrade path — forced by an on-path attacker dropping or
+	// rejecting the handshake, or a SkipHandshake misconfiguration — is
+	// refused here rather than silently sending/accepting unauthenticated
+	// plaintext downstream.
+	if c.requireSession {
+		switch {
+		case c.session == nil:
+			n.Stop()
+			if hsErr != nil {
+				return nil, fmt.Errorf("zapclient: secure session required but handshake failed: %w", hsErr)
+			}
+			return nil, errors.New("zapclient: secure session required but none established (handshake skipped or peer does not speak OpClientHello)")
+		case (c.localCaps&kmszap.CapMLKEM768 != 0) && !c.sessionHybrid:
+			// We offered ML-KEM-768 but the peer negotiated classical-only.
+			// For a post-quantum staking secret this is a downgrade — refuse.
+			n.Stop()
+			return nil, errors.New("zapclient: hybrid PQ session required but peer negotiated classical-only (ML-KEM-768 downgrade refused)")
 		}
 	}
 	return c, nil
@@ -262,6 +319,7 @@ func (c *Client) handshake(ctx context.Context) error {
 		return fmt.Errorf("zapclient: session init: %w", err)
 	}
 	c.session = sess
+	c.sessionHybrid = result.Hybrid
 	if !result.Hybrid {
 		c.log.Warn("zapclient: handshake classical-only — peer cleared ML-KEM-768 cap bit",
 			"peer", c.peerID, "peerCaps", result.PeerCaps)
@@ -358,6 +416,14 @@ func (c *Client) DeleteAt(ctx context.Context, path, name, env string) error {
 // verifies before authorization runs. Without an identity wired in
 // Config the wire path fails fast.
 func (c *Client) call(ctx context.Context, op uint16, body []byte) ([]byte, error) {
+	// Fail-closed backstop: never transmit or accept a secret opcode over a
+	// plaintext channel when a secure session was required. DialWithConfig
+	// already refuses to return a sessionless client under RequireSession;
+	// this guarantees it at the call site too, so the response below is always
+	// AEAD-opened (never read as attacker-forgeable plaintext).
+	if c.requireSession && c.session == nil {
+		return nil, errors.New("zapclient: secure session required but not established (refusing to transmit secret in plaintext)")
+	}
 	if c.signer == nil || len(c.identityHeader.PublicKey) == 0 {
 		return nil, errors.New("zapclient: no identity wired (Config.IdentityHeader + Signer)")
 	}

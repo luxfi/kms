@@ -5,7 +5,7 @@ go 1.26.4
 require (
 	github.com/cloudflare/circl v1.6.3
 	github.com/go-jose/go-jose/v4 v4.1.4
-	github.com/luxfi/go-bip39 v1.1.2
+	github.com/luxfi/go-bip39 v1.2.0
 	github.com/luxfi/ids v1.3.2
 	github.com/luxfi/keys v1.4.1
 	github.com/luxfi/log v1.4.3
@@ -52,7 +52,7 @@ require (
 	github.com/klauspost/crc32 v1.3.0 // indirect
 	github.com/luxfi/accel v1.2.4 // indirect
 	github.com/luxfi/address v1.1.1 // indirect
-	github.com/luxfi/age v1.5.0 // indirect
+	github.com/luxfi/age v1.6.0 // indirect
 	github.com/luxfi/cache v1.3.1 // indirect
 	github.com/luxfi/constants v1.6.2 // indirect
 	github.com/luxfi/container v0.2.1 // indirect
@@ -60,14 +60,15 @@ require (
 	github.com/luxfi/crypto/ipa v1.2.4 // indirect
 	github.com/luxfi/formatting v1.1.1 // indirect
 	github.com/luxfi/geth v1.20.1 // indirect
-	github.com/luxfi/go-bip32 v1.0.2 // indirect
+	github.com/luxfi/go-bip32 v1.1.0 // indirect
 	github.com/luxfi/math v1.5.1 // indirect
 	github.com/luxfi/math/big v0.1.0 // indirect
 	github.com/luxfi/mdns v0.1.1 // indirect
 	github.com/luxfi/metric v1.8.1 // indirect
 	github.com/luxfi/mock v0.1.1 // indirect
-	github.com/luxfi/pq v1.0.3 // indirect
+	github.com/luxfi/pq v1.1.0 // indirect
 	github.com/luxfi/proto v1.4.2 // indirect
+	github.com/luxfi/protocol v0.0.2 // indirect
 	github.com/luxfi/sampler v1.1.0 // indirect
 	github.com/luxfi/tls v1.1.1 // indirect
 	github.com/luxfi/vm v1.3.1 // indirect
@@ -90,12 +91,12 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/supranational/blst v0.3.16 // indirect
-	github.com/tinylib/msgp v1.6.3 // indirect
+	github.com/tinylib/msgp v1.6.4 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel v1.43.0 // indirect
-	go.opentelemetry.io/otel/metric v1.43.0 // indirect
-	go.opentelemetry.io/otel/trace v1.43.0 // indirect
+	go.opentelemetry.io/otel v1.44.0 // indirect
+	go.opentelemetry.io/otel/metric v1.44.0 // indirect
+	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.uber.org/mock v0.6.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
