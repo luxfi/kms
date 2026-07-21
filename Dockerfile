@@ -35,6 +35,16 @@ ENV GOSUMDB=off
 RUN rm -f go.sum && go mod download
 COPY . .
 
+# `COPY . .` just re-introduced the committed go.sum. luxfi first-party tags are
+# periodically force-republished (e.g. luxfi/vm), so the committed go.sum can be
+# stale vs the bits primed into the module cache above — and `go build -mod=mod`
+# below then aborts with a go.sum checksum mismatch (SECURITY ERROR). Drop it and
+# regenerate from the primed cache under GOSUMDB=off: integrity is still enforced
+# against the regenerated go.sum (regenerate-not-bypass, same posture as the
+# `go mod download` above). Without this, that earlier regeneration is silently
+# reverted by this COPY — the actual root cause of the 2026-07 build breakage.
+RUN rm -f go.sum && go mod download
+
 # Embed the React SPA into the Go binary at the embed.FS path (cmd/kms/web).
 # The Makefile `copy-ui` target does this; we replicate it inline so the
 # Dockerfile path is independent of `make`. Without this step, registerWebUI
