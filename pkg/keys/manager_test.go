@@ -95,6 +95,7 @@ func mockMPCServer(t *testing.T) *httptest.Server {
 				"signature": "sig-deadbeef",
 				"r":         "aabb",
 				"s":         "ccdd",
+				"v":         "1",
 			})
 		case r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/wallets"):
 			keygenCount++
@@ -239,6 +240,11 @@ func TestSignWithBLS(t *testing.T) {
 	}
 	if resp.Signature != "sig-deadbeef" {
 		t.Errorf("expected sig-deadbeef, got %s", resp.Signature)
+	}
+	// The recovery id must propagate — without it a caller cannot build an
+	// EVM tx and must guess v (wrong guess => wrong sender).
+	if resp.V != "1" {
+		t.Errorf("expected recovery id v=1 to propagate, got %q", resp.V)
 	}
 }
 

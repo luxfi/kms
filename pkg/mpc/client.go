@@ -88,10 +88,14 @@ type SignRequest struct {
 	Payload  []byte `json:"payload"`
 }
 
-// SignResult is the response from a signing operation.
+// SignResult is the response from a signing operation. For secp256k1/ECDSA,
+// mpcd returns EIP-2 low-S R/S, the recovery id V ("0"/"1"), and Signature as
+// the canonical 65-byte r‖s‖v (ecrecover-ready). For ed25519/FROST, Signature
+// is the 64-byte blob and V is empty.
 type SignResult struct {
 	R         string `json:"r,omitempty"`
 	S         string `json:"s,omitempty"`
+	V         string `json:"v,omitempty"`
 	Signature string `json:"signature,omitempty"`
 }
 
