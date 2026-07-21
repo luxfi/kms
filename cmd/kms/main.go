@@ -247,71 +247,14 @@ func main() {
 	expectedIss := envOr("KMS_EXPECTED_ISSUER", iamEndpoint)
 	auth := newOrgJWTAuth(jwksFrom, expectedIss)
 
-	// GET /v1/kms/orgs/{org}/secrets/{path...}/{name}
-	// Matches the ATS kmsclient.Get() URL pattern.
-	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
-		rest := r.PathValue("rest")
-		idx := strings.LastIndex(rest, "/")
-		if idx < 0 {
-			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "path and name required"})
-			return
-		}
-		path, name := rest[:idx], rest[idx+1:]
-		env := r.URL.Query().Get("env")
-		if env == "" {
-			env = "default"
-		}
-		sec, err := secStore.Get(path, name, env)
-		if err != nil {
-			writeJSON(w, http.StatusNotFound, map[string]any{"message": "not found"})
-			return
-		}
-		writeJSON(w, http.StatusOK, map[string]any{
-			"secret": map[string]any{"value": string(sec.Ciphertext)},
-		})
-	}))
-
-	// POST /v1/kms/orgs/{org}/secrets — create a secret. The handler is a
-	// named func (putSecretHandler) so the env-required contract is unit
-	// testable without standing up the full server.
-	mux.HandleFunc("POST /v1/kms/orgs/{org}/secrets", auth.requireOrgJWT(putSecretHandler(secStore)))
-
-	// DELETE /v1/kms/orgs/{org}/secrets/{rest...}/{name}
-	mux.HandleFunc("DELETE /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
-		rest := r.PathValue("rest")
-		idx := strings.LastIndex(rest, "/")
-		if idx < 0 {
-			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "path and name required"})
-			return
-		}
-		path, name := rest[:idx], rest[idx+1:]
-		env := r.URL.Query().Get("env")
-		if env == "" {
-			env = "default"
-		}
-		if err := secStore.Delete(path, name, env); err != nil {
-			writeJSON(w, http.StatusNotFound, map[string]any{"message": "not found"})
-			return
-		}
-		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
-	}))
-
-	// Legacy: env-backed secret fetch.
-	mux.HandleFunc("GET /v1/kms/secrets/{name}", func(w http.ResponseWriter, r *http.Request) {
-		name := r.PathValue("name")
-		if name == "" {
-			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "secret name required"})
-			return
-		}
-		val := os.Getenv(name)
-		if val == "" {
-			writeJSON(w, http.StatusNotFound, map[string]any{"message": "not found"})
-			return
-		}
-		writeJSON(w, http.StatusOK, map[string]any{
-			"secret": map[string]any{"secretKey": name, "secretValue": val},
-		})
-	})
+	// Secret CRUD surface — org-scoped, JWT-gated, ZapDB-backed. Extracted
+	// into one named registrar (mirrors registerKMSRoutes / registerOIDCRoutes
+	// / registerWebUI) so the exact route set the server exposes is testable
+	// in isolation. There is deliberately NO env-var fetch route: the KMS
+	// process environment (KMS_MASTER_KEY_B64 root REK, MPC_TOKEN, S3 keys) is
+	// never reachable over HTTP. Secrets flow ONLY through these org-scoped
+	// routes and the ZAP wire. Regression: TestSecretRoutes_NoEnvVarLeak.
+	registerSecretRoutes(mux, auth, secStore)
 
 	// MPC key management (only when MPC_VAULT_ID is set).
 	//
@@ -477,6 +420,78 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
+}
+
+// registerSecretRoutes installs the org-scoped secret CRUD surface — the ONLY
+// HTTP way to read or write secrets:
+//
+//	GET    /v1/kms/orgs/{org}/secrets/{path...}/{name}   read a secret value
+//	POST   /v1/kms/orgs/{org}/secrets                    create/upsert (env required)
+//	DELETE /v1/kms/orgs/{org}/secrets/{path...}/{name}   delete a secret
+//
+// Every route is wrapped in auth.requireOrgJWT: an IAM-signed bearer whose
+// owner/name/tag resolves to {org} (or carries the kms-admin role) is
+// mandatory, verified against IAM's JWKS. The values live in ZapDB (encrypted
+// at rest) and are also reachable over the ZAP wire.
+//
+// There is intentionally no `GET /v1/kms/secrets/{name}` env-var route. Such a
+// route once read os.Getenv of an attacker-supplied name and returned it
+// UNWRAPPED — no auth middleware — leaking the KMS process environment
+// (KMS_MASTER_KEY_B64 root REK, MPC_TOKEN, S3 backup keys) to anyone who
+// reached :8080 past the network boundary (NetworkPolicy gap, port-forward,
+// pod compromise, SSRF). It was deleted, not gated: it had zero callers (the
+// kms-operator and in-cluster clients read via the org-scoped path or ZAP) and
+// process env is never a secret-fetch source. Regression that keeps it gone:
+// TestSecretRoutes_NoEnvVarLeak.
+func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.SecretStore) {
+	// GET /v1/kms/orgs/{org}/secrets/{path...}/{name}
+	// Matches the ATS kmsclient.Get() URL pattern.
+	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
+		rest := r.PathValue("rest")
+		idx := strings.LastIndex(rest, "/")
+		if idx < 0 {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "path and name required"})
+			return
+		}
+		path, name := rest[:idx], rest[idx+1:]
+		env := r.URL.Query().Get("env")
+		if env == "" {
+			env = "default"
+		}
+		sec, err := secStore.Get(path, name, env)
+		if err != nil {
+			writeJSON(w, http.StatusNotFound, map[string]any{"message": "not found"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"secret": map[string]any{"value": string(sec.Ciphertext)},
+		})
+	}))
+
+	// POST /v1/kms/orgs/{org}/secrets — create a secret. The handler is a
+	// named func (putSecretHandler) so the env-required contract is unit
+	// testable without standing up the full server.
+	mux.HandleFunc("POST /v1/kms/orgs/{org}/secrets", auth.requireOrgJWT(putSecretHandler(secStore)))
+
+	// DELETE /v1/kms/orgs/{org}/secrets/{rest...}/{name}
+	mux.HandleFunc("DELETE /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
+		rest := r.PathValue("rest")
+		idx := strings.LastIndex(rest, "/")
+		if idx < 0 {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "path and name required"})
+			return
+		}
+		path, name := rest[:idx], rest[idx+1:]
+		env := r.URL.Query().Get("env")
+		if env == "" {
+			env = "default"
+		}
+		if err := secStore.Delete(path, name, env); err != nil {
+			writeJSON(w, http.StatusNotFound, map[string]any{"message": "not found"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	}))
 }
 
 // putSecretHandler serves POST /v1/kms/orgs/{org}/secrets (create/upsert).

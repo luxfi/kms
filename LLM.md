@@ -3,6 +3,29 @@
 **Project**: Lux Key Management Service (KMS)
 **Organization**: Lux Network
 
+## v1.12.5 — deleted the env-var fetch route (secrets are never process env)
+
+- **Hole (HIGH, CRITICAL on live `lux-kms-go`):** `GET /v1/kms/secrets/{name}` was
+  registered **unwrapped** — no auth middleware — and did `os.Getenv(name)`, returning
+  the raw value. Any caller reaching `:8080` past the network boundary (NetworkPolicy
+  gap, port-forward, pod compromise, SSRF) could `curl .../v1/kms/secrets/KMS_MASTER_KEY_B64`
+  with **no Authorization header** and read the root REK that protects every per-secret
+  DEK — plus `MPC_TOKEN`, `KMS_ENCRYPTION_KEY_B64`, and (in the `k8s/` variant) the S3
+  backup keys. On the live `lux-kms-go/kms` statefulset `KMS_MASTER_KEY_B64` IS populated
+  (verified: 32-byte key present in `kms-secrets`), so the leak was **live master-key
+  exposure gated only by the network** → CRITICAL.
+- **Fix: deleted the route** (it had **zero callers** — the kms-operator reads via the
+  org-scoped path/ZAP, the `kms` Go client uses ZAP; process env was never a secret
+  source). The three org-scoped secret routes were extracted into `registerSecretRoutes`
+  (mirrors `registerKMSRoutes`/`registerOIDCRoutes`/`registerWebUI`) so the exact exposed
+  route set is testable. Secrets now flow **only** through `/v1/kms/orgs/{org}/secrets/*`
+  (JWT-gated, `requireOrgJWT`) and the ZAP wire. Regression `TestSecretRoutes_NoEnvVarLeak`
+  fails if any route ever echoes process env again (unauth → 404, admin → 404, canary
+  value never in body). Stale `kms.go` doc comment referencing the route corrected.
+- Contrast: the Hanzo white-label fork (`hanzo/kms`) KEPT its `/v1/kms/secrets/{name}`
+  because it has real SDK consumers, and gated it (admin-only + `safeEnvName` + audit,
+  test `TestRed2_EnvVarReadRequiresAdmin`). Lux has no such consumers → delete, don't gate.
+
 ## 2026-07-15 — KMS↔MPC wire fix (v1.12.3) + authorizer-coupling caveat
 
 - **v1.12.3** (wire-fix commit `7105376`) realigns the KMS↔MPC ZAP signing wire to the mpcd
