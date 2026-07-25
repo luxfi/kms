@@ -118,6 +118,17 @@ func (m *Manager) GenerateValidatorKeys(ctx context.Context, req GenerateRequest
 		return nil, fmt.Errorf("keys: corona keygen failed (orphaned bls wallet %s): %w", blsResult.WalletID, err)
 	}
 
+	// Verify we got the threshold we asked for. Keygen takes no per-request
+	// threshold — the MPC ring's own --threshold governs — so requesting
+	// 3-of-5 and receiving something weaker is silent unless we check.
+	// Fail closed: an explicit error beats recording an unverified key.
+	if err := verifyThreshold("bls", req, blsResult.Threshold, blsResult.Participants); err != nil {
+		return nil, err
+	}
+	if err := verifyThreshold("corona", req, coronaResult.Threshold, coronaResult.Participants); err != nil {
+		return nil, err
+	}
+
 	blsPub := ""
 	if blsResult.ECDSAPubkey != nil {
 		blsPub = *blsResult.ECDSAPubkey
@@ -146,6 +157,37 @@ func (m *Manager) GenerateValidatorKeys(ctx context.Context, req GenerateRequest
 	}
 
 	return ks, nil
+}
+
+// verifyThreshold checks that a freshly generated key actually has the t-of-n
+// the caller asked for, and refuses the key otherwise.
+//
+// Why this must exist: mpc.KeygenRequest has no threshold field. The MPC ring's
+// own --threshold decides the CGGMP21 polynomial degree, so GenerateValidatorKeys
+// validating req.Threshold proves nothing about the key it gets back — the
+// request is advisory at best. Before mpcd reported these values it emitted
+// neither field, so every key set was stored as Threshold:0 Parties:0 while its
+// caller had asked for 3-of-5 and passed validation.
+//
+// Fail closed in both directions: a mismatch is an error, and so is a ring that
+// declines to state what it did. Silently trusting an unstated threshold is the
+// exact failure this guards.
+func verifyThreshold(keyName string, req GenerateRequest, gotThreshold int, gotParticipants []string) error {
+	if gotThreshold == 0 && len(gotParticipants) == 0 {
+		return fmt.Errorf(
+			"keys: %s keygen did not report its threshold or party set, so the requested %d-of-%d cannot be verified; "+
+				"upgrade the MPC ring to mpcd >= v1.17.15 (older builds omit both fields and this silently recorded 0-of-0)",
+			keyName, req.Threshold, req.Parties)
+	}
+	if gotThreshold != req.Threshold {
+		return fmt.Errorf("keys: %s keygen produced a %d-of-%d key but %d-of-%d was requested; refusing to record it",
+			keyName, gotThreshold, len(gotParticipants), req.Threshold, req.Parties)
+	}
+	if len(gotParticipants) != req.Parties {
+		return fmt.Errorf("keys: %s keygen produced a %d-of-%d key but %d-of-%d was requested; refusing to record it",
+			keyName, gotThreshold, len(gotParticipants), req.Threshold, req.Parties)
+	}
+	return nil
 }
 
 // SignWithBLS signs a message using the validator's BLS key via MPC threshold signing.
