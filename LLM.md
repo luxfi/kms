@@ -3,6 +3,26 @@
 **Project**: Lux Key Management Service (KMS)
 **Organization**: Lux Network
 
+## v1.12.9 — HTTP secret list (surface parity with ZAP)
+
+The ZAP wire has carried `OpSecretList` (0x0042, `{path, env}` -> `{names}`)
+since it was written; HTTP had get/put/delete and **no list**, so the two
+framings of the same store disagreed about what you could ask it. A client that
+wanted to enumerate had to open a ZAP connection or give up — the hanzo browser
+extension gave up and pinned itself to Infisical `/api/v3` paths instead.
+
+    GET /v1/kms/orgs/{org}/secrets?path=&env=   ->  {"names": [...]}
+
+Same envelope the ZAP op returns. The pattern has no trailing segment, so
+ServeMux routes the bare collection there and anything below it to the existing
+`{rest...}` handler. That split is the whole risk: invert it and list swallows
+every get, or get 400s on the bare collection for want of a slash.
+`TestSecretRoutes_ListAndGetDoNotShadow` asserts both directions, and that an
+empty result is `[]` not `null`.
+
+The full HTTP secret surface is now get / list / put / delete — orthogonal to
+the ZAP ops 0x0040-0x0043, one store behind both.
+
 ## v1.12.5 — deleted the env-var fetch route (secrets are never process env)
 
 - **Hole (HIGH, CRITICAL on live `lux-kms-go`):** `GET /v1/kms/secrets/{name}` was
