@@ -399,6 +399,35 @@ func main() {
 // process env is never a secret-fetch source. Regression that keeps it gone:
 // TestSecretRoutes_NoEnvVarLeak.
 func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.SecretStore) {
+	// GET /v1/kms/orgs/{org}/secrets?path=&env=  — list names under a path.
+	//
+	// The ZAP wire has carried this since it was written (OpSecretList 0x0042,
+	// {path, env} -> {names}); HTTP had get/put/delete and no list, so the two
+	// framings of the same store disagreed about what you could ask it. A client
+	// that wanted to enumerate had to either open a ZAP connection or give up —
+	// the hanzo browser extension gave up. Same handler shape, same envelope as
+	// ZAP returns.
+	//
+	// Distinct from the {rest...} pattern below: this one has no trailing
+	// segment, so ServeMux routes the bare collection here and any path under it
+	// there. Pinned by TestSecretRoutes_ListAndGetDoNotShadow.
+	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
+		env := r.URL.Query().Get("env")
+		if env == "" {
+			env = "default"
+		}
+		secs, err := secStore.List(r.URL.Query().Get("path"), env)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]any{"message": "list failed"})
+			return
+		}
+		names := make([]string, 0, len(secs))
+		for _, sec := range secs {
+			names = append(names, sec.Name)
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"names": names})
+	}))
+
 	// GET /v1/kms/orgs/{org}/secrets/{path...}/{name}
 	// Matches the ATS kmsclient.Get() URL pattern.
 	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
