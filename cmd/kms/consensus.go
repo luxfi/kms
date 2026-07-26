@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -75,9 +76,22 @@ func buildNonceLedger() (zapserver.NonceLedger, error) {
 // consensusSnapshot is the wire shape of the JSON file the operator
 // drops into the kmsd container. Same shape as the env vars (one
 // authority per slice) so the operator can pick either delivery.
+//
+// Scopes is the OPTIONAL least-privilege overlay. Absent => nil => no
+// scope observation is possible, which is exactly the state every
+// currently-deployed snapshot is in. Decoding it is inert: nothing reads
+// the overlay unless KMS_AUTHZ_MODE selects a mode that does.
 type consensusSnapshot struct {
-	Validators []string `json:"validators"`
-	Operators  []string `json:"operators"`
+	Validators []string           `json:"validators"`
+	Operators  []string           `json:"operators"`
+	Scopes     *consensusScopeSet `json:"scopes"`
+}
+
+// consensusScopeSet is keyed by IDENTITY, not by authority: membership
+// answers "who are you", grants answer "what may you address". Mirrors
+// the kms-operator's bootstrap.AuthorityScopes byte-for-byte.
+type consensusScopeSet struct {
+	Identities map[string]zapserver.Grants `json:"identities"`
 }
 
 // buildConsensusAuthorizer constructs the ConsensusAuthorizer wired
@@ -85,7 +99,7 @@ type consensusSnapshot struct {
 // vars; refuses to boot if neither is present, since the ZAP server
 // is fail-closed by construction.
 func buildConsensusAuthorizer() (zapserver.ConsensusAuthorizer, error) {
-	validators, operators, err := loadConsensusSnapshot()
+	validators, operators, scopes, err := loadConsensusSnapshot()
 	if err != nil {
 		return nil, err
 	}
@@ -118,41 +132,97 @@ func buildConsensusAuthorizer() (zapserver.ConsensusAuthorizer, error) {
 	}, "self-test", zapserver.OpAuthGet); err != nil {
 		return nil, fmt.Errorf("authorizer self-test: %w", err)
 	}
-	return az, nil
+	return wrapAuthzMode(az, scopes)
 }
 
-// loadConsensusSnapshot returns the (validators, operators) NodeID
-// sets, sourcing from KMS_CONSENSUS_FILE first then falling back to
-// KMS_CONSENSUS_VALIDATORS + KMS_CONSENSUS_OPERATORS env vars.
-func loadConsensusSnapshot() ([]ids.NodeID, []ids.NodeID, error) {
+// wrapAuthzMode installs the scope-observation stage selected by
+// KMS_AUTHZ_MODE.
+//
+// Unset (the state of every deployment today) returns `az` VERBATIM: no
+// wrapper, no extra branch, no behaviour change of any kind. A malformed
+// value is a hard boot failure so a typo cannot silently degrade to a
+// posture nobody chose.
+func wrapAuthzMode(az zapserver.ConsensusAuthorizer, scopes map[ids.NodeID]zapserver.Grants) (zapserver.ConsensusAuthorizer, error) {
+	mode, err := zapserver.ParseAuthzMode(os.Getenv(zapserver.EnvAuthzMode))
+	if err != nil {
+		return nil, err
+	}
+	if mode == zapserver.AuthzModeOff {
+		return az, nil
+	}
+	provider := zapserver.NewStaticScopeProvider(scopes)
+	log.Printf("kms: authz mode=%s (OBSERVE ONLY — no request is denied by scope) identities=%d", mode, provider.Len())
+	if provider.Len() == 0 {
+		log.Printf("kms: authz mode=%s but the consensus snapshot carries no scope overlay — "+
+			"every allowed request will be reported as a would-deny", mode)
+	}
+	log.Printf("kms: authz audit compares PATH only; the authorizer contract carries neither env nor org, " +
+		"so real enforcement would deny at least what audit reports and probably more")
+	return zapserver.WrapScopeAuthorizer(az, zapserver.ScopeAuthorizerConfig{
+		Mode:   mode,
+		Scopes: provider,
+	})
+}
+
+// loadConsensusSnapshot returns the (validators, operators) NodeID sets
+// plus the optional per-identity scope overlay, sourcing from
+// KMS_CONSENSUS_FILE first then falling back to KMS_CONSENSUS_VALIDATORS
+// + KMS_CONSENSUS_OPERATORS env vars.
+//
+// The env-var delivery carries no overlay (it is two NodeID lists); a nil
+// scope map there is correct, not a gap.
+func loadConsensusSnapshot() ([]ids.NodeID, []ids.NodeID, map[ids.NodeID]zapserver.Grants, error) {
 	if path := strings.TrimSpace(os.Getenv(envFile)); path != "" {
 		data, err := os.ReadFile(path)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%s: %w", envFile, err)
+			return nil, nil, nil, fmt.Errorf("%s: %w", envFile, err)
 		}
 		var snap consensusSnapshot
 		if err := json.Unmarshal(data, &snap); err != nil {
-			return nil, nil, fmt.Errorf("%s: %w", envFile, err)
+			return nil, nil, nil, fmt.Errorf("%s: %w", envFile, err)
 		}
 		validators, err := parseNodeIDs(snap.Validators)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%s validators: %w", envFile, err)
+			return nil, nil, nil, fmt.Errorf("%s validators: %w", envFile, err)
 		}
 		operators, err := parseNodeIDs(snap.Operators)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%s operators: %w", envFile, err)
+			return nil, nil, nil, fmt.Errorf("%s operators: %w", envFile, err)
 		}
-		return validators, operators, nil
+		scopes, err := parseScopes(snap.Scopes)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("%s scopes: %w", envFile, err)
+		}
+		return validators, operators, scopes, nil
 	}
 	validators, err := parseNodeIDs(splitLines(os.Getenv(envValidators)))
 	if err != nil {
-		return nil, nil, fmt.Errorf("%s: %w", envValidators, err)
+		return nil, nil, nil, fmt.Errorf("%s: %w", envValidators, err)
 	}
 	operators, err := parseNodeIDs(splitLines(os.Getenv(envOperators)))
 	if err != nil {
-		return nil, nil, fmt.Errorf("%s: %w", envOperators, err)
+		return nil, nil, nil, fmt.Errorf("%s: %w", envOperators, err)
 	}
-	return validators, operators, nil
+	return validators, operators, nil, nil
+}
+
+// parseScopes converts the snapshot's identity→grants block into the
+// NodeID-keyed form the scope provider serves. A nil block yields a nil
+// map (no overlay). A malformed NodeID is a hard failure — the same
+// posture parseNodeIDs takes for the authority lists.
+func parseScopes(sc *consensusScopeSet) (map[ids.NodeID]zapserver.Grants, error) {
+	if sc == nil || sc.Identities == nil {
+		return nil, nil
+	}
+	out := make(map[ids.NodeID]zapserver.Grants, len(sc.Identities))
+	for raw, grants := range sc.Identities {
+		id, err := ids.NodeIDFromString(strings.TrimSpace(raw))
+		if err != nil {
+			return nil, fmt.Errorf("parse %q: %w", raw, err)
+		}
+		out[id] = grants
+	}
+	return out, nil
 }
 
 // splitLines splits on newlines, commas, and whitespace. Empty
