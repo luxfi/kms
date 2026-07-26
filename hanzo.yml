@@ -1,0 +1,23 @@
+# Build is owned by platform.hanzo.ai, not GitHub Actions. Platform reads this
+# file, schedules the image build onto the self-hosted arcd pools over the
+# native long-poll fabric, and pushes to GHCR — no GitHub-Actions hop.
+#
+# This repo previously built through .github/workflows/build-lux-kms.yml. That
+# path is dead: GitHub answers a workflow dispatch with 422 "Actions has been
+# disabled for this user", so pushes produced no build at all and the deployed
+# image silently drifted behind main.
+#
+# Schema: ~/work/hanzo/platform/docs/PLATFORM_CI.md §hanzo.yml.
+build:
+  matrix:
+    - { os: linux, arch: amd64 }
+  dockerfile: ./Dockerfile
+  context: .
+  image: ghcr.io/luxfi/kms
+  tag-pattern: "{{git.branch}}"
+  push: true
+  dispatch: native
+
+# No `deploy:` block. The kms Deployment in the hanzo namespace is kustomize-
+# managed and carries no operator CR, so there is nothing here for the Service-CR
+# rollout to target. Rolling the image stays a separate, explicit step.
