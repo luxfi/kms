@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/hero.svg" alt="crypto" width="880"></p>
+
 # Lux Crypto
 
 Cryptographic primitives for the Lux Network -- post-quantum signatures, key encapsulation, BLS aggregation, threshold signing, ring signatures, and EVM-compatible secp256k1.

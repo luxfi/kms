@@ -4,8 +4,6 @@ filippo.io/hpke
 filippo.io/hpke/crypto
 filippo.io/hpke/crypto/ecdh
 filippo.io/hpke/internal/byteorder
-# github.com/bits-and-blooms/bitset v1.24.4
-## explicit; go 1.16
 # github.com/btcsuite/btcd/btcutil v1.1.6
 ## explicit; go 1.16
 github.com/btcsuite/btcd/btcutil/bech32
@@ -47,10 +45,6 @@ github.com/cloudflare/circl/sign/mldsa/mldsa87/internal
 github.com/cloudflare/circl/simd/keccakf1600
 github.com/cloudflare/circl/xof
 github.com/cloudflare/circl/xof/k12
-# github.com/consensys/gnark-crypto v0.20.1
-## explicit; go 1.25.7
-# github.com/crate-crypto/go-eth-kzg v1.5.0
-## explicit; go 1.22
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
@@ -70,8 +64,6 @@ github.com/dustin/go-humanize
 ## explicit; go 1.13
 github.com/emicklei/go-restful/v3
 github.com/emicklei/go-restful/v3/log
-# github.com/ethereum/c-kzg-4844/v2 v2.1.7
-## explicit; go 1.19
 # github.com/fxamacker/cbor/v2 v2.9.1
 ## explicit; go 1.20
 github.com/fxamacker/cbor/v2
@@ -156,26 +148,26 @@ github.com/klauspost/crc32
 ## explicit; go 1.26.4
 github.com/luxfi/accel
 github.com/luxfi/accel/internal/capi
-# github.com/luxfi/address v1.0.1
-## explicit; go 1.25.5
+# github.com/luxfi/address v1.1.1
+## explicit; go 1.26.4
 github.com/luxfi/address
-# github.com/luxfi/age v1.5.0
-## explicit; go 1.24.0
+# github.com/luxfi/age v1.6.0
+## explicit; go 1.26.4
 github.com/luxfi/age
 github.com/luxfi/age/internal/bech32
 github.com/luxfi/age/internal/format
 github.com/luxfi/age/internal/stream
-# github.com/luxfi/cache v1.2.1
-## explicit; go 1.25.5
+# github.com/luxfi/cache v1.3.1
+## explicit; go 1.26.4
 github.com/luxfi/cache
 github.com/luxfi/cache/lru
-# github.com/luxfi/constants v1.5.8
+# github.com/luxfi/constants v1.6.2
 ## explicit; go 1.26.4
 github.com/luxfi/constants
-# github.com/luxfi/container v0.0.4
-## explicit; go 1.25.5
+# github.com/luxfi/container v0.2.1
+## explicit; go 1.26.4
 github.com/luxfi/container
-# github.com/luxfi/crypto v1.19.27
+# github.com/luxfi/crypto v1.20.2
 ## explicit; go 1.26.4
 github.com/luxfi/crypto
 github.com/luxfi/crypto/backend
@@ -193,34 +185,32 @@ github.com/luxfi/crypto/secp256k1/libsecp256k1/include
 github.com/luxfi/crypto/secp256k1/libsecp256k1/src
 github.com/luxfi/crypto/secp256k1/libsecp256k1/src/modules/recovery
 github.com/luxfi/crypto/secret
-# github.com/luxfi/crypto/ipa v1.2.4
-## explicit; go 1.18
-# github.com/luxfi/formatting v1.0.1
-## explicit; go 1.25.5
+# github.com/luxfi/formatting v1.1.1
+## explicit; go 1.26.4
 github.com/luxfi/formatting
-# github.com/luxfi/geth v1.17.12
+# github.com/luxfi/geth v1.20.1
 ## explicit; go 1.26.4
 github.com/luxfi/geth/common
 github.com/luxfi/geth/common/hexutil
-# github.com/luxfi/go-bip32 v1.0.2
-## explicit; go 1.23.5
+# github.com/luxfi/go-bip32 v1.1.0
+## explicit; go 1.26.4
 github.com/luxfi/go-bip32
-# github.com/luxfi/go-bip39 v1.1.2
-## explicit; go 1.25
+# github.com/luxfi/go-bip39 v1.2.0
+## explicit; go 1.26.4
 github.com/luxfi/go-bip39
 github.com/luxfi/go-bip39/wordlists
-# github.com/luxfi/ids v1.2.15
-## explicit; go 1.26.3
+# github.com/luxfi/ids v1.3.2
+## explicit; go 1.26.4
 github.com/luxfi/ids
-# github.com/luxfi/keys v1.1.0
-## explicit; go 1.26.3
+# github.com/luxfi/keys v1.4.1
+## explicit; go 1.26.4
 github.com/luxfi/keys
 # github.com/luxfi/log v1.4.3
 ## explicit; go 1.26.3
 github.com/luxfi/log
 github.com/luxfi/log/internal/json
-# github.com/luxfi/math v1.4.1
-## explicit; go 1.26.3
+# github.com/luxfi/math v1.5.1
+## explicit; go 1.26.4
 github.com/luxfi/math
 github.com/luxfi/math/heap
 github.com/luxfi/math/linked
@@ -231,29 +221,27 @@ github.com/luxfi/math/big
 # github.com/luxfi/mdns v0.1.1
 ## explicit; go 1.26.3
 github.com/luxfi/mdns
-# github.com/luxfi/metric v1.5.8
-## explicit; go 1.26.3
+# github.com/luxfi/metric v1.8.1
+## explicit; go 1.26.4
 github.com/luxfi/metric
 github.com/luxfi/metric/client
 # github.com/luxfi/mock v0.1.1
 ## explicit; go 1.25.5
 github.com/luxfi/mock/gomock
-# github.com/luxfi/pq v1.0.3
-## explicit; go 1.23.0
-# github.com/luxfi/proto v1.3.4
-## explicit; go 1.26.3
-github.com/luxfi/proto/p/signer
+# github.com/luxfi/protocol v0.0.2
+## explicit; go 1.25.5
+github.com/luxfi/protocol/p/signer
 # github.com/luxfi/sampler v1.1.0
 ## explicit; go 1.26.3
 github.com/luxfi/sampler
-# github.com/luxfi/tls v1.0.3
-## explicit; go 1.25.5
+# github.com/luxfi/tls v1.1.1
+## explicit; go 1.26.4
 github.com/luxfi/tls
-# github.com/luxfi/vm v1.2.3
+# github.com/luxfi/vm v1.3.1
 ## explicit; go 1.26.4
 github.com/luxfi/vm/components/verify
-# github.com/luxfi/zap v0.7.2
-## explicit; go 1.26.3
+# github.com/luxfi/zap v1.2.6
+## explicit; go 1.26.4
 github.com/luxfi/zap
 github.com/luxfi/zap/handshake
 # github.com/luxfi/zapdb v1.10.0
@@ -335,7 +323,7 @@ github.com/spf13/pflag
 # github.com/supranational/blst v0.3.16
 ## explicit; go 1.11
 github.com/supranational/blst/bindings/go
-# github.com/tinylib/msgp v1.6.3
+# github.com/tinylib/msgp v1.6.4
 ## explicit; go 1.24
 github.com/tinylib/msgp/msgp
 github.com/tinylib/msgp/msgp/setof
@@ -346,7 +334,7 @@ github.com/x448/float16
 ## explicit; go 1.24.0
 go.opentelemetry.io/auto/sdk
 go.opentelemetry.io/auto/sdk/internal/telemetry
-# go.opentelemetry.io/otel v1.43.0
+# go.opentelemetry.io/otel v1.44.0
 ## explicit; go 1.25.0
 go.opentelemetry.io/otel
 go.opentelemetry.io/otel/attribute
@@ -359,12 +347,12 @@ go.opentelemetry.io/otel/internal/errorhandler
 go.opentelemetry.io/otel/internal/global
 go.opentelemetry.io/otel/propagation
 go.opentelemetry.io/otel/semconv/v1.37.0
-go.opentelemetry.io/otel/semconv/v1.40.0
-# go.opentelemetry.io/otel/metric v1.43.0
+go.opentelemetry.io/otel/semconv/v1.41.0
+# go.opentelemetry.io/otel/metric v1.44.0
 ## explicit; go 1.25.0
 go.opentelemetry.io/otel/metric
 go.opentelemetry.io/otel/metric/embedded
-# go.opentelemetry.io/otel/trace v1.43.0
+# go.opentelemetry.io/otel/trace v1.44.0
 ## explicit; go 1.25.0
 go.opentelemetry.io/otel/trace
 go.opentelemetry.io/otel/trace/embedded

@@ -8,6 +8,10 @@ type Registerer interface {
 	Metrics
 	Register(Collector) error
 	MustRegister(...Collector)
+	// Unregister removes a previously registered collector, freeing its name
+	// to be registered again. Returns true if it was present. Mirrors
+	// prometheus.Registerer.Unregister.
+	Unregister(Collector) bool
 }
 
 // Registry is a registerer that can also gather metric families.
@@ -41,8 +45,9 @@ type prefixRegisterer struct {
 	next   Registerer
 }
 
-func (p *prefixRegisterer) Register(c Collector) error { return p.next.Register(c) }
+func (p *prefixRegisterer) Register(c Collector) error   { return p.next.Register(c) }
 func (p *prefixRegisterer) MustRegister(cs ...Collector) { p.next.MustRegister(cs...) }
+func (p *prefixRegisterer) Unregister(c Collector) bool  { return p.next.Unregister(c) }
 func (p *prefixRegisterer) NewCounter(name, help string) Counter {
 	return p.next.NewCounter(p.prefix+name, help)
 }

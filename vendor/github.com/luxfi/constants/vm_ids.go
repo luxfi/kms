@@ -18,7 +18,8 @@ const (
 	QuantumVMName   = "quantumvm"   // Q-Chain: Quantum-resistant security
 	AIVMName        = "aivm"        // A-Chain: AI Virtual Machine
 	BridgeVMName    = "bridgevm"    // B-Chain: Bridge/Cross-chain
-	ThresholdVMName = "thresholdvm" // T-Chain: Threshold signatures
+	MPCVMName       = "mpcvm"       // M-Chain: MPC threshold signing / bridge custody (LP-7100)
+	FHEVMName       = "fhevm"       // F-Chain: FHE confidential compute / encrypted state (LP-8200)
 	KeyVMName       = "keyvm"       // K-Chain: Key Management
 	ZKVMName        = "zkvm"        // Z-Chain: Zero-Knowledge proofs
 	GraphVMName     = "graphvm"     // G-Chain: GraphQL/DGraph unified data layer
@@ -40,7 +41,8 @@ var (
 	AttestationVMID = ids.ID{'a', 'i', 'v', 'm'} // A-Chain: Attestation/AI VM
 	AIVMID          = AttestationVMID            // Alias for AttestationVMID
 	BridgeVMID      = ids.ID{'b', 'r', 'i', 'd', 'g', 'e', 'v', 'm'}
-	ThresholdVMID   = ids.ID{'t', 'h', 'r', 'e', 's', 'h', 'o', 'l', 'd', 'v', 'm'}
+	MPCVMID         = ids.ID{'m', 'p', 'c', 'v', 'm'} // M-Chain: MPC threshold signing / bridge custody
+	FHEVMID         = ids.ID{'f', 'h', 'e', 'v', 'm'} // F-Chain: FHE confidential compute
 	KeyVMID         = ids.ID{'k', 'e', 'y', 'v', 'm'} // K-Chain: Key Management
 	KVMID           = KeyVMID                         // Alias for KeyVMID
 	ZKVMID          = ids.ID{'z', 'k', 'v', 'm'}
@@ -107,8 +109,10 @@ func VMName(vmID ids.ID) string {
 		return AIVMName
 	case BridgeVMID:
 		return BridgeVMName
-	case ThresholdVMID:
-		return ThresholdVMName
+	case MPCVMID:
+		return MPCVMName
+	case FHEVMID:
+		return FHEVMName
 	case KeyVMID:
 		return KeyVMName
 	case ZKVMID:

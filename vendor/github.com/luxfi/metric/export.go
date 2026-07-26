@@ -39,3 +39,24 @@ type MetricFamilies = []*MetricFamily
 func NewHTTPHandler(gatherer Gatherer, opts HandlerOpts) http.Handler {
 	return HandlerForWithOpts(gatherer, opts)
 }
+
+// InstrumentMetricHandler wraps handler so each scrape is observed on reg.
+// It registers promhttp_metric_handler_requests_total (scrape count) and
+// promhttp_metric_handler_requests_in_flight (concurrent scrapes) and updates
+// them around each call. Mirrors prometheus/client_golang/promhttp.InstrumentMetricHandler.
+func InstrumentMetricHandler(reg Registerer, handler http.Handler) http.Handler {
+	requests := reg.NewCounter(
+		"promhttp_metric_handler_requests_total",
+		"Total number of scrapes served.",
+	)
+	inFlight := reg.NewGauge(
+		"promhttp_metric_handler_requests_in_flight",
+		"Current number of scrapes being served.",
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		inFlight.Inc()
+		defer inFlight.Dec()
+		requests.Inc()
+		handler.ServeHTTP(w, r)
+	})
+}

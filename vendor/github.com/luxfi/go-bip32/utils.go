@@ -263,9 +263,7 @@ func validateChildPublicKey(key []byte) error {
 	return nil
 }
 
-//
 // Numerical
-//
 func uint32Bytes(i uint32) []byte {
 	bytes := make([]byte, 4)
 	binary.BigEndian.PutUint32(bytes, i)

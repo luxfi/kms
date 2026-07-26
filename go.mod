@@ -19,18 +19,14 @@ require (
 
 require (
 	filippo.io/hpke v0.4.0 // indirect
-	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/btcsuite/btcd/btcutil v1.1.6 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/consensys/gnark-crypto v0.20.1 // indirect
-	github.com/crate-crypto/go-eth-kzg v1.5.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1 // indirect
 	github.com/dgraph-io/ristretto/v2 v2.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
-	github.com/ethereum/c-kzg-4844/v2 v2.1.7 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
@@ -57,7 +53,6 @@ require (
 	github.com/luxfi/constants v1.6.2 // indirect
 	github.com/luxfi/container v0.2.1 // indirect
 	github.com/luxfi/crypto v1.20.2 // indirect
-	github.com/luxfi/crypto/ipa v1.2.4 // indirect
 	github.com/luxfi/formatting v1.1.1 // indirect
 	github.com/luxfi/geth v1.20.1 // indirect
 	github.com/luxfi/go-bip32 v1.1.0 // indirect
@@ -66,8 +61,6 @@ require (
 	github.com/luxfi/mdns v0.1.1 // indirect
 	github.com/luxfi/metric v1.8.1 // indirect
 	github.com/luxfi/mock v0.1.1 // indirect
-	github.com/luxfi/pq v1.1.0 // indirect
-	github.com/luxfi/proto v1.4.2 // indirect
 	github.com/luxfi/protocol v0.0.2 // indirect
 	github.com/luxfi/sampler v1.1.0 // indirect
 	github.com/luxfi/tls v1.1.1 // indirect

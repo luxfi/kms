@@ -50,7 +50,7 @@ func (c *LRUCache[K, V]) Put(key K, value V) {
 		elem.Value.(*cacheEntry[K, V]).value = value
 		return
 	}
-	
+
 	if len(c.elements) >= c.capacity {
 		back := c.lru.Back()
 		if back != nil {
@@ -58,7 +58,7 @@ func (c *LRUCache[K, V]) Put(key K, value V) {
 			delete(c.elements, back.Value.(*cacheEntry[K, V]).key)
 		}
 	}
-	
+
 	elem := c.lru.PushFront(&cacheEntry[K, V]{key, value})
 	c.elements[key] = elem
 }

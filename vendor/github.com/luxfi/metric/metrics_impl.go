@@ -776,6 +776,25 @@ func (hpr *registry) MustRegister(cs ...Collector) {
 	}
 }
 
+// Unregister drops the collector's metric family (all label permutations) and
+// frees its name for re-registration. Returns true if the name was registered.
+// Mirrors prometheus.Registerer.Unregister.
+func (hpr *registry) Unregister(c Collector) bool {
+	name, _, ok := collectorIdentity(c)
+	if !ok {
+		return false
+	}
+	hpr.mu.Lock()
+	defer hpr.mu.Unlock()
+	_, had := hpr.registered[name]
+	delete(hpr.registered, name)
+	delete(hpr.counters, name)
+	delete(hpr.gauges, name)
+	delete(hpr.histograms, name)
+	delete(hpr.summaries, name)
+	return had
+}
+
 // Gather returns metric families for all registered metrics.
 func (hpr *registry) Gather() ([]*MetricFamily, error) {
 	hpr.mu.RLock()

@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/hero.svg" alt="metric" width="880"></p>
+
 # Lux Metrics Library
 
 `github.com/luxfi/metric` is the native metrics library for Lux. It produces a

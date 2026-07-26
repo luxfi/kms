@@ -32,6 +32,10 @@ type HandlerOpts struct {
 	ErrorHandling HandlerErrorHandling
 	// ErrorLog is used when ErrorHandling is Continue.
 	ErrorLog interface{ Println(...any) }
+	// DisableCompression mirrors prometheus/client_golang/promhttp.HandlerOpts.
+	// The native handler serves uncompressed exposition, so this is always
+	// effectively honored; the field exists for source compatibility.
+	DisableCompression bool
 }
 
 // HTTPHandlerOpts is an alias for HandlerOpts for compatibility.
