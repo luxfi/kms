@@ -360,8 +360,6 @@ Transport is always native ZAP — there is no HTTP fallback in the Go client.
 
 | Path | Status | Notes |
 |------|--------|-------|
-| `backend/` | Legacy | Old Node.js/Fastify backend (legacy fork) |
-| `frontend/` | Legacy | Old React dashboard |
 
 ## Key concepts
 
@@ -490,5 +488,5 @@ never plaintext. Routes are `/v1`-only. e2e green, deployed.
 
 Canonical image: `ghcr.io/luxfi/kms` (Lux) and its Hanzo white-label fork
 `ghcr.io/hanzoai/kms` (same Go source, branded by domain). Built by CI from
-the `Dockerfile` (frontend `pnpm vite build` → embed → one binary). NO
-Postgres, NO Redis, NO Node, NO Infisical.
+the `Dockerfile` (Go → one binary). NO Postgres, NO Redis, NO Node,
+NO Infisical, NO SPA — the service is the API.

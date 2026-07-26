@@ -12,8 +12,8 @@
 // here.
 //
 // Public endpoints (no Bearer required) are wired in main.go and stay
-// public: /healthz, /health, /v1/kms/health{,z}, /v1/admin/config,
-// /v1/kms/auth/login, the OIDC routes, and the embedded SPA. The
+// public: /healthz, /health, /v1/kms/health{,z}, /v1/kms/auth/login
+// and the OIDC routes. The
 // middleware below only wraps the secrets handlers.
 
 package main
