@@ -432,12 +432,19 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 	// Matches the ATS kmsclient.Get() URL pattern.
 	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
 		rest := r.PathValue("rest")
-		idx := strings.LastIndex(rest, "/")
-		if idx < 0 {
-			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "path and name required"})
+		// A secret at the store root has an empty path, so `rest` is just the
+		// name with no separator. List() and POST both accept path="" and the
+		// store keys on (path, name) — so rejecting a slash-less rest made every
+		// root-level secret unreachable while List cheerfully reported it. Split
+		// on the last "/" when there is one; otherwise the whole rest is the name.
+		path, name := "", rest
+		if idx := strings.LastIndex(rest, "/"); idx >= 0 {
+			path, name = rest[:idx], rest[idx+1:]
+		}
+		if name == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "name required"})
 			return
 		}
-		path, name := rest[:idx], rest[idx+1:]
 		env := r.URL.Query().Get("env")
 		if env == "" {
 			env = "default"
@@ -460,12 +467,19 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 	// DELETE /v1/kms/orgs/{org}/secrets/{rest...}/{name}
 	mux.HandleFunc("DELETE /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
 		rest := r.PathValue("rest")
-		idx := strings.LastIndex(rest, "/")
-		if idx < 0 {
-			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "path and name required"})
+		// A secret at the store root has an empty path, so `rest` is just the
+		// name with no separator. List() and POST both accept path="" and the
+		// store keys on (path, name) — so rejecting a slash-less rest made every
+		// root-level secret unreachable while List cheerfully reported it. Split
+		// on the last "/" when there is one; otherwise the whole rest is the name.
+		path, name := "", rest
+		if idx := strings.LastIndex(rest, "/"); idx >= 0 {
+			path, name = rest[:idx], rest[idx+1:]
+		}
+		if name == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "name required"})
 			return
 		}
-		path, name := rest[:idx], rest[idx+1:]
 		env := r.URL.Query().Get("env")
 		if env == "" {
 			env = "default"

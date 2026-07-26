@@ -213,3 +213,71 @@ func TestSecretRoutes_ListAndGetDoNotShadow(t *testing.T) {
 		t.Errorf("empty list = %d %s, want 200 with an empty array", code, body)
 	}
 }
+
+// TestSecretRoutes_RootLevelSecretIsAddressable pins the round trip for a
+// secret stored at the root of an org (empty path).
+//
+// The store keys on (path, name) and accepts path="", so List and POST have
+// always handled root-level secrets. GET and DELETE split `{rest...}` on the
+// last "/" and used to 400 "path and name required" when there wasn't one —
+// which made every root-level secret permanently unreachable while List
+// cheerfully reported it. That was not academic: the whole `bootnode` org in
+// prod stores its secrets flat (DATABASE_URL, API_KEY, APP_SECRET, ...), so the
+// kms-operator could enumerate them and never fetch one, and 54 KMSSecret CRs
+// sat failing.
+func TestSecretRoutes_RootLevelSecretIsAddressable(t *testing.T) {
+	auth, bearer, cleanup := newTestKeyAuth(t, roleKMSAdmin)
+	defer cleanup()
+	secStore := newTestSecretStore(t)
+
+	if err := secStore.Put(&store.Secret{
+		Path: "", Name: "DATABASE_URL", Env: "prod", Ciphertext: []byte("postgres://x"),
+	}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	mux := http.NewServeMux()
+	registerSecretRoutes(mux, auth, secStore)
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	do := func(method, path string) (int, string) {
+		req, _ := http.NewRequest(method, srv.URL+path, nil)
+		req.Header.Set("Authorization", "Bearer "+bearer)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("%s %s: %v", method, path, err)
+		}
+		defer resp.Body.Close()
+		body, _ := io.ReadAll(resp.Body)
+		return resp.StatusCode, string(body)
+	}
+
+	// List sees it at the root — this always worked.
+	code, body := do(http.MethodGet, "/v1/kms/orgs/hanzo/secrets?path=&env=prod")
+	if code != http.StatusOK || !strings.Contains(body, "DATABASE_URL") {
+		t.Fatalf("list root: status %d, body %s", code, body)
+	}
+
+	// ...and GET must be able to fetch what list just advertised.
+	code, body = do(http.MethodGet, "/v1/kms/orgs/hanzo/secrets/DATABASE_URL?env=prod")
+	if code != http.StatusOK {
+		t.Fatalf("get root-level secret: status %d, body %s (list advertised it; get must resolve it)", code, body)
+	}
+	if !strings.Contains(body, "postgres://x") {
+		t.Errorf("get body = %s, want the seeded value", body)
+	}
+
+	// A trailing-slash-only rest has no name and stays a 400.
+	if code, _ := do(http.MethodGet, "/v1/kms/orgs/hanzo/secrets/?env=prod"); code != http.StatusBadRequest {
+		t.Errorf("empty name: status %d, want 400", code)
+	}
+
+	// DELETE had the identical split, so it gets the identical guarantee.
+	if code, body := do(http.MethodDelete, "/v1/kms/orgs/hanzo/secrets/DATABASE_URL?env=prod"); code != http.StatusOK {
+		t.Fatalf("delete root-level secret: status %d, body %s", code, body)
+	}
+	if code, _ := do(http.MethodGet, "/v1/kms/orgs/hanzo/secrets/DATABASE_URL?env=prod"); code != http.StatusNotFound {
+		t.Errorf("after delete: status %d, want 404", code)
+	}
+}
