@@ -6,6 +6,7 @@ package zap
 import (
 	"encoding/binary"
 	"math"
+	"sync"
 )
 
 // Builder constructs ZAP messages.
@@ -94,27 +95,30 @@ type ObjectBuilder struct {
 	b        *Builder
 	startPos int
 	dataSize int
-	offsets  []offsetEntry
 }
 
-type offsetEntry struct {
-	fieldOffset int
-	targetPos   int    // positive = known position, negative = deferred write
-	data        []byte // actual bytes to write (deferred text/bytes)
-}
-
-// StartObject starts building an object with the given data size.
-func (b *Builder) StartObject(dataSize int) *ObjectBuilder {
+// StartObject starts building an object with the given data size, RESERVING the
+// full fixed section up front (zero-filled). Reserving eagerly means a variable
+// field (SetBytes/SetText) can append its tail data immediately after the fixed
+// section and patch its own relative pointer on the spot — there is no deferred
+// offset list to record intentions and replay in Finish. Callers already build
+// child objects/lists BEFORE StartObject (the writeXxxList-then-StartObject
+// pattern), so the object's own Set* calls are the only buffer writes between
+// StartObject and Finish; appending tail bytes immediately is safe and produces
+// byte-identical wire.
+func (b *Builder) StartObject(dataSize int) ObjectBuilder {
 	b.align(Alignment)
-	return &ObjectBuilder{
+	ob := ObjectBuilder{
 		b:        b,
 		startPos: b.pos,
 		dataSize: dataSize,
 	}
+	ob.ensureField(dataSize)
+	return ob
 }
 
 // SetBool sets a bool field.
-func (ob *ObjectBuilder) SetBool(fieldOffset int, v bool) {
+func (ob ObjectBuilder) SetBool(fieldOffset int, v bool) {
 	if v {
 		ob.SetUint8(fieldOffset, 1)
 	} else {
@@ -123,88 +127,111 @@ func (ob *ObjectBuilder) SetBool(fieldOffset int, v bool) {
 }
 
 // SetUint8 sets a uint8 field.
-func (ob *ObjectBuilder) SetUint8(fieldOffset int, v uint8) {
+func (ob ObjectBuilder) SetUint8(fieldOffset int, v uint8) {
 	ob.ensureField(fieldOffset + 1)
 	ob.b.buf[ob.startPos+fieldOffset] = v
 }
 
 // SetUint16 sets a uint16 field.
-func (ob *ObjectBuilder) SetUint16(fieldOffset int, v uint16) {
+func (ob ObjectBuilder) SetUint16(fieldOffset int, v uint16) {
 	ob.ensureField(fieldOffset + 2)
 	binary.LittleEndian.PutUint16(ob.b.buf[ob.startPos+fieldOffset:], v)
 }
 
 // SetUint32 sets a uint32 field.
-func (ob *ObjectBuilder) SetUint32(fieldOffset int, v uint32) {
+func (ob ObjectBuilder) SetUint32(fieldOffset int, v uint32) {
 	ob.ensureField(fieldOffset + 4)
 	binary.LittleEndian.PutUint32(ob.b.buf[ob.startPos+fieldOffset:], v)
 }
 
 // SetUint64 sets a uint64 field.
-func (ob *ObjectBuilder) SetUint64(fieldOffset int, v uint64) {
+func (ob ObjectBuilder) SetUint64(fieldOffset int, v uint64) {
 	ob.ensureField(fieldOffset + 8)
 	binary.LittleEndian.PutUint64(ob.b.buf[ob.startPos+fieldOffset:], v)
 }
 
 // SetInt8 sets an int8 field.
-func (ob *ObjectBuilder) SetInt8(fieldOffset int, v int8) {
+func (ob ObjectBuilder) SetInt8(fieldOffset int, v int8) {
 	ob.SetUint8(fieldOffset, uint8(v))
 }
 
 // SetInt16 sets an int16 field.
-func (ob *ObjectBuilder) SetInt16(fieldOffset int, v int16) {
+func (ob ObjectBuilder) SetInt16(fieldOffset int, v int16) {
 	ob.SetUint16(fieldOffset, uint16(v))
 }
 
 // SetInt32 sets an int32 field.
-func (ob *ObjectBuilder) SetInt32(fieldOffset int, v int32) {
+func (ob ObjectBuilder) SetInt32(fieldOffset int, v int32) {
 	ob.SetUint32(fieldOffset, uint32(v))
 }
 
 // SetInt64 sets an int64 field.
-func (ob *ObjectBuilder) SetInt64(fieldOffset int, v int64) {
+func (ob ObjectBuilder) SetInt64(fieldOffset int, v int64) {
 	ob.SetUint64(fieldOffset, uint64(v))
 }
 
 // SetFloat32 sets a float32 field.
-func (ob *ObjectBuilder) SetFloat32(fieldOffset int, v float32) {
+func (ob ObjectBuilder) SetFloat32(fieldOffset int, v float32) {
 	ob.SetUint32(fieldOffset, float32bits(v))
 }
 
 // SetFloat64 sets a float64 field.
-func (ob *ObjectBuilder) SetFloat64(fieldOffset int, v float64) {
+func (ob ObjectBuilder) SetFloat64(fieldOffset int, v float64) {
 	ob.SetUint64(fieldOffset, float64bits(v))
 }
 
+// SetBytesFixed copies len(v) bytes inline at fieldOffset within the
+// object's fixed payload. This is the generic-width counterpart of
+// SetHash (32 bytes) and SetAddress (20 bytes); it covers any N>0
+// inline byte-array slot (e.g., LP-201 SessionID [16]byte, LP-208
+// QuasarWitness [96]byte).
+//
+// Unlike SetBytes (which writes a variable-length tail pointer
+// {relOffset uint32, length uint32}), SetBytesFixed writes the bytes
+// IN PLACE in the fixed payload. Use this when the schema declares a
+// fixed-width byte field; use SetBytes when the schema declares a
+// variable-length tail.
+//
+// Panics on len(v) == 0 are avoided: a zero-length argument is a
+// no-op (the slot is left as the zero value).
+func (ob ObjectBuilder) SetBytesFixed(fieldOffset int, v []byte) {
+	if len(v) == 0 {
+		return
+	}
+	ob.ensureField(fieldOffset + len(v))
+	copy(ob.b.buf[ob.startPos+fieldOffset:], v)
+}
+
 // SetText sets a text (string) field.
-func (ob *ObjectBuilder) SetText(fieldOffset int, v string) {
+func (ob ObjectBuilder) SetText(fieldOffset int, v string) {
 	ob.SetBytes(fieldOffset, []byte(v))
 }
 
 // SetBytes sets a bytes field.
 // The data is written after the object's fixed section during Finish().
-func (ob *ObjectBuilder) SetBytes(fieldOffset int, v []byte) {
-	ob.ensureField(fieldOffset + 8) // offset + length
-
+func (ob ObjectBuilder) SetBytes(fieldOffset int, v []byte) {
 	if len(v) == 0 {
-		// Null pointer
+		// Null pointer (offset 0, length 0).
 		binary.LittleEndian.PutUint32(ob.b.buf[ob.startPos+fieldOffset:], 0)
 		binary.LittleEndian.PutUint32(ob.b.buf[ob.startPos+fieldOffset+4:], 0)
 		return
 	}
+	// The fixed section is fully reserved by StartObject, so b.pos is at the
+	// tail: append the data now and patch this field's (relOffset, length) pair
+	// immediately — no deferred offset list, no per-object slice allocation.
+	dataPos := ob.b.pos
+	ob.b.grow(len(v))
+	copy(ob.b.buf[ob.b.pos:ob.b.pos+len(v)], v)
+	ob.b.pos += len(v)
 
-	// Store the data and length; the relative offset is patched in Finish()
-	ob.offsets = append(ob.offsets, offsetEntry{
-		fieldOffset: fieldOffset,
-		data:        append([]byte(nil), v...), // copy the data
-	})
-
-	// Write the length now
-	binary.LittleEndian.PutUint32(ob.b.buf[ob.startPos+fieldOffset+4:], uint32(len(v)))
+	fieldAbsPos := ob.startPos + fieldOffset
+	relOffset := int32(dataPos - fieldAbsPos)
+	binary.LittleEndian.PutUint32(ob.b.buf[fieldAbsPos:], uint32(relOffset))
+	binary.LittleEndian.PutUint32(ob.b.buf[fieldAbsPos+4:], uint32(len(v)))
 }
 
 // SetObject sets a nested object field (by offset).
-func (ob *ObjectBuilder) SetObject(fieldOffset int, objOffset int) {
+func (ob ObjectBuilder) SetObject(fieldOffset int, objOffset int) {
 	ob.ensureField(fieldOffset + 4)
 
 	if objOffset == 0 {
@@ -218,7 +245,7 @@ func (ob *ObjectBuilder) SetObject(fieldOffset int, objOffset int) {
 }
 
 // SetList sets a list field.
-func (ob *ObjectBuilder) SetList(fieldOffset int, listOffset int, length int) {
+func (ob ObjectBuilder) SetList(fieldOffset int, listOffset int, length int) {
 	ob.ensureField(fieldOffset + 8)
 
 	if listOffset == 0 || length == 0 {
@@ -232,7 +259,7 @@ func (ob *ObjectBuilder) SetList(fieldOffset int, listOffset int, length int) {
 	binary.LittleEndian.PutUint32(ob.b.buf[ob.startPos+fieldOffset+4:], uint32(length))
 }
 
-func (ob *ObjectBuilder) ensureField(endOffset int) {
+func (ob ObjectBuilder) ensureField(endOffset int) {
 	needed := ob.startPos + endOffset
 	if needed > ob.b.pos {
 		ob.b.grow(needed - ob.b.pos)
@@ -244,35 +271,38 @@ func (ob *ObjectBuilder) ensureField(endOffset int) {
 	}
 }
 
-// Finish finalizes the object and returns its offset.
-// Writes deferred text/bytes data after the object's fixed section
-// and patches relative offsets.
-func (ob *ObjectBuilder) Finish() int {
-	// Ensure minimum size for fixed fields
-	ob.ensureField(ob.dataSize)
+// ReserveFixed extends the builder's write cursor so the object's
+// entire fixed payload of dataSize bytes is materialized (zero-filled
+// up to startPos+dataSize). Use this BEFORE writing any variable-
+// length tail (list elements, deferred bytes) that should live AFTER
+// the fixed section.
+//
+// Without this call, list elements or deferred-data writes interleave
+// with the unreserved tail of the fixed section, producing incorrect
+// wire bytes when later Set* calls patch fields that overlap with
+// already-written variable data.
+//
+// Idempotent: a second call with the same dataSize is a no-op. A call
+// with a smaller dataSize is also a no-op (the cursor never moves
+// backwards).
+//
+// This is the exported counterpart to the internal ensureField helper.
+// It is used by zapv1.WriteList to keep the parent's payload reserved
+// before list elements are appended.
+func (ob ObjectBuilder) ReserveFixed(dataSize int) {
+	ob.ensureField(dataSize)
+}
 
-	// Write deferred text/bytes data and patch relative offsets
-	for _, entry := range ob.offsets {
-		if entry.data == nil {
-			continue
-		}
-		// Write the data at current position (after fixed section)
-		dataPos := ob.b.pos
-		ob.b.grow(len(entry.data))
-		copy(ob.b.buf[ob.b.pos:ob.b.pos+len(entry.data)], entry.data)
-		ob.b.pos += len(entry.data)
-
-		// Patch the relative offset: relOffset = dataPos - fieldAbsPos
-		fieldAbsPos := ob.startPos + entry.fieldOffset
-		relOffset := int32(dataPos - fieldAbsPos)
-		binary.LittleEndian.PutUint32(ob.b.buf[fieldAbsPos:], uint32(relOffset))
-	}
-
+// Finish finalizes the object and returns its offset. Every field (fixed and
+// variable) is written eagerly by its Set* call — the fixed section is reserved
+// in StartObject and SetBytes/SetText append their tail immediately — so there
+// is nothing to replay here.
+func (ob ObjectBuilder) Finish() int {
 	return ob.startPos
 }
 
 // FinishAsRoot finalizes and sets as the message root.
-func (ob *ObjectBuilder) FinishAsRoot() int {
+func (ob ObjectBuilder) FinishAsRoot() int {
 	offset := ob.Finish()
 	ob.b.rootOffset = offset
 	return offset
@@ -300,17 +330,22 @@ func (b *Builder) WriteText(s string) int {
 type ListBuilder struct {
 	b        *Builder
 	startPos int
-	elemSize int
 	count    int
 }
 
-// StartList starts building a list.
-func (b *Builder) StartList(elemSize int) *ListBuilder {
+// StartList starts building a list. Returns a VALUE (not a heap pointer): the
+// Add*/Finish methods take pointer receivers, and every caller binds the result
+// to an addressable local (`lb := b.StartList(...)`), so Go auto-addresses the
+// local and count mutations accumulate on it — no per-list heap allocation.
+// Mirrors the value-typed StartObject. elemSize is unused (the stride is
+// implicit in which Add* the caller invokes) and kept only as a documenting
+// param.
+func (b *Builder) StartList(elemSize int) ListBuilder {
+	_ = elemSize
 	b.align(Alignment)
-	return &ListBuilder{
+	return ListBuilder{
 		b:        b,
 		startPos: b.pos,
-		elemSize: elemSize,
 	}
 }
 
@@ -346,9 +381,58 @@ func (lb *ListBuilder) AddBytes(data []byte) {
 	lb.count += len(data)
 }
 
+// AddObjectPtr appends a 4-byte SIGNED relative pointer to an object at
+// absolute position targetPos (pass 0 for a null element). This is the
+// element kind for a list of out-of-line objects — the wire encoding of a
+// "repeated message" field, where each fixed-stride slot points to a tailed
+// object elsewhere in the buffer rather than inlining a fixed-size value.
+//
+// The relative offset is computed against THIS slot's position, so the
+// reader resolves it the same way [Object.Object] does: absOffset = slotPos
+// + int32(rel). Targets may precede the slot (negative rel) — the common
+// case, since a builder writes the objects first and the pointer array
+// after.
+func (lb *ListBuilder) AddObjectPtr(targetPos int) {
+	lb.b.grow(4)
+	if targetPos == 0 {
+		binary.LittleEndian.PutUint32(lb.b.buf[lb.b.pos:], 0)
+	} else {
+		rel := int32(targetPos - lb.b.pos)
+		binary.LittleEndian.PutUint32(lb.b.buf[lb.b.pos:], uint32(rel))
+	}
+	lb.b.pos += 4
+	lb.count++
+}
+
 // Finish returns the list offset and length.
 func (lb *ListBuilder) Finish() (offset int, length int) {
 	return lb.startPos, lb.count
+}
+
+// ---- Builder pool (write-side counterpart to the read bufpool) ----
+
+// builderPool recycles Builders across messages. A pooled Builder keeps its
+// grown backing array, so steady-state message construction allocates zero
+// builder buffers. Byte-safety on reuse is unconditional: ensureField
+// zero-fills every extended span and align zero-fills padding, so a reused
+// (dirty) buffer emits bytes identical to a fresh one.
+var builderPool = sync.Pool{
+	New: func() any { return NewBuilder(512) },
+}
+
+// GetBuilder returns a pooled Builder, reset and ready to write a Version2
+// message. Callers MUST copy out the bytes returned by Finish (which aliases
+// the Builder's buffer) before calling PutBuilder.
+func GetBuilder() *Builder {
+	b := builderPool.Get().(*Builder)
+	b.Reset()
+	return b
+}
+
+// PutBuilder returns a Builder to the pool. The slice previously returned by
+// b.Finish() must no longer be referenced (it aliases b's buffer).
+func PutBuilder(b *Builder) {
+	builderPool.Put(b)
 }
 
 // Helper functions

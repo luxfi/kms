@@ -11,7 +11,7 @@ import (
 	"math"
 	"strings"
 
-	hashing "github.com/luxfi/crypto/hash"
+	"github.com/luxfi/crypto/hash"
 )
 
 const (
@@ -107,7 +107,7 @@ func Encode(encoding Encoding, bytes []byte) (string, error) {
 		}
 		checked := make([]byte, bytesLen+checksumLen)
 		copy(checked, bytes)
-		copy(checked[len(bytes):], hashing.Checksum(bytes, checksumLen))
+		copy(checked[len(bytes):], hash.Checksum(bytes, checksumLen))
 		bytes = checked
 	}
 
@@ -163,7 +163,7 @@ func Decode(encoding Encoding, str string) ([]byte, error) {
 		// Verify the checksum
 		rawBytes := decodedBytes[:len(decodedBytes)-checksumLen]
 		checksum := decodedBytes[len(decodedBytes)-checksumLen:]
-		if !bytes.Equal(checksum, hashing.Checksum(rawBytes, checksumLen)) {
+		if !bytes.Equal(checksum, hash.Checksum(rawBytes, checksumLen)) {
 			return nil, errBadChecksum
 		}
 		decodedBytes = rawBytes

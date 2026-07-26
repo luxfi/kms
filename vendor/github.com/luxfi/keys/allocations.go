@@ -33,10 +33,10 @@ const (
 // Allocation represents a P-chain genesis allocation
 type Allocation struct {
 	// ETHAddr is the C-chain compatible address (0x...)
-	ETHAddr string `json:"evmAddr"`
+	ETHAddr string `json:"ethAddr"`
 
 	// LUXAddr is the P/X-chain address (P-lux1...)
-	LUXAddr string `json:"utxoAddr"`
+	LUXAddr string `json:"luxAddr"`
 
 	// InitialAmount is immediately available on X-chain (usually 0)
 	InitialAmount uint64 `json:"initialAmount"`

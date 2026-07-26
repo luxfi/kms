@@ -47,10 +47,10 @@ const MsgMetricBatch uint16 = 2
 // payload field. One batch per Export call (typically one Gather()
 // snapshot per scrape interval).
 type MetricBatch struct {
-	AppName     string            `json:"appName,omitempty"`
-	Version     string            `json:"version,omitempty"`
-	Resource    map[string]string `json:"resource,omitempty"`
-	TimestampNs int64             `json:"timestampNs"`
+	AppName     string             `json:"appName,omitempty"`
+	Version     string             `json:"version,omitempty"`
+	Resource    map[string]string  `json:"resource,omitempty"`
+	TimestampNs int64              `json:"timestampNs"`
 	Families    []MetricFamilyWire `json:"families"`
 }
 

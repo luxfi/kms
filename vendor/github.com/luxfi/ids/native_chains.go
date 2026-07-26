@@ -13,9 +13,10 @@ package ids
 //   C-Chain: 11111111111111111111111111111111C (Contract/EVM)
 //   X-Chain: 11111111111111111111111111111111X (Exchange/DAG)
 //   Q-Chain: 11111111111111111111111111111111Q (Quantum)
-//   A-Chain: 11111111111111111111111111111111A (AI)
+//   A-Chain: 11111111111111111111111111111111A (AI/Attestation)
 //   B-Chain: 11111111111111111111111111111111B (Bridge)
-//   T-Chain: 11111111111111111111111111111111T (Threshold)
+//   M-Chain: 11111111111111111111111111111111M (MPC — threshold signing / bridge custody)
+//   F-Chain: 11111111111111111111111111111111F (FHE — confidential compute)
 //   Z-Chain: 11111111111111111111111111111111Z (Zero-knowledge)
 //   G-Chain: 11111111111111111111111111111111G (Graph/dgraph)
 //   K-Chain: 11111111111111111111111111111111K (KMS)
@@ -42,7 +43,8 @@ const (
 	QChainIDStr = nativeChainPrefix + "Q"
 	AChainIDStr = nativeChainPrefix + "A"
 	BChainIDStr = nativeChainPrefix + "B"
-	TChainIDStr = nativeChainPrefix + "T"
+	MChainIDStr = nativeChainPrefix + "M"
+	FChainIDStr = nativeChainPrefix + "F"
 	ZChainIDStr = nativeChainPrefix + "Z"
 	GChainIDStr = nativeChainPrefix + "G" // Coming soon
 	IChainIDStr = nativeChainPrefix + "I" // Identity - Coming soon
@@ -69,8 +71,11 @@ var (
 	// BChainID is the well-known B-Chain (Bridge) ID
 	BChainID ID
 
-	// TChainID is the well-known T-Chain (Threshold) ID
-	TChainID ID
+	// MChainID is the well-known M-Chain (MPC — threshold signing, bridge custody) ID
+	MChainID ID
+
+	// FChainID is the well-known F-Chain (FHE — confidential compute) ID
+	FChainID ID
 
 	// ZChainID is the well-known Z-Chain (Zero-knowledge) ID
 	ZChainID ID
@@ -96,7 +101,8 @@ func init() {
 	QChainID[nativeChainLetterPos] = 'Q'
 	AChainID[nativeChainLetterPos] = 'A'
 	BChainID[nativeChainLetterPos] = 'B'
-	TChainID[nativeChainLetterPos] = 'T'
+	MChainID[nativeChainLetterPos] = 'M'
+	FChainID[nativeChainLetterPos] = 'F'
 	ZChainID[nativeChainLetterPos] = 'Z'
 	GChainID[nativeChainLetterPos] = 'G'
 	IChainID[nativeChainLetterPos] = 'I'
@@ -138,8 +144,10 @@ func NativeChainString(id ID) string {
 		return AChainIDStr
 	case 'B':
 		return BChainIDStr
-	case 'T':
-		return TChainIDStr
+	case 'M':
+		return MChainIDStr
+	case 'F':
+		return FChainIDStr
 	case 'Z':
 		return ZChainIDStr
 	case 'G':
@@ -187,8 +195,10 @@ func NativeChainFromString(s string) (ID, bool) {
 			return AChainID, true
 		case 'B', 'b':
 			return BChainID, true
-		case 'T', 't':
-			return TChainID, true
+		case 'M', 'm':
+			return MChainID, true
+		case 'F', 'f':
+			return FChainID, true
 		case 'Z', 'z':
 			return ZChainID, true
 		case 'G', 'g':
@@ -227,8 +237,10 @@ func NativeChainFromString(s string) (ID, bool) {
 		return AChainID, true
 	case 'B':
 		return BChainID, true
-	case 'T':
-		return TChainID, true
+	case 'M':
+		return MChainID, true
+	case 'F':
+		return FChainID, true
 	case 'Z':
 		return ZChainID, true
 	case 'G':
@@ -256,7 +268,7 @@ func NativeChainAlias(id ID) string {
 
 // AllNativeChainIDs returns all well-known native chain IDs.
 func AllNativeChainIDs() []ID {
-	return []ID{PChainID, CChainID, XChainID, QChainID, AChainID, BChainID, TChainID, ZChainID, GChainID, IChainID, KChainID, DChainID}
+	return []ID{PChainID, CChainID, XChainID, QChainID, AChainID, BChainID, MChainID, FChainID, ZChainID, GChainID, IChainID, KChainID, DChainID}
 }
 
 // NativeChainIDFromLetter returns the chain ID for a given letter.
@@ -277,8 +289,10 @@ func NativeChainIDFromLetter(letter byte) (ID, bool) {
 		return AChainID, true
 	case 'B', 'b':
 		return BChainID, true
-	case 'T', 't':
-		return TChainID, true
+	case 'M', 'm':
+		return MChainID, true
+	case 'F', 'f':
+		return FChainID, true
 	case 'Z', 'z':
 		return ZChainID, true
 	case 'G', 'g':

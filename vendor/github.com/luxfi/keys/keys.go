@@ -24,7 +24,7 @@ import (
 	"github.com/luxfi/go-bip32"
 	"github.com/luxfi/go-bip39"
 	"github.com/luxfi/ids"
-	"github.com/luxfi/proto/p/signer"
+	"github.com/luxfi/protocol/p/signer"
 	luxtls "github.com/luxfi/tls"
 	"golang.org/x/crypto/sha3"
 )
@@ -546,7 +546,7 @@ func deriveMnemonicKeyForPath(mnemonic string, account, index uint32) ([]byte, e
 	}
 
 	// m/44'/60' (coin type for LUX)
-	key, err = key.NewChildKey(bip32.FirstHardenedChild + CoinTypeEVM)
+	key, err = key.NewChildKey(bip32.FirstHardenedChild + LUXCoinType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to derive coin type: %w", err)
 	}
@@ -572,9 +572,8 @@ func deriveMnemonicKeyForPath(mnemonic string, account, index uint32) ([]byte, e
 	return key.Key, nil
 }
 
-// CoinTypeEVM is the SLIP-0044 coin_type for EVM chains (60', shared with
-// Ethereum). C-Chain and any non-Lux L1 EVM derive under this tree.
-const CoinTypeEVM = 60
+// LUXCoinType is the BIP-44 coin type for LUX (60' = standard Ethereum)
+const LUXCoinType = 60
 
 // deriveMnemonicKey derives an EC private key from mnemonic using BIP44 path m/44'/60'/0'/0/{index}
 func deriveMnemonicKey(mnemonic string, accountIndex uint32) ([]byte, error) {
@@ -597,7 +596,7 @@ func deriveMnemonicKey(mnemonic string, accountIndex uint32) ([]byte, error) {
 	}
 
 	// m/44'/60' (coin type for LUX)
-	key, err = key.NewChildKey(bip32.FirstHardenedChild + CoinTypeEVM)
+	key, err = key.NewChildKey(bip32.FirstHardenedChild + LUXCoinType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to derive coin type: %w", err)
 	}
