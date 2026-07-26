@@ -152,3 +152,64 @@ func TestSecretRoutes_UnauthOrgReadRejected(t *testing.T) {
 		t.Fatalf("unauth org read: got %d want 401", resp.StatusCode)
 	}
 }
+
+// TestSecretRoutes_ListAndGetDoNotShadow pins the two GET patterns apart.
+//
+// `GET .../secrets` (the collection) and `GET .../secrets/{rest...}` (one
+// secret) are registered on the same mux. ServeMux routes the bare collection
+// to the first and anything below it to the second; if that ever inverts, list
+// would swallow every get, or get would 400 on the bare collection because
+// {rest...} has no slash to split. Both directions are asserted here.
+func TestSecretRoutes_ListAndGetDoNotShadow(t *testing.T) {
+	auth, bearer, cleanup := newTestKeyAuth(t, roleKMSAdmin)
+	defer cleanup()
+	secStore := newTestSecretStore(t)
+
+	if err := secStore.Put(&store.Secret{
+		Path: "gateway", Name: "routes", Env: "default", Ciphertext: []byte("yaml: here"),
+	}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	mux := http.NewServeMux()
+	registerSecretRoutes(mux, auth, secStore)
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	get := func(path string) (int, string) {
+		req, _ := http.NewRequest(http.MethodGet, srv.URL+path, nil)
+		req.Header.Set("Authorization", "Bearer "+bearer)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("GET %s: %v", path, err)
+		}
+		defer resp.Body.Close()
+		body, _ := io.ReadAll(resp.Body)
+		return resp.StatusCode, string(body)
+	}
+
+	// The collection lists names — it must NOT fall through to the {rest...}
+	// handler, which would 400 for want of a slash.
+	code, body := get("/v1/kms/orgs/hanzo/secrets?path=gateway&env=default")
+	if code != http.StatusOK {
+		t.Fatalf("list: status %d, body %s", code, body)
+	}
+	if !strings.Contains(body, `"names"`) || !strings.Contains(body, "routes") {
+		t.Errorf("list body = %s, want a names array containing the seeded secret", body)
+	}
+
+	// A path below the collection still reaches the single-secret handler.
+	code, body = get("/v1/kms/orgs/hanzo/secrets/gateway/routes?env=default")
+	if code != http.StatusOK {
+		t.Fatalf("get: status %d, body %s", code, body)
+	}
+	if !strings.Contains(body, "yaml: here") {
+		t.Errorf("get body = %s, want the secret value", body)
+	}
+
+	// Listing an empty path is an empty array, never null — clients range over it.
+	code, body = get("/v1/kms/orgs/hanzo/secrets?path=nothing-here&env=default")
+	if code != http.StatusOK || !strings.Contains(body, `"names":[]`) {
+		t.Errorf("empty list = %d %s, want 200 with an empty array", code, body)
+	}
+}
