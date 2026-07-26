@@ -349,9 +349,12 @@ func main() {
 	// back to index.html so React Router can resolve the path client-side.
 
 	// Start HTTP server.
+	// Every route is registered by now; "/" catches the rest as JSON, and
+	// jsonOnly guarantees nothing on this listener ever answers in HTML.
+	mux.HandleFunc("/", notFoundJSON)
 	srv := &http.Server{
 		Addr:         listen,
-		Handler:      mux,
+		Handler:      jsonOnly(mux),
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 60 * time.Second,
 		IdleTimeout:  120 * time.Second,
