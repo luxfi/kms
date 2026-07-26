@@ -66,11 +66,9 @@ package main
 
 import (
 	"context"
-	"embed"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"log"
 	"log/slog"
 	"net/http"
@@ -95,16 +93,6 @@ import (
 )
 
 // One binary, one image. The KMS admin UI ships inside this binary.
-// The `web/` directory at this package root is populated by `make build`
-// (it copies `frontend/dist/` from the repo root before `go build`); the
-// embed picks up the static Vite output and serves it at `/` with a SPA
-// fallback so React Router routes resolve. API routes (`/v1/*`,
-// `/healthz`, `/health`) take precedence and are registered before the
-// catch-all. If `web/` is empty (e.g. fresh clone, no UI build yet), the
-// fallback returns 404 cleanly — the API still works.
-//
-//go:embed all:web
-var frontendDist embed.FS
 
 func main() {
 	mpcAddr := envOr("MPC_ADDR", "")
@@ -160,41 +148,6 @@ func main() {
 	mux.HandleFunc("GET /v1/kms/healthz", healthOK)
 	mux.HandleFunc("GET /v1/kms/health", healthOK)
 
-	// SPA bootstrap config. The legacy-derived React frontend in
-	// frontend/src/hooks/api/admin/queries.ts:fetchServerConfig fetches
-	// `/v1/admin/config` at first paint and refuses to render when the
-	// payload is missing — the user sees `["server-config"] data is
-	// undefined`. We don't run the full legacy admin surface, so
-	// this returns a minimal-but-complete shape: signups via IAM, no
-	// invite-only gating, no SMTP, instance is initialized. Fields the
-	// SPA reads: initialized, allowSignUp, allowedSignUpDomain, etc.
-	// defaultAuthOrgSlug drives the OIDC "Login with <Brand>" button in
-	// the SPA: when set, the SPA bypasses the org-picker and goes straight
-	// to /v1/sso/oidc/login?orgSlug=<this>. Read from env so the same image
-	// white-labels per-deployment via KMS_DEFAULT_ORG_SLUG.
-	defaultOrgSlug := envOr("KMS_DEFAULT_ORG_SLUG", "")
-	mux.HandleFunc("GET /v1/admin/config", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{
-			"config": map[string]any{
-				"initialized":               true,
-				"allowSignUp":               true,
-				"allowedSignUpDomain":       nil,
-				"trustSamlEmails":           false,
-				"trustLdapEmails":           false,
-				"trustOidcEmails":           true,
-				"defaultAuthOrgId":          "",
-				"defaultAuthOrgSlug":        defaultOrgSlug,
-				"isSecretScanningDisabled":  false,
-				"isMigrationModeOn":         false,
-				"enabledLoginMethods":       []string{"oidc"},
-				"slackClientId":             "",
-				"isSmtpConfigured":          false,
-				"isSecretApprovalDisabled":  false,
-				"identityRevocationEnabled": true,
-			},
-		})
-	})
-
 	// Machine identity auth via IAM.
 	mux.HandleFunc("POST /v1/kms/auth/login", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
@@ -249,7 +202,7 @@ func main() {
 
 	// Secret CRUD surface — org-scoped, JWT-gated, ZapDB-backed. Extracted
 	// into one named registrar (mirrors registerKMSRoutes / registerOIDCRoutes
-	// / registerWebUI) so the exact route set the server exposes is testable
+	// ) so the exact route set the server exposes is testable
 	// in isolation. There is deliberately NO env-var fetch route: the KMS
 	// process environment (KMS_MASTER_KEY_B64 root REK, MPC_TOKEN, S3 keys) is
 	// never reachable over HTTP. Secrets flow ONLY through these org-scoped
@@ -394,7 +347,6 @@ func main() {
 	// so explicit handlers (`/healthz`, `/health`, `/v1/*`) win the route
 	// match. SPA fallback: any GET that doesn't match a real file falls
 	// back to index.html so React Router can resolve the path client-side.
-	registerWebUI(mux)
 
 	// Start HTTP server.
 	srv := &http.Server{
@@ -1004,40 +956,4 @@ func (zapdbLogger) Infof(format string, args ...interface{}) {
 }
 func (zapdbLogger) Debugf(format string, args ...interface{}) {
 	slog.Debug(fmt.Sprintf(format, args...))
-}
-
-// registerWebUI mounts the embedded Vite SPA at `/` with a SPA fallback.
-// API routes are registered earlier on the same mux and win the route
-// match (Go 1.22 ServeMux specificity rules); this only catches the
-// remainder. If `web/` is empty (not built yet), every fallthrough returns
-// 404 — the API still works, just no UI.
-func registerWebUI(mux *http.ServeMux) {
-	sub, err := fs.Sub(frontendDist, "web")
-	if err != nil {
-		log.Printf("kms: web UI disabled — embed sub: %v", err)
-		return
-	}
-	// If index.html is missing, treat the UI as not-built and return early.
-	// (`make build` populates `web/` from frontend/dist before `go build`.)
-	if _, err := fs.Stat(sub, "index.html"); err != nil {
-		log.Printf("kms: web UI not built — `make build` populates cmd/kms/web from frontend/dist")
-		return
-	}
-	fileSrv := http.FileServer(http.FS(sub))
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		// Trim leading "/" once for fs.Stat.
-		clean := strings.TrimPrefix(r.URL.Path, "/")
-		if clean == "" {
-			clean = "index.html"
-		}
-		if _, err := fs.Stat(sub, clean); err != nil {
-			// Not a real asset — serve index.html so React Router takes over.
-			r2 := r.Clone(r.Context())
-			r2.URL.Path = "/"
-			fileSrv.ServeHTTP(w, r2)
-			return
-		}
-		fileSrv.ServeHTTP(w, r)
-	})
-	log.Printf("kms: web UI mounted at /")
 }
