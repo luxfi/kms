@@ -6,6 +6,9 @@
 package metric
 
 func init() {
-	DefaultRegistry = NewNoOpRegistry()
+	r := NewNoOpRegistry()
+	DefaultRegistry = r
+	DefaultRegisterer = r
+	DefaultGatherer = r
 	defaultFactory = NewNoOpFactory()
 }

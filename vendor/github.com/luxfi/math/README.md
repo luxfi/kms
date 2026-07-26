@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/hero.svg" alt="math" width="880"></p>
+
 # Lux Math Library
 
 A comprehensive mathematical utilities library for the Lux ecosystem.

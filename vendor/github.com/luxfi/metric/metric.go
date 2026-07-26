@@ -106,6 +106,7 @@ type Factory interface {
 type CounterVec interface {
 	With(Labels) Counter
 	WithLabelValues(...string) Counter
+	MustCurryWith(Labels) CounterVec
 	Reset()
 }
 
@@ -113,6 +114,7 @@ type CounterVec interface {
 type GaugeVec interface {
 	With(Labels) Gauge
 	WithLabelValues(...string) Gauge
+	MustCurryWith(Labels) GaugeVec
 	Reset()
 }
 
@@ -120,6 +122,7 @@ type GaugeVec interface {
 type HistogramVec interface {
 	With(Labels) Histogram
 	WithLabelValues(...string) Histogram
+	MustCurryWith(Labels) HistogramVec
 	Reset()
 }
 
@@ -127,6 +130,7 @@ type HistogramVec interface {
 type SummaryVec interface {
 	With(Labels) Summary
 	WithLabelValues(...string) Summary
+	MustCurryWith(Labels) SummaryVec
 	Reset()
 }
 
@@ -151,6 +155,15 @@ type Request interface {
 
 // DefaultRegistry is the default in-process registry used by package-level helpers.
 var DefaultRegistry Registry = NewRegistry()
+
+// DefaultRegisterer is the default Registerer, backed by DefaultRegistry.
+// Mirrors prometheus.DefaultRegisterer so call sites that pass a package-level
+// registerer (e.g. metric.Register(metric.DefaultRegisterer)) keep working.
+var DefaultRegisterer Registerer = DefaultRegistry
+
+// DefaultGatherer is the default Gatherer, backed by DefaultRegistry.
+// Mirrors prometheus.DefaultGatherer for HTTP exposition of the default registry.
+var DefaultGatherer Gatherer = DefaultRegistry
 
 // Global factory instance.
 var defaultFactory Factory = NewFactoryWithRegistry(DefaultRegistry)

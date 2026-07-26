@@ -21,7 +21,8 @@ type ChainConfig struct {
 	QChainID ids.ID // Quantum chain - post-quantum cryptography
 	AChainID ids.ID // Attestation chain - oracles, compute attestation
 	BChainID ids.ID // Bridge chain - cross-chain interop
-	TChainID ids.ID // Threshold chain - FHE, threshold crypto
+	MChainID ids.ID // MPC chain - threshold signing / bridge custody (consumes mpcvm library)
+	FChainID ids.ID // FHE chain - confidential compute / encrypted state (consumes mpcvm library)
 	ZChainID ids.ID // ZK chain - zero-knowledge proofs
 	GChainID ids.ID // Graph chain - dgraph
 	KChainID ids.ID // KMS chain - key management
@@ -109,8 +110,10 @@ func (r *ChainRegistry) MigrateChain(networkID uint32, chainName string, newChai
 		config.AChainID = newChainID
 	case "B", "bridge":
 		config.BChainID = newChainID
-	case "T", "threshold":
-		config.TChainID = newChainID
+	case "M", "mpc":
+		config.MChainID = newChainID
+	case "F", "fhe":
+		config.FChainID = newChainID
 	case "Z", "zk":
 		config.ZChainID = newChainID
 	case "D", "dex":
@@ -166,9 +169,14 @@ func (r *ChainRegistry) GetBChainID(networkID uint32) ids.ID {
 	return r.GetOrDefault(networkID).BChainID
 }
 
-// GetTChainID returns the T-chain ID for the given network.
-func (r *ChainRegistry) GetTChainID(networkID uint32) ids.ID {
-	return r.GetOrDefault(networkID).TChainID
+// GetMChainID returns the M-chain ID for the given network.
+func (r *ChainRegistry) GetMChainID(networkID uint32) ids.ID {
+	return r.GetOrDefault(networkID).MChainID
+}
+
+// GetFChainID returns the F-chain ID for the given network.
+func (r *ChainRegistry) GetFChainID(networkID uint32) ids.ID {
+	return r.GetOrDefault(networkID).FChainID
 }
 
 // GetZChainID returns the Z-chain ID for the given network.
@@ -192,7 +200,8 @@ func defaultMainnetConfig() *ChainConfig {
 		QChainID:  ids.QChainID,
 		AChainID:  ids.AChainID,
 		BChainID:  ids.BChainID,
-		TChainID:  ids.TChainID,
+		MChainID:  ids.MChainID,
+		FChainID:  ids.FChainID,
 		ZChainID:  ids.ZChainID,
 		DChainID:  ids.DChainID,
 	}
@@ -207,7 +216,8 @@ func defaultTestnetConfig() *ChainConfig {
 		QChainID:  ids.QChainID,
 		AChainID:  ids.AChainID,
 		BChainID:  ids.BChainID,
-		TChainID:  ids.TChainID,
+		MChainID:  ids.MChainID,
+		FChainID:  ids.FChainID,
 		ZChainID:  ids.ZChainID,
 		DChainID:  ids.DChainID,
 	}
@@ -222,7 +232,8 @@ func defaultDevnetConfig() *ChainConfig {
 		QChainID:  ids.QChainID,
 		AChainID:  ids.AChainID,
 		BChainID:  ids.BChainID,
-		TChainID:  ids.TChainID,
+		MChainID:  ids.MChainID,
+		FChainID:  ids.FChainID,
 		ZChainID:  ids.ZChainID,
 		DChainID:  ids.DChainID,
 	}
@@ -237,7 +248,8 @@ func defaultCustomConfig() *ChainConfig {
 		QChainID:  ids.QChainID,
 		AChainID:  ids.AChainID,
 		BChainID:  ids.BChainID,
-		TChainID:  ids.TChainID,
+		MChainID:  ids.MChainID,
+		FChainID:  ids.FChainID,
 		ZChainID:  ids.ZChainID,
 		DChainID:  ids.DChainID,
 	}

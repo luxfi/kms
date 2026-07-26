@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/hero.svg" alt="go-bip32" width="880"></p>
+
 # GO-BIP32
 This repository contains a local copy of the original ``github.com/tyler-smith/go-bip32`` library.
 

@@ -5,12 +5,10 @@ package zap
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/luxfi/mdns"
@@ -91,8 +89,22 @@ func (n *Node) onAcceptedTransportConn(peerID string, tc TransportConn) {
 	go n.serveTransportConn(peerID, tc)
 }
 
-// serveTransportConn is the QUIC equivalent of handleConn — it
-// drives the read loop and dispatches incoming frames to handlers.
+// serveTransportConn drives the read loops on a QUIC peer connection.
+//
+// Two parallel read loops run on each connection:
+//
+//  1. Control-stream loop (tc.Recv): handles one-way Sends only.
+//  2. Per-Call stream accept loop (AcceptCallStream): handles every
+//     Call. Each accepted stream carries exactly one request + one
+//     response, so the dispatch goroutine reads, handles, writes,
+//     and closes the stream in one shot.
+//
+// The two loops are independent: each runs in its own goroutine, and
+// both terminate when the connection closes or n.ctx is cancelled.
+//
+// The QUIC transport always implements TransportStreamer; if a
+// connection somehow lacks it we close it — the per-stream Call path
+// is the only Call path.
 func (n *Node) serveTransportConn(peerID string, tc TransportConn) {
 	defer n.wg.Done()
 	defer func() {
@@ -104,6 +116,14 @@ func (n *Node) serveTransportConn(peerID string, tc TransportConn) {
 		_ = tc.Close()
 		n.logger.Info("Peer disconnected (QUIC)", "peerID", peerID)
 	}()
+
+	streamer, ok := tc.(TransportStreamer)
+	if !ok {
+		n.logger.Error("QUIC TransportConn missing TransportStreamer", "peerID", peerID)
+		return
+	}
+	n.wg.Add(1)
+	go n.acceptCallStreams(peerID, streamer)
 
 	for {
 		select {
@@ -123,41 +143,81 @@ func (n *Node) serveTransportConn(peerID string, tc TransportConn) {
 			n.logger.Debug("QUIC Recv error", "peerID", peerID, "error", err)
 			return
 		}
-		n.dispatchFrame(peerID, data, tc)
+		// Control stream carries one-way Sends only. Calls ride
+		// per-Call streams.
+		msg, err := Parse(data)
+		if err != nil {
+			continue
+		}
+		n.invokeHandlerOneWay(peerID, msg)
 	}
 }
 
-// dispatchFrame routes a single ZAP frame to either the pending-Call
-// channel (if it has a response correlation header) or to the
-// registered handler. Mirrors the TCP path in node.go's handleConn.
-func (n *Node) dispatchFrame(peerID string, data []byte, tc TransportConn) {
-	if len(data) >= 8 {
-		reqFlag := binary.LittleEndian.Uint32(data[4:8])
-		if reqFlag == ReqFlagResp {
-			reqID := binary.LittleEndian.Uint32(data[0:4])
-			msg, err := Parse(data[8:])
-			if err == nil {
-				n.routeQUICResponse(peerID, reqID, msg)
-			}
+// acceptCallStreams runs in its own goroutine for each QUIC peer and
+// processes inbound per-Call streams. Each stream gets its own handler
+// goroutine so multiple in-flight Calls from the same peer execute
+// concurrently — the headline parallelism win.
+//
+// Termination: AcceptCallStream returns a non-nil err when the
+// connection is torn down. The loop exits without logging — the
+// peer-disconnected line is already emitted by serveTransportConn's
+// deferred close.
+func (n *Node) acceptCallStreams(peerID string, s TransportStreamer) {
+	defer n.wg.Done()
+	for {
+		select {
+		case <-n.ctx.Done():
+			return
+		default:
+		}
+		stream, err := s.AcceptCallStream(n.ctx)
+		if err != nil {
 			return
 		}
-		if reqFlag == ReqFlagReq {
-			reqID := binary.LittleEndian.Uint32(data[0:4])
-			msg, err := Parse(data[8:])
-			if err != nil {
-				return
-			}
-			n.handleQUICRequest(peerID, tc, reqID, msg)
-			return
-		}
+		n.wg.Add(1)
+		go n.handleCallStream(peerID, stream)
 	}
+}
 
-	// Regular one-way message.
-	msg, err := Parse(data)
+// handleCallStream serves exactly one inbound per-Call stream:
+// read one frame as the request, run the registered handler, and
+// write the response back on the same stream. The stream is closed
+// when this function returns.
+func (n *Node) handleCallStream(peerID string, stream TransportStream) {
+	defer n.wg.Done()
+	defer stream.Close()
+
+	reqBytes, err := stream.ReadFrame()
 	if err != nil {
 		return
 	}
-	n.invokeHandlerOneWay(peerID, msg)
+	msg, err := Parse(reqBytes)
+	if err != nil {
+		return
+	}
+
+	msgType := msg.Flags() >> 8
+	n.handlersMu.RLock()
+	handler, ok := n.handlers[msgType]
+	n.handlersMu.RUnlock()
+	if !ok {
+		return
+	}
+
+	// Guarded: a handler panic on the QUIC per-Call stream must not crash
+	// the node any more than on the TCP path. safeHandle recovers, logs,
+	// and converts the panic to an error; the stream is then closed.
+	resp, herr := n.safeHandle(handler, peerID, msgType, msg)
+	if herr != nil {
+		n.logger.Error("Handler error (stream)", "peerID", peerID, "msgType", msgType, "error", herr)
+		return
+	}
+	if resp == nil {
+		return
+	}
+	if err := stream.WriteFrame(resp.Bytes()); err != nil {
+		n.logger.Debug("QUIC stream write error", "peerID", peerID, "error", err)
+	}
 }
 
 // invokeHandlerOneWay runs the registered handler and discards the
@@ -170,96 +230,77 @@ func (n *Node) invokeHandlerOneWay(peerID string, msg *Message) {
 	if !ok {
 		return
 	}
-	_, _ = handler(n.ctx, peerID, msg)
-}
-
-// handleQUICRequest dispatches a Call request and writes back the
-// correlation-tagged response on the same transport conn.
-func (n *Node) handleQUICRequest(peerID string, tc TransportConn, reqID uint32, msg *Message) {
-	msgType := msg.Flags() >> 8
-	n.handlersMu.RLock()
-	handler, ok := n.handlers[msgType]
-	n.handlersMu.RUnlock()
-	if !ok {
-		return
-	}
-	resp, err := handler(n.ctx, peerID, msg)
-	if err != nil {
-		n.logger.Error("Handler error", "peerID", peerID, "msgType", msgType, "error", err)
-		return
-	}
-	if resp == nil {
-		return
-	}
-	respBytes := resp.Bytes()
-	wrapped := make([]byte, len(respBytes)+8)
-	binary.LittleEndian.PutUint32(wrapped[0:4], reqID)
-	binary.LittleEndian.PutUint32(wrapped[4:8], ReqFlagResp)
-	copy(wrapped[8:], respBytes)
-	if err := tc.Send(wrapped); err != nil {
-		n.logger.Debug("QUIC Send error", "peerID", peerID, "error", err)
-	}
-}
-
-// quicPendingMu / quicPending hold the per-peer pending Call response
-// channels for the QUIC transport. We keep them on the Node (not on
-// each TransportConn) because TransportConn is an interface and we
-// don't want to require implementors to carry the pending map.
-var (
-	quicPendingMu sync.Mutex
-	quicPending   = map[string]map[uint32]chan *Message{}
-)
-
-func (n *Node) routeQUICResponse(peerID string, reqID uint32, msg *Message) {
-	quicPendingMu.Lock()
-	defer quicPendingMu.Unlock()
-	if peerMap, ok := quicPending[n.nodeID+":"+peerID]; ok {
-		if ch, ok := peerMap[reqID]; ok {
-			select {
-			case ch <- msg:
-			default:
-			}
-		}
-	}
+	// Guarded: same recover boundary as every other dispatch path so a
+	// panicking one-way handler cannot kill the node.
+	_, _ = n.safeHandle(handler, peerID, msgType, msg)
 }
 
 // quicCall is the QUIC path for Node.Call.
+//
+// Every Call gets its own fresh bidirectional QUIC stream. The
+// request goes out on the new stream, the response comes back on the
+// same stream, and the stream is torn down. Concurrent Calls run in
+// parallel up to the peer-advertised stream limit (1024 for ZAP's
+// QUIC config) — no shared write mutex, no correlation header.
+//
+// QUIC's TransportConn always implements TransportStreamer; if it
+// somehow does not, that is a programmer error and we surface it.
 func (n *Node) quicCall(ctx context.Context, peerID string, msg *Message) (*Message, error) {
 	tc, err := n.getOrConnectQUIC(ctx, peerID)
 	if err != nil {
 		return nil, err
 	}
-
-	reqID := nextReqID(n)
-
-	respCh := make(chan *Message, 1)
-	key := n.nodeID + ":" + peerID
-	quicPendingMu.Lock()
-	if quicPending[key] == nil {
-		quicPending[key] = make(map[uint32]chan *Message)
+	streamer, ok := tc.(TransportStreamer)
+	if !ok {
+		return nil, fmt.Errorf("zap: QUIC TransportConn for %s missing TransportStreamer", peerID)
 	}
-	quicPending[key][reqID] = respCh
-	quicPendingMu.Unlock()
+	return n.quicCallStream(ctx, streamer, msg)
+}
 
-	defer func() {
-		quicPendingMu.Lock()
-		delete(quicPending[key], reqID)
-		quicPendingMu.Unlock()
-	}()
+// quicCallStream runs one Call on a fresh per-Call QUIC stream.
+//
+// The stream lifecycle is:
+//  1. OpenCallStream — server peer's AcceptCallStream wakes.
+//  2. WriteFrame(req) — single length-prefixed ZAP frame.
+//  3. ReadFrame()      — single length-prefixed ZAP frame (response).
+//  4. Close            — stream ID returns to the QUIC pool.
+//
+// No correlation header is needed on the wire: each stream carries
+// exactly one request + one response. The response payload is the raw
+// ZAP frame; we Parse it directly.
+//
+// Each stream gets cancelled if ctx fires before the response
+// arrives; the QUIC layer will surface ErrStreamCanceled into
+// ReadFrame so the goroutine exits cleanly.
+func (n *Node) quicCallStream(ctx context.Context, s TransportStreamer, msg *Message) (*Message, error) {
+	stream, err := s.OpenCallStream(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer stream.Close()
 
-	orig := msg.Bytes()
-	wrapped := make([]byte, len(orig)+8)
-	binary.LittleEndian.PutUint32(wrapped[0:4], reqID)
-	binary.LittleEndian.PutUint32(wrapped[4:8], ReqFlagReq)
-	copy(wrapped[8:], orig)
-
-	if err := tc.Send(wrapped); err != nil {
+	if err := stream.WriteFrame(msg.Bytes()); err != nil {
 		return nil, err
 	}
 
+	// Read response on this stream. The QUIC layer respects the
+	// stream's own deadline; we set one from ctx so a cancelled
+	// context tears the read down.
+	type result struct {
+		resp []byte
+		err  error
+	}
+	out := make(chan result, 1)
+	go func() {
+		resp, err := stream.ReadFrame()
+		out <- result{resp, err}
+	}()
 	select {
-	case resp := <-respCh:
-		return resp, nil
+	case r := <-out:
+		if r.err != nil {
+			return nil, r.err
+		}
+		return Parse(r.resp)
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
@@ -342,15 +383,4 @@ func (n *Node) getOrConnectQUIC(ctx context.Context, peerID string) (TransportCo
 	n.wg.Add(1)
 	go n.serveTransportConn(peerID, newTC)
 	return newTC, nil
-}
-
-// nextReqID returns the next request ID for a QUIC peer. We piggy-
-// back on the existing Conn.reqID counter pattern but use a per-node
-// global because the TransportConn interface is opaque about its own
-// state. Atomicity is provided by the Node struct's reqIDMu.
-func nextReqID(n *Node) uint32 {
-	n.reqIDQuicMu.Lock()
-	defer n.reqIDQuicMu.Unlock()
-	n.reqIDQuic++
-	return n.reqIDQuic
 }

@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/hero.svg" alt="ids" width="880"></p>
+
 # Lux IDs Package
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/luxfi/ids.svg)](https://pkg.go.dev/github.com/luxfi/ids)

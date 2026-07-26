@@ -74,8 +74,8 @@ REPLICATE_AGE_RECIPIENTS_FALLBACK=age1pq1...     # comma-separated, multi-recipi
 ### E. Operator CRD
 
 ```yaml
-apiVersion: liquidity.io/v1
-kind: LiquidReplicate
+apiVersion: lux.network/v1
+kind: ReplicateConfig
 spec:
   encryption:
     kem: xwing                    # enum: hpke-mlkem768x25519 | xwing
