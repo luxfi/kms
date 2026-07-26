@@ -2,10 +2,19 @@
 # file, schedules the image build onto the self-hosted arcd pools over the
 # native long-poll fabric, and pushes to GHCR — no GitHub-Actions hop.
 #
-# This repo previously built through .github/workflows/build-lux-kms.yml. That
-# path is dead: GitHub answers a workflow dispatch with 422 "Actions has been
-# disabled for this user", so pushes produced no build at all and the deployed
-# image silently drifted behind main.
+# STATUS: declaration of intent, NOT the live path. The build that actually runs
+# today is .github/workflows/build-lux-kms.yml, restored after this file briefly
+# replaced it — the native plane is not serving yet (the platform Deployment is
+# scaled to 0/0 and PLATFORM_BUILD_CALLBACK_TOKEN, the bearer POST /v1/runner
+# needs, is in neither cluster), so cutting over left kms unable to build at all.
+#
+# The 422 "Actions has been disabled for this user" that motivated the cutover is
+# ACCOUNT-scoped, not repo-scoped: the hanzo-dev account gets it, the zeekay
+# account dispatches fine. Push-triggered runs did stop firing around 2026-07-24,
+# so builds need an explicit dispatch either way.
+#
+# Switch to this path when the native plane serves, and do it for the whole fleet
+# at once — every sibling repo still builds on Actions.
 #
 # Schema: ~/work/hanzo/platform/docs/PLATFORM_CI.md §hanzo.yml.
 build:
