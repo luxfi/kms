@@ -469,7 +469,7 @@ func (c *oidcConfig) callIAMAddApplication(ctx context.Context, adminID, adminSe
 		"clientId":     {adminID},
 		"clientSecret": {adminSecret},
 	}
-	adminURL := c.iamEndpoint + "/api/add-application?" + q.Encode()
+	adminURL := c.iamEndpoint + "/v1/iam/add-application?" + q.Encode()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, adminURL, strings.NewReader(string(bodyJSON)))
 	if err != nil {
 		return "", "", err
