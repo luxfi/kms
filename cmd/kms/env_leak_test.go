@@ -83,10 +83,19 @@ func TestSecretRoutes_NoEnvVarLeak(t *testing.T) {
 				t.Fatalf("LEAK: response body contained the process-env master key (status=%d)", resp.StatusCode)
 			}
 
-			// No handler serves this path anymore → 404. A 200 would mean an
-			// env-echoing route came back.
-			if resp.StatusCode != http.StatusNotFound {
-				t.Fatalf("deleted env route: got status %d, want 404 (no handler)", resp.StatusCode)
+			// This path is now the tenant surface's GET (org-less secrets),
+			// which resolves against the STORE and never the process env:
+			// unauthenticated → 401 at the guard; authenticated → 404 from the
+			// store, because no secret named after an env var exists. A 200
+			// would mean an env-echoing route came back — still the failure
+			// this test exists to catch, together with the sentinel assertion
+			// above, which holds regardless of status.
+			want := http.StatusNotFound
+			if c.bearer == "" {
+				want = http.StatusUnauthorized
+			}
+			if resp.StatusCode != want {
+				t.Fatalf("env-named path: got status %d, want %d (store-resolved, never env)", resp.StatusCode, want)
 			}
 		})
 	}

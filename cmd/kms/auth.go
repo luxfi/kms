@@ -297,6 +297,39 @@ func (a *orgJWTAuth) requireOrgJWT(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// requireJWT admits any validated bearer and stamps NOTHING from the URL: the
+// tenant is the TOKEN's, which is the whole point of the org-less secret
+// surface (/v1/kms/secrets*). It is requireOrgJWT minus the URL-vs-token
+// reconciliation — there is no URL org left to reconcile. The org the token
+// names is currently advisory here because the secret store is not org-keyed;
+// the store partition is the deployment (one KMS per plane), matching how
+// every existing caller already uses this service.
+func (a *orgJWTAuth) requireJWT(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if a == nil {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]any{
+				"statusCode": 503, "message": "auth not configured",
+			})
+			return
+		}
+		raw := bearerToken(r)
+		if raw == "" {
+			writeJSON(w, http.StatusUnauthorized, map[string]any{
+				"statusCode": 401, "message": "missing bearer token",
+			})
+			return
+		}
+		if _, err := a.validate(r.Context(), raw); err != nil {
+			log.Printf("kms: auth reject: %v (path=%s)", err, r.URL.Path)
+			writeJSON(w, http.StatusUnauthorized, map[string]any{
+				"statusCode": 401, "message": "invalid token",
+			})
+			return
+		}
+		next(w, r)
+	}
+}
+
 // requireKeyAuth wraps a validator-key-management handler (keygen, sign,
 // rotate, and the key-metadata reads) with app-layer IAM JWT verification.
 //

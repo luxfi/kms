@@ -399,19 +399,7 @@ func main() {
 // process env is never a secret-fetch source. Regression that keeps it gone:
 // TestSecretRoutes_NoEnvVarLeak.
 func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.SecretStore) {
-	// GET /v1/kms/orgs/{org}/secrets?path=&env=  — list names under a path.
-	//
-	// The ZAP wire has carried this since it was written (OpSecretList 0x0042,
-	// {path, env} -> {names}); HTTP had get/put/delete and no list, so the two
-	// framings of the same store disagreed about what you could ask it. A client
-	// that wanted to enumerate had to either open a ZAP connection or give up —
-	// the hanzo browser extension gave up. Same handler shape, same envelope as
-	// ZAP returns.
-	//
-	// Distinct from the {rest...} pattern below: this one has no trailing
-	// segment, so ServeMux routes the bare collection here and any path under it
-	// there. Pinned by TestSecretRoutes_ListAndGetDoNotShadow.
-	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
+	listHandler := func(w http.ResponseWriter, r *http.Request) {
 		env := r.URL.Query().Get("env")
 		if env == "" {
 			env = "default"
@@ -426,11 +414,8 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 			names = append(names, sec.Name)
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"names": names})
-	}))
-
-	// GET /v1/kms/orgs/{org}/secrets/{path...}/{name}
-	// Matches the ATS kmsclient.Get() URL pattern.
-	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
+	}
+	getHandler := func(w http.ResponseWriter, r *http.Request) {
 		rest := r.PathValue("rest")
 		// A secret at the store root has an empty path, so `rest` is just the
 		// name with no separator. List() and POST both accept path="" and the
@@ -457,15 +442,8 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 		writeJSON(w, http.StatusOK, map[string]any{
 			"secret": map[string]any{"value": string(sec.Ciphertext)},
 		})
-	}))
-
-	// POST /v1/kms/orgs/{org}/secrets — create a secret. The handler is a
-	// named func (putSecretHandler) so the env-required contract is unit
-	// testable without standing up the full server.
-	mux.HandleFunc("POST /v1/kms/orgs/{org}/secrets", auth.requireOrgJWT(putSecretHandler(secStore)))
-
-	// DELETE /v1/kms/orgs/{org}/secrets/{rest...}/{name}
-	mux.HandleFunc("DELETE /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(func(w http.ResponseWriter, r *http.Request) {
+	}
+	deleteHandler := func(w http.ResponseWriter, r *http.Request) {
 		rest := r.PathValue("rest")
 		// A secret at the store root has an empty path, so `rest` is just the
 		// name with no separator. List() and POST both accept path="" and the
@@ -489,7 +467,46 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
-	}))
+	}
+
+
+	// GET /v1/kms/orgs/{org}/secrets?path=&env=  — list names under a path.
+	//
+	// The ZAP wire has carried this since it was written (OpSecretList 0x0042,
+	// {path, env} -> {names}); HTTP had get/put/delete and no list, so the two
+	// framings of the same store disagreed about what you could ask it. A client
+	// that wanted to enumerate had to either open a ZAP connection or give up —
+	// the hanzo browser extension gave up. Same handler shape, same envelope as
+	// ZAP returns.
+	//
+	// Distinct from the {rest...} pattern below: this one has no trailing
+	// segment, so ServeMux routes the bare collection here and any path under it
+	// there. Pinned by TestSecretRoutes_ListAndGetDoNotShadow.
+	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets", auth.requireOrgJWT(listHandler))
+
+	// GET /v1/kms/orgs/{org}/secrets/{path...}/{name}
+	// Matches the ATS kmsclient.Get() URL pattern.
+	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(getHandler))
+
+	// POST /v1/kms/orgs/{org}/secrets — create a secret. The handler is a
+	// named func (putSecretHandler) so the env-required contract is unit
+	// testable without standing up the full server.
+	mux.HandleFunc("POST /v1/kms/orgs/{org}/secrets", auth.requireOrgJWT(putSecretHandler(secStore)))
+
+	// DELETE /v1/kms/orgs/{org}/secrets/{rest...}/{name}
+	mux.HandleFunc("DELETE /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(deleteHandler))
+
+	// ── the org-less tenant surface ─────────────────────────────────────────
+	// /v1/kms/secrets*: the SAME four handlers, addressed without an org in the
+	// URL — the tenant is the TOKEN's (requireJWT), which is the shape cloud's
+	// embedded KMS and every swept client (gateway, console, kms-operator)
+	// speak. The org-addressed registrations above are the COMPAT surface for
+	// unswept callers (ATS kmsclient, the browser extension) and are removed
+	// the release after those sweep; new callers use these.
+	mux.HandleFunc("GET /v1/kms/secrets", auth.requireJWT(listHandler))
+	mux.HandleFunc("GET /v1/kms/secrets/{rest...}", auth.requireJWT(getHandler))
+	mux.HandleFunc("POST /v1/kms/secrets", auth.requireJWT(putSecretHandler(secStore)))
+	mux.HandleFunc("DELETE /v1/kms/secrets/{rest...}", auth.requireJWT(deleteHandler))
 }
 
 // putSecretHandler serves POST /v1/kms/orgs/{org}/secrets (create/upsert).
