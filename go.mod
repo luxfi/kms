@@ -80,3 +80,5 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
+
+exclude github.com/luxfi/genesis v1.5.21
