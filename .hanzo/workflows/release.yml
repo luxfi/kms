@@ -1,0 +1,112 @@
+name: Release
+# Builds ghcr.io/luxfi/kms on the native runners (git.hanzo.ai → git-runner).
+# A tag push vX.Y.Z is a release: the image carries the semver tags plus the
+# sha tag; a main push carries only the sha tag. The image must pass the smoke
+# below before it is allowed to exist at the registry, and the pushed manifest
+# is proven resolvable so a CR pin can never point at a phantom tag.
+#
+# ghcr auth: GHCR_USER / GHCR_TOKEN — org Actions secrets on this forge,
+# sourced from KMS (luxfi:/registry/ghcr-user, ghcr-token, env=prod). The
+# instance GITHUB_TOKEN is a Hanzo Git token and is NOT valid at ghcr.io or
+# github.com; the same PAT also serves the Dockerfile's module fetch.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: [lux-build-linux-amd64]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute tags
+        id: meta
+        run: |
+          set -euo pipefail
+          SHA_TAG="ghcr.io/luxfi/kms:sha-${GITHUB_SHA:0:7}"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            {
+              echo "tags<<EOF"
+              echo "ghcr.io/luxfi/kms:v${VERSION}"
+              echo "ghcr.io/luxfi/kms:${VERSION}"
+              echo "$SHA_TAG"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+            echo "probe=ghcr.io/luxfi/kms:v${VERSION}" >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "tags<<EOF"
+              echo "$SHA_TAG"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+            echo "probe=$SHA_TAG" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          driver-opts: network=host
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USER }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build (load for smoke, not yet pushed)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          build-args: |
+            GITHUB_TOKEN=${{ secrets.GHCR_TOKEN }}
+          load: true
+          push: false
+          provenance: false
+          tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Smoke — the binary is present and serves
+        # An image that builds but cannot answer /healthz deploys and half-works;
+        # catch it before a manifest exists rather than after one ships.
+        run: |
+          set -euo pipefail
+          img="${{ steps.meta.outputs.probe }}"
+          docker run --rm --entrypoint sh "$img" -c 'command -v kms'
+          cid=$(docker run -d "$img")
+          for i in $(seq 1 15); do
+            if docker exec "$cid" curl -sf http://localhost:8080/healthz >/dev/null 2>&1; then
+              echo "healthz ok"; docker rm -f "$cid"; exit 0
+            fi
+            sleep 2
+          done
+          docker logs "$cid" | tail -40; docker rm -f "$cid"
+          echo "::error::kms never answered /healthz"; exit 1
+
+      - name: Push
+        run: |
+          set -euo pipefail
+          while IFS= read -r t; do
+            [ -n "$t" ] && docker push "$t"
+          done <<< "${{ steps.meta.outputs.tags }}"
+
+      - name: Verify the pushed manifest resolves
+        run: |
+          set -euo pipefail
+          img="${{ steps.meta.outputs.probe }}"
+          for i in 1 2 3 4 5 6; do
+            if docker manifest inspect "$img" >/dev/null 2>&1; then
+              echo "$img is resolvable"; exit 0
+            fi
+            echo "manifest not visible yet (attempt ${i}/6) — retrying"; sleep 5
+          done
+          echo "::error::$img not pullable after push"; exit 1
