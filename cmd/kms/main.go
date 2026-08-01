@@ -201,6 +201,18 @@ func main() {
 	expectedIss := envOr("KMS_EXPECTED_ISSUER", iamEndpoint)
 	auth := newOrgJWTAuth(jwksFrom, expectedIss)
 
+	// KMS_HOME_ORG binds this deployment's flat secret store to the org that
+	// owns it. Without it the store authorizes any valid IAM token from any of
+	// the shared issuer's orgs — every brand, every app — through the org-less
+	// door or through its own /orgs/{self} door, because the URL org proves only
+	// that the caller named itself honestly (see authorizesHome). Fail closed:
+	// refuse to boot rather than serve the store ungated. A stalled rollout
+	// leaves the prior pod serving; a running pod is never open.
+	auth.homeOrgs = parseHomeOrgs(envOr("KMS_HOME_ORG", ""))
+	if err := requireHomeOrgConfig(auth.homeOrgs); err != nil {
+		log.Fatalf("kms: %v", err)
+	}
+
 	// Secret CRUD surface — org-scoped, JWT-gated, ZapDB-backed. Extracted
 	// into one named registrar (mirrors registerKMSRoutes / registerOIDCRoutes
 	// ) so the exact route set the server exposes is testable
