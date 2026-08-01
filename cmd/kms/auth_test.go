@@ -639,3 +639,26 @@ func TestBearerToken_extracts(t *testing.T) {
 		}
 	}
 }
+
+// TestIAMJWKSURL_CarriesV1IAMPrefix pins the WHOLE JWKS URL, not its suffix.
+//
+// This bug was invisible to every existing test because the stub servers here match
+// with strings.HasSuffix(path, "/.well-known/jwks"), which is true of both the wrong
+// path and the right one. In production the wrong path is not a 404 either — IAM
+// answers any unregistered path with a 200 text/html SPA, so the fetch "succeeds",
+// unmarshal fails, no key is ever cached, and the only operator-visible symptom is
+// `login HTTP 401 invalid credentials` on unrelated KMSSecret resources. lux-k8s ran
+// that way for four and a half months with 50 of 53 secrets unsynced.
+func TestIAMJWKSURL_CarriesV1IAMPrefix(t *testing.T) {
+	const want = "https://hanzo.id/v1/iam/.well-known/jwks"
+	if got := iamJWKSURL("https://hanzo.id"); got != want {
+		t.Fatalf("jwks URL = %q, want %q", got, want)
+	}
+	if got := iamJWKSURL("https://hanzo.id/"); got != want {
+		t.Fatalf("trailing slash not trimmed: jwks URL = %q, want %q", got, want)
+	}
+	t.Setenv("IAM_JWKS_PATH", "/custom/jwks")
+	if got, w := iamJWKSURL("https://hanzo.id"), "https://hanzo.id/custom/jwks"; got != w {
+		t.Fatalf("IAM_JWKS_PATH override ignored: jwks URL = %q, want %q", got, w)
+	}
+}

@@ -116,13 +116,29 @@ type orgJWTAuth struct {
 // KMS will fetch JWKS from (in-cluster); expectedIssuer is the
 // `iss` claim value to enforce. If expectedIssuer is empty the
 // iamEndpoint is used (matches the simple single-URL deployment).
+// iamJWKSURL builds the IAM JWKS endpoint.
+//
+// The path is NOT "/.well-known/jwks". IAM serves a 200 text/html SPA catch-all for
+// any unregistered path, so a wrong path here is never a 404 — it is HTML that fails
+// to unmarshal, so no key is ever loaded, every token check fails, and the only
+// symptom reaching an operator is `login HTTP 401 invalid credentials` on a
+// KMSSecret, which points at credentials rather than at this. lux-k8s sat that way
+// from 2026-03-17 to 2026-08-01 with 50 of 53 secrets unsynced.
+//
+// /v1/iam/... is the canonical host-relative prefix (HIP-0111) and is already what
+// IAM_TOKEN_PATH defaults to; JWKS was simply left behind on the legacy root path.
+// Overridable for the same reason the token path is.
+func iamJWKSURL(iamEndpoint string) string {
+	return strings.TrimRight(iamEndpoint, "/") + envOr("IAM_JWKS_PATH", "/v1/iam/.well-known/jwks")
+}
+
 func newOrgJWTAuth(iamEndpoint, expectedIssuer string) *orgJWTAuth {
 	iam := strings.TrimRight(iamEndpoint, "/")
 	issuers := parseIssuers(expectedIssuer)
 	if len(issuers) == 0 {
 		issuers = []string{iam}
 	}
-	jwksURL := iam + "/.well-known/jwks"
+	jwksURL := iamJWKSURL(iam)
 	return &orgJWTAuth{
 		jwksURL: jwksURL,
 		issuers: issuers,
