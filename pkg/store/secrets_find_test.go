@@ -1,9 +1,12 @@
 package store
 
 import (
+	"strconv"
 	"testing"
 
 	badger "github.com/luxfi/zapdb"
+
+	"github.com/luxfi/kms/pkg/secret"
 )
 
 func findTestStore(t *testing.T) *SecretStore {
@@ -66,24 +69,24 @@ func TestFindSelectsSubtreeAndEnv(t *testing.T) {
 	mustPut(t, s, "deploy/ci", "prod", "RUNNER")
 	mustPut(t, s, "deployfoo", "prod", "OTHER")
 
-	got := func(q Query) []Ref {
+	got := func(q secret.Query) []secret.Ref {
 		t.Helper()
-		refs, err := s.Find(q)
+		refs, _, err := s.Find(q)
 		if err != nil {
 			t.Fatalf("find %+v: %v", q, err)
 		}
 		return refs
 	}
 
-	if all := got(Query{}); len(all) != 5 {
+	if all := got(secret.Query{}); len(all) != 5 {
 		t.Fatalf("zero Query must select every record, got %d: %+v", len(all), all)
 	}
 	// Ordering is (path, env, name) so two runs are diffable.
-	if all := got(Query{}); all[0].Path != "" || all[1].Path != "deploy" || all[1].Env != "prod" {
+	if all := got(secret.Query{}); all[0].Path != "" || all[1].Path != "deploy" || all[1].Env != "prod" {
 		t.Fatalf("results are not ordered by (path, env, name): %+v", all)
 	}
 
-	sub := got(Query{Path: "deploy"})
+	sub := got(secret.Query{Path: "deploy"})
 	if len(sub) != 3 { // PIN prod, PIN staging, deploy/ci RUNNER — never deployfoo
 		t.Fatalf("path=deploy must descend and stop at the segment boundary, got %+v", sub)
 	}
@@ -93,19 +96,19 @@ func TestFindSelectsSubtreeAndEnv(t *testing.T) {
 		}
 	}
 
-	if env := got(Query{Env: "staging"}); len(env) != 1 || env[0].Path != "deploy" {
+	if env := got(secret.Query{Env: "staging"}); len(env) != 1 || env[0].Path != "deploy" {
 		t.Fatalf("env filter must span every path and only that env, got %+v", env)
 	}
-	if both := got(Query{Path: "deploy", Env: "prod"}); len(both) != 2 {
+	if both := got(secret.Query{Path: "deploy", Env: "prod"}); len(both) != 2 {
 		t.Fatalf("path+env must intersect, got %+v", both)
 	}
 	// Slash spellings of one subtree are one subtree.
 	for _, p := range []string{"/deploy", "deploy/", "/deploy/"} {
-		if len(got(Query{Path: p})) != 3 {
+		if len(got(secret.Query{Path: p})) != 3 {
 			t.Fatalf("path=%q must mean the same subtree as %q", p, "deploy")
 		}
 	}
-	if none := got(Query{Env: "nope"}); len(none) != 0 {
+	if none := got(secret.Query{Env: "nope"}); len(none) != 0 {
 		t.Fatalf("an env with no records is empty, got %+v", none)
 	}
 }
@@ -127,7 +130,37 @@ func TestPutRejectsAmbiguousCoord(t *testing.T) {
 			t.Fatalf("Put(env=%q name=%q) = nil, want ErrInvalidCoord", c.env, c.name)
 		}
 	}
-	if refs, _ := s.Find(Query{}); len(refs) != 0 {
+	if refs, _, _ := s.Find(secret.Query{}); len(refs) != 0 {
 		t.Fatalf("a refused write must store nothing, got %+v", refs)
+	}
+}
+
+// A capped answer must SAY it is capped. An enumeration is authenticated, but
+// one request that pulls the whole keyspace into memory and onto the wire is
+// still an amplification lever, so Find bounds itself — and the moment it does,
+// the caller must be able to tell a bounded prefix from the whole store, or the
+// cap reintroduces the very failure this surface was hardened against: a short
+// list that reads as the complete truth.
+func TestFindCapsTheAnswerAndSaysSo(t *testing.T) {
+	s := findTestStore(t)
+	for i := 0; i < maxFindRows+1; i++ {
+		mustPut(t, s, "bulk", "prod", "N"+strconv.Itoa(i))
+	}
+
+	refs, truncated, err := s.Find(secret.Query{})
+	if err != nil {
+		t.Fatalf("find: %v", err)
+	}
+	if !truncated {
+		t.Fatalf("find over %d records reported truncated=false with %d rows", maxFindRows+1, len(refs))
+	}
+	if len(refs) != maxFindRows {
+		t.Fatalf("find returned %d rows, want the cap %d", len(refs), maxFindRows)
+	}
+
+	// A narrowed query that fits is NOT flagged — truncated must mean "there is
+	// more", never "this store is big".
+	if _, tr, err := s.Find(secret.Query{Env: "nope"}); err != nil || tr {
+		t.Fatalf("narrowed find: truncated=%v err=%v; want false, nil", tr, err)
 	}
 }
