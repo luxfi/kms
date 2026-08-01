@@ -87,6 +87,7 @@ import (
 	"github.com/luxfi/kms/pkg/keys"
 	"github.com/luxfi/kms/pkg/mpc"
 	"github.com/luxfi/kms/pkg/sdksign"
+	"github.com/luxfi/kms/pkg/secret"
 	"github.com/luxfi/kms/pkg/store"
 	"github.com/luxfi/kms/pkg/store/mpcrek"
 	"github.com/luxfi/kms/pkg/zapserver"
@@ -420,7 +421,7 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 			writeJSON(w, http.StatusBadRequest, map[string]any{"message": err.Error()})
 			return
 		}
-		refs, err := secStore.Find(q)
+		refs, truncated, err := secStore.Find(q)
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]any{"message": "list failed"})
 			return
@@ -433,12 +434,14 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 		// filter that produced them: an empty result is then self-explaining —
 		// the caller can see which path and env were actually searched instead
 		// of reading "[]" as "this store is empty". `names` is the shape the
-		// existing clients read and stays.
+		// existing HTTP clients read and stays. `truncated` warns when the answer
+		// was capped, so a caller narrows rather than trusting a partial list.
 		writeJSON(w, http.StatusOK, map[string]any{
-			"names":   names,
-			"secrets": refs,
-			"total":   len(refs),
-			"query":   map[string]string{"path": q.Path, "env": q.Env},
+			"names":     names,
+			"secrets":   refs,
+			"total":     len(refs),
+			"truncated": truncated,
+			"query":     map[string]string{"path": q.Path, "env": q.Env},
 		})
 	}
 	getHandler := func(w http.ResponseWriter, r *http.Request) {
@@ -511,9 +514,11 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 	// reported with the path and env it actually lives at.
 	//
 	// This surface enumerates the DEPLOYMENT's store, not one org's: the secret
-	// keyspace carries no org (see requireJWT), so {org} authorizes the call and
-	// does not scope it. The org-keyed plane is cloud's (apps/kms), which shards
-	// a file per tenant.
+	// keyspace carries no org, so {org} here is caller-chosen and scopes nothing
+	// — a caller can only ever name an org its own token already authorizes.
+	// What binds a request to this store is KMS_HOME_ORG (authorizesHome, run by
+	// both doors). The org-KEYED plane is cloud's (apps/kms), which shards a
+	// file per tenant.
 	//
 	// Distinct from the {rest...} pattern below: this one has no trailing
 	// segment, so ServeMux routes the bare collection here and any path under it
@@ -521,7 +526,7 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets", auth.requireOrgJWT(listHandler))
 
 	// GET /v1/kms/orgs/{org}/secrets/{path...}/{name}
-	// Matches the ATS kmsclient.Get() URL pattern.
+	// Matches the Go kmsclient.Get() URL pattern.
 	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(getHandler))
 
 	// POST /v1/kms/orgs/{org}/secrets — create a secret. The handler is a
@@ -532,12 +537,14 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 	// DELETE /v1/kms/orgs/{org}/secrets/{rest...}/{name}
 	mux.HandleFunc("DELETE /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(deleteHandler))
 
-	// ── the org-less tenant surface ─────────────────────────────────────────
+	// ── the org-less surface ────────────────────────────────────────────────
 	// /v1/kms/secrets*: the SAME four handlers, addressed without an org in the
-	// URL — the tenant is the TOKEN's (requireJWT), which is the shape cloud's
-	// embedded KMS and every swept client (gateway, console, kms-operator)
-	// speak. The org-addressed registrations above are the COMPAT surface for
-	// unswept callers (ATS kmsclient, the browser extension) and are removed
+	// URL — the shape cloud's embedded KMS and every swept client (gateway,
+	// console, kms-operator) speak. There is no URL org to reconcile here, so
+	// requireJWT gates on the same thing requireOrgJWT ultimately does: whether
+	// the caller's own org authorizes this deployment's home org. Two doors, one
+	// boundary. The org-addressed registrations above are the COMPAT surface for
+	// unswept callers (the Go kmsclient, the browser extension) and are removed
 	// the release after those sweep; new callers use these.
 	mux.HandleFunc("GET /v1/kms/secrets", auth.requireJWT(listHandler))
 	mux.HandleFunc("GET /v1/kms/secrets/{rest...}", auth.requireJWT(getHandler))
@@ -546,35 +553,45 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 }
 
 // listParams maps every accepted list query parameter to the field it sets.
-// `secretPath` and `environment` are the kms-operator's spellings of `path` and
-// `env`; one endpoint serves both vocabularies rather than two endpoints
-// disagreeing about what you may ask.
+//
+// The store has ONE name for a subtree root — `path` — and every other route on
+// this surface already spells it that way (POST takes {path,name,env,value};
+// GET addresses /secrets/{path}/{name}). `prefix` is that same value under the
+// spelling two shipped first-party SDKs emit against THIS route: the Go
+// kmsclient's httpList and the generated hanzoai Python client both send
+// `?prefix=`. Translating one legacy spelling at the boundary is what turns
+// their silently-empty answer into the right one, and the response echoes the
+// canonical name back so there is still only one name for the value.
+//
+// Nothing else is accepted. `secretPath`/`environment` belong to the Infisical
+// /api/v3 shape, which this server does not serve — a client sending those is
+// addressing a different API and is better told so than answered.
 var listParams = map[string]string{
-	"path":        "path",
-	"secretPath":  "path",
-	"env":         "env",
-	"environment": "env",
+	"path":   "path",
+	"prefix": "path",
+	"env":    "env",
 }
 
-// parseListQuery turns a list request's query string into a store.Query, and
+// parseListQuery turns a list request's query string into a secret.Query, and
 // REFUSES anything it does not understand.
 //
-// A silently-ignored filter is the worst failure this surface has: `?prefix=x`
-// (or a typo'd `?environment=`) used to fall through to "no filter at all",
-// answer 200 with an empty list, and read to the caller as "the store holds
-// nothing" — which is how an invalid deploy token sat unnoticed while every
-// build pinned nothing. A misspelled question must fail loudly, not be answered
-// as if it were a different question.
+// A silently-ignored filter is the worst failure this surface has: an unknown
+// parameter used to fall through to "no filter at all", answer 200 with an empty
+// list, and read to the caller as "the store holds nothing" — which is how an
+// invalid deploy token sat unnoticed while every build pinned nothing. A
+// misspelled question must fail loudly, not be answered as if it were a
+// different question, so the refusal names the offending key AND the accepted
+// vocabulary: one round trip is enough to correct it.
 //
 // An omitted parameter is not a silent narrowing either: no path means the
-// whole store and no env means every environment (see store.Query).
-func parseListQuery(v url.Values) (store.Query, error) {
-	var q store.Query
+// whole store and no env means every environment (see secret.Query).
+func parseListQuery(v url.Values) (secret.Query, error) {
+	var q secret.Query
 	set := map[string]string{}
 	for key, vals := range v {
 		field, ok := listParams[key]
 		if !ok {
-			return q, fmt.Errorf("unknown query parameter %q: this endpoint takes path (alias secretPath) and env (alias environment); omit path to list every path, omit env to list every environment", key)
+			return q, fmt.Errorf("unknown query parameter %q: this endpoint takes path (also spelled prefix) and env; omit path to list every path, omit env to list every environment", key)
 		}
 		val := ""
 		if len(vals) > 0 {
@@ -592,7 +609,7 @@ func parseListQuery(v url.Values) (store.Query, error) {
 	// env is one key segment; a '/' in it can never match a stored record, so
 	// say so instead of returning an empty list that looks like an empty store.
 	if q.Env != "" && !store.ValidCoord(q.Env, "x") {
-		return store.Query{}, fmt.Errorf("env must be a single segment (no '/', no control characters)")
+		return secret.Query{}, fmt.Errorf("env must be a single segment (no '/', no control characters)")
 	}
 	return q, nil
 }
