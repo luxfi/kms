@@ -3,6 +3,49 @@
 **Project**: Lux Key Management Service (KMS)
 **Organization**: Lux Network
 
+## The store does not open without an at-rest key — READ BEFORE DEPLOYING
+
+`KMS_ENCRYPTION_KEY_B64` is now a boot precondition. A missing or malformed
+key used to degrade to an unencrypted ZapDB behind one log line, and the Hanzo
+deployment ran that way: `KEYREGISTRY` 28 bytes (empty), `kms/secrets/…` keys
+greppable in the SSTs, and the S3 replica shipping those same cleartext files
+off-cluster. One PVC snapshot or one bucket read was the whole store. The JWT
+gate in front of it never protected the bytes.
+
+**The deploy is gated on two operator steps, in this order.** An image built
+from this commit will refuse to start without them — that is the point, but it
+means a tag bump alone takes the fleet's secret sync down.
+
+1. **Provision the key, outside this KMS.** A store's own key cannot be a
+   record in that store — a cold start could never read it. Use a Secret
+   provisioned out of band (or the MPC-rooted REK, which is already how the ZAP
+   secrets plane roots its per-secret DEKs):
+
+       head -c 32 /dev/urandom | base64      # -> KMS_ENCRYPTION_KEY_B64
+
+   `ROOT_ENCRYPTION_KEY` is NOT this key. It is the Infisical-era name the Hanzo
+   deployment still provisions; nothing reads it. The boot refusal names it so
+   an operator does not read "no key configured" while looking at a populated
+   Secret.
+
+2. **Migrate the store once, with the server stopped.** ZapDB takes a directory
+   lock, and a store read while it is written yields a copy missing records.
+
+       KMS_ENCRYPTION_KEY_B64=<new> \
+         kms-rekey -from /var/lib/cloud/kms -to /var/lib/cloud/kms-encrypted
+
+   The source is opened read-only and never written, so a migration that dies
+   halfway leaves the live store untouched — delete the half-written
+   destination and run it again. It prints the record count; compare it before
+   pointing `KMS_DATA_DIR` at the result, and delete nothing until you have.
+   Rotation of an already-encrypted store is the same command with
+   `KMS_REKEY_FROM_B64` set to the retired key — there is no separate rotate
+   path to keep in sync.
+
+Verification that the migration actually encrypted anything, on the new dir:
+`KEYREGISTRY` grows past 28 bytes (a data key is registered), and
+`grep -c kms/secrets *.sst` answers 0 where the old dir answered non-zero.
+
 ## v1.12.14 — the list could not see secrets that exist
 
 `GET /v1/kms/orgs/hanzo/secrets` answered `200 {"names":[]}` while
