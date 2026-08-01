@@ -8,7 +8,7 @@
 //
 //	0x0040  OpSecretGet   { path, name, env }          → { value: base64 } or not-found
 //	0x0041  OpSecretPut   { path, name, env, value }   → { ok: true }           (admin only)
-//	0x0042  OpSecretList  { path, env }                → { names: []string }
+//	0x0042  OpSecretList  { path, env }                → { names, secrets: [{path,env,name}] }
 //	0x0043  OpSecretDelete{ path, name, env }          → { ok: true }           (admin only)
 //
 // Auth: every secret-opcode payload is wrapped in a signed Envelope
@@ -552,23 +552,31 @@ type listReq struct {
 
 type listResp struct {
 	Names []string `json:"names"`
+	// Secrets carries each record's full (path, env, name) coordinate. Names
+	// alone cannot say WHERE a record lives, so a caller listing across
+	// sub-paths or environments could not tell two same-named records apart.
+	Secrets []store.Ref `json:"secrets"`
 }
 
+// handleList answers OpSecretList from the same store.Find the HTTP face uses,
+// so the two framings of this store can never disagree about what it holds. An
+// omitted path means the whole store; an omitted env means every environment
+// (see store.Query) — neither silently narrows the answer.
 func (s *Server) handleList(_ context.Context, ident Identity, payload []byte) (byte, []byte, error) {
 	var req listReq
 	if err := json.Unmarshal(payload, &req); err != nil {
 		return statusError, errJSON(err.Error()), nil
 	}
-	secs, err := s.store.List(req.Path, req.Env)
+	refs, err := s.store.Find(store.Query{Path: req.Path, Env: req.Env})
 	if err != nil {
 		return statusError, nil, err
 	}
-	names := make([]string, 0, len(secs))
-	for _, sec := range secs {
-		names = append(names, sec.Name)
+	names := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		names = append(names, ref.Name)
 	}
 	s.log.Debug("kms.zap list", "ident", ident.String(), "path", req.Path, "env", req.Env)
-	b, _ := json.Marshal(listResp{Names: names})
+	b, _ := json.Marshal(listResp{Names: names, Secrets: refs})
 	return statusOK, b, nil
 }
 
