@@ -9,6 +9,8 @@ import (
 	"time"
 
 	badger "github.com/luxfi/zapdb"
+
+	"github.com/luxfi/kms/pkg/secret"
 )
 
 var ErrSecretNotFound = errors.New("store: secret not found")
@@ -125,9 +127,19 @@ var ErrInvalidCoord = errors.New("store: env and name must be single segments (n
 // either would let two different (path, env, name) triples spell the SAME key
 // and make an enumeration's decode of that key ambiguous. Enforced on write, so
 // the keyspace stays injective going forward.
+//
+// Leading/trailing whitespace is rejected too. A list query trims its filter
+// values (parseListQuery), so a stored env=="prod " could never be selected by
+// ?env=prod — it would answer an empty list that reads as an empty store, the
+// exact silent-empty failure this surface was hardened against. Rejecting rather
+// than trimming keeps the write's intent explicit: "prod " and "prod" must not
+// collapse into one key as a side effect of storage.
 func ValidCoord(env, name string) bool {
 	for _, s := range [2]string{env, name} {
 		if s == "" {
+			return false
+		}
+		if strings.TrimSpace(s) != s {
 			return false
 		}
 		for _, r := range s {
@@ -140,25 +152,25 @@ func ValidCoord(env, name string) bool {
 }
 
 // Put stores an encrypted secret (upsert).
-func (s *SecretStore) Put(secret *Secret) error {
-	if !ValidCoord(secret.Env, secret.Name) {
+func (s *SecretStore) Put(rec *Secret) error {
+	if !ValidCoord(rec.Env, rec.Name) {
 		return ErrInvalidCoord
 	}
-	if secret.Scheme == "" {
-		secret.Scheme = ModeStandard
+	if rec.Scheme == "" {
+		rec.Scheme = ModeStandard
 	}
-	raw, err := json.Marshal(secret)
+	raw, err := json.Marshal(rec)
 	if err != nil {
 		return err
 	}
 	return s.db.Update(func(txn *badger.Txn) error {
-		return txn.Set(secretKey(secret.Path, secret.Name, secret.Env), raw)
+		return txn.Set(secretKey(rec.Path, rec.Name, rec.Env), raw)
 	})
 }
 
 // Get retrieves an encrypted secret. Caller must decrypt via appropriate path.
 func (s *SecretStore) Get(path, name, env string) (*Secret, error) {
-	var secret Secret
+	var rec Secret
 	err := s.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(secretKey(path, name, env))
 		if err == badger.ErrKeyNotFound {
@@ -168,46 +180,28 @@ func (s *SecretStore) Get(path, name, env string) (*Secret, error) {
 			return err
 		}
 		return item.Value(func(val []byte) error {
-			return json.Unmarshal(val, &secret)
+			return json.Unmarshal(val, &rec)
 		})
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &secret, nil
+	return &rec, nil
 }
 
-// Ref is a stored secret's full coordinate — the complete answer to "what is in
-// this store". It has no value field, so an enumeration is structurally
-// incapable of returning a secret, and it carries the path and env alongside
-// the name so a listed record is never mistaken for a different environment's
-// record of the same name. A Ref feeds straight back into Get and Delete.
-type Ref struct {
-	Path string `json:"path"`
-	Env  string `json:"env"`
-	Name string `json:"name"`
-}
-
-// Query selects a set of stored secrets. The ZERO Query selects every record:
-// a store you cannot ask "what is in you" cannot be audited, rotated, or
-// checked for coverage, so "everything" must be expressible.
-type Query struct {
-	// Path is a subtree root. It selects the secrets stored at this path AND
-	// at every path beneath it; "" selects the whole store. Matching is on the
-	// segment boundary, so "deploy" reaches "deploy/ci" but never "deployfoo".
-	Path string
-
-	// Env restricts the result to one environment. "" means EVERY environment.
-	// There is deliberately no default env here: env is a component of the
-	// storage key, so a listing that silently picked one would report an empty
-	// store while another env held every record — indistinguishable, from the
-	// outside, from a store that is genuinely empty.
-	Env string
-}
+// maxFindRows bounds a single enumeration. The scan is keys-only and cheap per
+// row, but an unbounded []secret.Ref is still an authenticated amplification
+// lever: one request forces the whole keyspace into memory and onto the wire.
+// 10000 is far above any real deployment (prod holds hundreds) yet caps the
+// blast radius; a caller that hits it is TOLD (truncated=true) to narrow with
+// path/env rather than being handed a silently-partial answer — a short list
+// that claims to be the whole store is the failure this file exists to prevent.
+const maxFindRows = 10000
 
 // Find returns the coordinates of every secret matching q, ordered by
 // (path, env, name) so two runs over the same data are byte-identical and
-// diffable.
+// diffable. truncated is true when the match set exceeded maxFindRows and the
+// returned slice is a bounded prefix of the full answer.
 //
 // It scans KEYS ONLY (PrefetchValues=false): a value blob is never loaded, so
 // no code path leads from an enumeration to a secret. Filtering happens on the
@@ -215,10 +209,10 @@ type Query struct {
 // lets one query span sub-paths and environments — the key layout braids path
 // and env into one string (kms/secrets/{path}/{env}/{name}), so a lone prefix
 // scan can only ever answer for one exact (path, env) pair.
-func (s *SecretStore) Find(q Query) ([]Ref, error) {
+func (s *SecretStore) Find(q secret.Query) (refs []secret.Ref, truncated bool, err error) {
 	root := normalizePath(q.Path)
-	refs := []Ref{}
-	err := s.db.View(func(txn *badger.Txn) error {
+	refs = []secret.Ref{}
+	err = s.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchValues = false // keys only — a listing never touches a value
 		opts.Prefix = secretPrefix
@@ -237,12 +231,17 @@ func (s *SecretStore) Find(q Query) ([]Ref, error) {
 			if !underPath(root, path) {
 				continue
 			}
-			refs = append(refs, Ref{Path: path, Env: env, Name: name})
+			if len(refs) >= maxFindRows {
+				// Stop scanning: the answer is capped and the caller is told so.
+				truncated = true
+				return nil
+			}
+			refs = append(refs, secret.Ref{Path: path, Env: env, Name: name})
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	sort.Slice(refs, func(i, j int) bool {
 		a, b := refs[i], refs[j]
@@ -254,7 +253,7 @@ func (s *SecretStore) Find(q Query) ([]Ref, error) {
 		}
 		return a.Name < b.Name
 	})
-	return refs, nil
+	return refs, truncated, nil
 }
 
 // normalizePath reduces the spellings of one subtree — "deploy", "/deploy",
