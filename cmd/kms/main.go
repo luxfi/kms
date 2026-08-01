@@ -68,6 +68,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -400,20 +401,31 @@ func main() {
 // TestSecretRoutes_NoEnvVarLeak.
 func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.SecretStore) {
 	listHandler := func(w http.ResponseWriter, r *http.Request) {
-		env := r.URL.Query().Get("env")
-		if env == "" {
-			env = "default"
+		q, err := parseListQuery(r.URL.Query())
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"message": err.Error()})
+			return
 		}
-		secs, err := secStore.List(r.URL.Query().Get("path"), env)
+		refs, err := secStore.Find(q)
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]any{"message": "list failed"})
 			return
 		}
-		names := make([]string, 0, len(secs))
-		for _, sec := range secs {
-			names = append(names, sec.Name)
+		names := make([]string, 0, len(refs))
+		for _, ref := range refs {
+			names = append(names, ref.Name)
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"names": names})
+		// `secrets` carries each record's FULL coordinate, `query` echoes the
+		// filter that produced them: an empty result is then self-explaining —
+		// the caller can see which path and env were actually searched instead
+		// of reading "[]" as "this store is empty". `names` is the shape the
+		// existing clients read and stays.
+		writeJSON(w, http.StatusOK, map[string]any{
+			"names":   names,
+			"secrets": refs,
+			"total":   len(refs),
+			"query":   map[string]string{"path": q.Path, "env": q.Env},
+		})
 	}
 	getHandler := func(w http.ResponseWriter, r *http.Request) {
 		rest := r.PathValue("rest")
@@ -469,8 +481,7 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 	}
 
-
-	// GET /v1/kms/orgs/{org}/secrets?path=&env=  — list names under a path.
+	// GET /v1/kms/orgs/{org}/secrets[?path=&env=]  — enumerate the store.
 	//
 	// The ZAP wire has carried this since it was written (OpSecretList 0x0042,
 	// {path, env} -> {names}); HTTP had get/put/delete and no list, so the two
@@ -478,6 +489,17 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 	// that wanted to enumerate had to either open a ZAP connection or give up —
 	// the hanzo browser extension gave up. Same handler shape, same envelope as
 	// ZAP returns.
+	//
+	// SEMANTICS (both framings, one store.Find): path is a SUBTREE root and is
+	// recursive — listing "deploy" returns "deploy/ci" too — and defaults to the
+	// whole store; env FILTERS and defaults to every environment. Both filters
+	// therefore only ever narrow what you asked for, and a name is always
+	// reported with the path and env it actually lives at.
+	//
+	// This surface enumerates the DEPLOYMENT's store, not one org's: the secret
+	// keyspace carries no org (see requireJWT), so {org} authorizes the call and
+	// does not scope it. The org-keyed plane is cloud's (apps/kms), which shards
+	// a file per tenant.
 	//
 	// Distinct from the {rest...} pattern below: this one has no trailing
 	// segment, so ServeMux routes the bare collection here and any path under it
@@ -507,6 +529,58 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 	mux.HandleFunc("GET /v1/kms/secrets/{rest...}", auth.requireJWT(getHandler))
 	mux.HandleFunc("POST /v1/kms/secrets", auth.requireJWT(putSecretHandler(secStore)))
 	mux.HandleFunc("DELETE /v1/kms/secrets/{rest...}", auth.requireJWT(deleteHandler))
+}
+
+// listParams maps every accepted list query parameter to the field it sets.
+// `secretPath` and `environment` are the kms-operator's spellings of `path` and
+// `env`; one endpoint serves both vocabularies rather than two endpoints
+// disagreeing about what you may ask.
+var listParams = map[string]string{
+	"path":        "path",
+	"secretPath":  "path",
+	"env":         "env",
+	"environment": "env",
+}
+
+// parseListQuery turns a list request's query string into a store.Query, and
+// REFUSES anything it does not understand.
+//
+// A silently-ignored filter is the worst failure this surface has: `?prefix=x`
+// (or a typo'd `?environment=`) used to fall through to "no filter at all",
+// answer 200 with an empty list, and read to the caller as "the store holds
+// nothing" — which is how an invalid deploy token sat unnoticed while every
+// build pinned nothing. A misspelled question must fail loudly, not be answered
+// as if it were a different question.
+//
+// An omitted parameter is not a silent narrowing either: no path means the
+// whole store and no env means every environment (see store.Query).
+func parseListQuery(v url.Values) (store.Query, error) {
+	var q store.Query
+	set := map[string]string{}
+	for key, vals := range v {
+		field, ok := listParams[key]
+		if !ok {
+			return q, fmt.Errorf("unknown query parameter %q: this endpoint takes path (alias secretPath) and env (alias environment); omit path to list every path, omit env to list every environment", key)
+		}
+		val := ""
+		if len(vals) > 0 {
+			val = strings.TrimSpace(vals[0])
+		}
+		if val == "" {
+			continue
+		}
+		if prev, dup := set[field]; dup && prev != val {
+			return q, fmt.Errorf("conflicting values for %s", field)
+		}
+		set[field] = val
+	}
+	q.Path, q.Env = set["path"], set["env"]
+	// env is one key segment; a '/' in it can never match a stored record, so
+	// say so instead of returning an empty list that looks like an empty store.
+	if q.Env != "" && !store.ValidCoord(q.Env, "x") {
+		return store.Query{}, fmt.Errorf("env must be a single segment (no '/', no control characters)")
+	}
+	return q, nil
 }
 
 // putSecretHandler serves POST /v1/kms/orgs/{org}/secrets (create/upsert).
@@ -544,7 +618,14 @@ func putSecretHandler(secStore *store.SecretStore) http.HandlerFunc {
 			Ciphertext: []byte(req.Value),
 		}
 		if err := secStore.Put(sec); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]any{"message": err.Error()})
+			// A coordinate the key cannot encode unambiguously is the caller's
+			// error, not the store's: report 400 so it is fixed at the source
+			// rather than retried forever against a 500.
+			code := http.StatusInternalServerError
+			if errors.Is(err, store.ErrInvalidCoord) {
+				code = http.StatusBadRequest
+			}
+			writeJSON(w, code, map[string]any{"message": err.Error()})
 			return
 		}
 		writeJSON(w, http.StatusCreated, map[string]any{"ok": true})
