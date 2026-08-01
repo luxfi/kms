@@ -7,10 +7,16 @@
 
 `KMS_ENCRYPTION_KEY_B64` is now a boot precondition. A missing or malformed
 key used to degrade to an unencrypted ZapDB behind one log line, and the Hanzo
-deployment ran that way: `KEYREGISTRY` 28 bytes (empty), `kms/secrets/…` keys
-greppable in the SSTs, and the S3 replica shipping those same cleartext files
-off-cluster. One PVC snapshot or one bucket read was the whole store. The JWT
-gate in front of it never protected the bytes.
+deployment ran that way: `KEYREGISTRY` 28 bytes (the empty registry) and
+`kms/secrets/…` keys greppable straight out of the SSTs. One volume snapshot,
+one node with disk access, or any process that can read the data directory is
+every credential the fleet syncs. The JWT gate in front of it never protected
+the bytes.
+
+That deployment has S3 replication OFF (`REPLICATE_S3_ENDPOINT` unset — the
+boot log says so), so the cleartext stays on the claim. Turning replication on
+before the store is encrypted would ship those same cleartext files
+off-cluster; do the migration first.
 
 **The deploy is gated on two operator steps, in this order.** An image built
 from this commit will refuse to start without them — that is the point, but it
