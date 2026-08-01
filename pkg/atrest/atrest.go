@@ -127,11 +127,21 @@ func Open(dir string, key []byte, logger badger.Logger) (*badger.DB, error) {
 
 // options is the ONE place the store's ZapDB options are spelled, so a server
 // open and a migration open cannot drift into different databases.
+//
+// The value log is sized for what this store actually is. ZapDB's default value
+// log is 1GB and the active file is mapped at twice that — 2147483646 bytes,
+// which is exactly the sparse file sitting on the Hanzo claim behind 476KB of
+// real secrets. It is not free: an operator who read that file inside the pod
+// filled the cgroup's page cache and OOM-killed a KMS that was using a few
+// hundred MB. At 64MB the active file maps 128MB, small enough that reading it
+// cannot evict a pod, and a store whose values are credentials — kilobytes each
+// — never needs more.
 func options(dir string, key []byte, logger badger.Logger) badger.Options {
 	return badger.DefaultOptions(dir).
 		WithLogger(logger).
 		WithEncryptionKey(key).
-		WithIndexCacheSize(64 << 20)
+		WithIndexCacheSize(64 << 20).
+		WithValueLogFileSize(64 << 20)
 }
 
 // Rekey copies every record of the store at srcDir into a NEW store at dstDir
