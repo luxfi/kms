@@ -83,6 +83,7 @@ import (
 
 	badger "github.com/luxfi/zapdb"
 
+	"github.com/luxfi/kms/pkg/atrest"
 	"github.com/luxfi/kms/pkg/keys"
 	"github.com/luxfi/kms/pkg/mpc"
 	"github.com/luxfi/kms/pkg/sdksign"
@@ -108,21 +109,22 @@ func main() {
 	dataDir := envOr("KMS_DATA_DIR", "/data/kms")
 	listen := envOr("KMS_LISTEN", ":8080")
 
-	// Open ZapDB.
-	if err := os.MkdirAll(dataDir, 0o700); err != nil {
-		log.Fatalf("kms: create data dir %s: %v", dataDir, err)
-	}
-	dbOpts := badger.DefaultOptions(dataDir).
-		WithLogger(zapdbLogger{}).
-		WithEncryptionKey(masterKeyFromEnv()).
-		WithIndexCacheSize(64 << 20) // 64MB index cache
-	db, err := badger.Open(dbOpts)
+	// Open ZapDB. At-rest encryption is a precondition, not a preference: a
+	// store opened without a key holds every credential in the fleet in
+	// cleartext on the PVC and in the S3 replica, and no gate in front of it
+	// changes that. So a missing or malformed key stops the boot here rather
+	// than degrading to a plaintext store behind one scrolled-past log line.
+	atRest, err := atrest.KeyFromEnv()
 	if err != nil {
-		log.Fatalf("kms: open zapdb at %s: %v", dataDir, err)
+		log.Fatalf("kms: %v", err)
+	}
+	db, err := atrest.Open(dataDir, atRest, zapdbLogger{})
+	if err != nil {
+		log.Fatalf("kms: %v", err)
 	}
 	defer db.Close()
 
-	log.Printf("kms: zapdb opened at %s", dataDir)
+	log.Printf("kms: zapdb opened at %s (at-rest encryption on)", dataDir)
 
 	// Start ZapDB Replicator if S3 is configured.
 	replicator := startReplicator(db, nodeID)
@@ -1011,21 +1013,6 @@ func loadREK() []byte {
 	}
 	log.Printf("kms: WARNING: using legacy KMS_MASTER_KEY_B64 env-var REK; set MPC_REK_ENDPOINT to migrate to MPC-rooted REK")
 	return mk
-}
-
-// masterKeyFromEnv returns a 32-byte encryption key for ZapDB at-rest encryption,
-// or nil to disable (dev only).
-func masterKeyFromEnv() []byte {
-	b64 := os.Getenv("KMS_ENCRYPTION_KEY_B64")
-	if b64 == "" {
-		return nil
-	}
-	key, err := base64.StdEncoding.DecodeString(b64)
-	if err != nil || len(key) != 32 {
-		log.Printf("kms: KMS_ENCRYPTION_KEY_B64 invalid (need 32 bytes base64); at-rest encryption disabled")
-		return nil
-	}
-	return key
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {
