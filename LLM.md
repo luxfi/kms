@@ -3,6 +3,59 @@
 **Project**: Lux Key Management Service (KMS)
 **Organization**: Lux Network
 
+## v1.12.14 — the list could not see secrets that exist
+
+`GET /v1/kms/orgs/hanzo/secrets` answered `200 {"names":[]}` while
+`GET .../secrets/deploy/UNIVERSE_PIN_TOKEN?env=prod` answered `200` with a
+value. Same token, same org, same path: reads worked, enumeration returned
+nothing. That is why a stale, invalid `UNIVERSE_PIN_TOKEN` sat in KMS unnoticed
+and broke continuous deployment for a day — every build published an image and
+pinned nothing, with no signal anywhere. **You cannot audit, rotate, or verify
+the coverage of a store you cannot enumerate.**
+
+Cause: a secret is keyed `kms/secrets/{path}/{env}/{name}`, which braids path
+and env into one string, and the listing was a single prefix scan over
+`kms/secrets/{path}/{env}/`. One opaque byte prefix can only answer for one
+exact (path, env) pair, so the listing had three separate ways to come back
+empty while the record sat right there — and all three answered 200:
+
+1. `env` silently defaulted to `default`; the fleet writes `prod`.
+2. `path` matched exactly, so a secret one segment deeper was invisible.
+3. any unrecognized query parameter was silently dropped, so `?prefix=deploy`
+   (and the operator's own `?environment=`) filtered nothing.
+
+Fix: one primitive, `store.Find(store.Query{Path, Env})`, that scans KEYS ONLY
+and filters on the decoded coordinate — which is what lets a query span
+sub-paths and environments at all. Both framings of the store (the HTTP list and
+ZAP `OpSecretList`) call it, so they cannot disagree about what the store holds.
+
+    path   subtree root, RECURSIVE ("deploy" reaches "deploy/ci", never
+           "deployfoo"); omitted = the whole store
+    env    filter; omitted = EVERY environment. There is no default: env is a
+           key component, so silently picking one reports an empty store while
+           another env holds every record
+    unknown parameter -> 400, never a silently different question
+
+The response now carries each record's full `{path, env, name}` coordinate and
+echoes the query it ran, so an empty result says which path and env were
+actually searched instead of reading as "this store is empty". `names` is
+unchanged for existing clients.
+
+`Put` now rejects an env or name containing `/` (400, `ErrInvalidCoord`): they
+are the last two key segments, so a `/` in either lets two coordinates spell one
+key and makes the decode ambiguous. The keyspace stays injective going forward;
+lookups stay permissive, since rejoining any triple reproduces its own key.
+
+The invariant that was missing is now a test — `cmd/kms/secrets_list_roundtrip_test.go`:
+**write a secret, assert the list returns it**, plus one case per axis above,
+delete-tracking, and cross-env isolation.
+
+Not fixed here, same defect class, separate deployable: cloud's `apps/kms`
+(`store.list`, `SELECT ... WHERE path=? AND env=?`) is also exact-coordinate
+with a silent `default` env. Its `List` is additionally consumed by the credz
+credential broker to enumerate an app's scope, so making it recursive widens
+that scope — it needs its own review, not a drive-by.
+
 ## v1.12.9 — HTTP secret list (surface parity with ZAP)
 
 The ZAP wire has carried `OpSecretList` (0x0042, `{path, env}` -> `{names}`)
