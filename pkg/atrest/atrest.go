@@ -4,10 +4,11 @@
 //
 // It exists because a KMS that opens its store without a key is a filesystem
 // with an HTTP API. Every byte — every credential the fleet syncs — then sits
-// in cleartext in the SSTs and the value log, and the S3 replica ships those
-// same cleartext files off-cluster. The blast radius of one PVC snapshot or one
-// bucket read is the whole store, and no amount of correct JWT gating in front
-// of it changes that.
+// in cleartext in the SSTs and the value log, so one volume snapshot, one node
+// with disk access, or any process that can read the data directory is the
+// whole store. Where S3 replication is configured those same cleartext files
+// also leave the cluster. No amount of correct JWT gating in front of the
+// store changes any of it.
 //
 // So the key is not optional and its absence is not a warning. A miswired key
 // used to degrade to "no encryption" through a single log line that scrolled
