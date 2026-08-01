@@ -27,9 +27,9 @@ import (
 //
 //	1. it silently defaulted env to "default" while the fleet writes "prod";
 //	2. it matched a path exactly, so a secret one segment deeper was invisible;
-//	3. it silently ignored any query parameter it did not recognize, so
-//	   ?prefix=deploy — and the operator's own ?environment= spelling — filtered
-//	   nothing and looked like an empty store.
+//	3. it silently ignored any query parameter it did not recognize, so the
+//	   ?prefix=deploy that both shipped SDKs emit filtered nothing and read back
+//	   as an empty store.
 //
 // Each case below is one of those, written as the round trip: put it, then ask
 // for it the way a caller actually asks.
@@ -143,8 +143,7 @@ func TestList_SeesWhatWasWritten(t *testing.T) {
 		"?path=/deploy",         // leading slash
 		"?env=prod",             // its env, any path
 		"?path=deploy&env=prod", // both
-		"?secretPath=deploy",    // the operator's spelling of path
-		"?environment=prod",     // the operator's spelling of env
+		"?prefix=deploy",        // the spelling the shipped SDKs emit
 	} {
 		code, got := f.list(q)
 		if code != http.StatusOK {
@@ -236,10 +235,11 @@ func TestList_RejectsUnknownParameter(t *testing.T) {
 	f.put("deploy", "UNIVERSE_PIN_TOKEN", "prod")
 
 	for _, q := range []string{
-		"?prefix=deploy",     // the parameter that started this
-		"?env=prod&prefix=x", // mixed with a valid one
-		"?Path=deploy",       // wrong case is a different parameter
-		"?envs=prod",         // near-miss
+		"?secretPath=deploy",  // the /api/v3 vocabulary, not this API's
+		"?environment=prod",   // same
+		"?env=prod&secrets=x", // mixed with a valid one
+		"?Path=deploy",        // wrong case is a different parameter
+		"?envs=prod",          // near-miss
 		"?nonsense=zzz",
 	} {
 		code, got := f.list(q)
@@ -307,5 +307,40 @@ func TestList_RejectsAmbiguousName(t *testing.T) {
 	_, all := f.list("")
 	if all.Total != 0 {
 		t.Fatalf("a refused write must store nothing, got %+v", all.Secrets)
+	}
+}
+
+// `prefix` is a SPELLING of `path`, not a second question. Two shipped
+// first-party SDKs emit it against this route, so it must select exactly the
+// same records — and the response must echo the canonical name back, so there
+// stays one name for the value even though two spellings reach it.
+func TestList_PrefixIsTheSameQuestionAsPath(t *testing.T) {
+	f := newListFixture(t)
+	f.put("deploy", "PIN_TOKEN", "prod")
+	f.put("deploy/ci", "RUNNER_TOKEN", "prod")
+	f.put("deployfoo", "OTHER_TOKEN", "prod")
+
+	_, byPath := f.list("?path=deploy")
+	_, byPrefix := f.list("?prefix=deploy")
+
+	if byPath.Total == 0 {
+		t.Fatal("?path=deploy matched nothing; the comparison below would be vacuous")
+	}
+	if byPrefix.Total != byPath.Total {
+		t.Fatalf("?prefix=deploy = %d rows, ?path=deploy = %d; one spelling, one answer", byPrefix.Total, byPath.Total)
+	}
+	for _, want := range byPath.Secrets {
+		if !byPrefix.has(want.Path, want.Env, want.Name) {
+			t.Fatalf("?prefix=deploy missed %s/%s@%s", want.Path, want.Name, want.Env)
+		}
+	}
+	// Same segment boundary as path: a sibling that merely shares the prefix
+	// string is NOT in the subtree. `prefix` naming a string prefix would widen
+	// disclosure; it does not.
+	if byPrefix.has("deployfoo", "prod", "OTHER_TOKEN") {
+		t.Fatal("?prefix=deploy reached deployfoo; the alias must keep the segment boundary")
+	}
+	if byPrefix.Query.Path != "deploy" {
+		t.Fatalf("query echo = %q, want the canonical spelling %q", byPrefix.Query.Path, "deploy")
 	}
 }
