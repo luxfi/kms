@@ -658,13 +658,14 @@ type sessionJWTValidator struct {
 }
 
 func newSessionJWTValidator(iamEndpoint, audience, owner string) *sessionJWTValidator {
+	jwksURL := iamJWKSURL(iamEndpoint)
 	return &sessionJWTValidator{
-		jwksURL:  iamEndpoint + "/.well-known/jwks",
+		jwksURL:  jwksURL,
 		issuer:   iamEndpoint,
 		audience: audience,
 		owner:    owner,
 		cache: &jwksCache{
-			url:    iamEndpoint + "/.well-known/jwks",
+			url:    jwksURL,
 			ttl:    5 * time.Minute,
 			client: &http.Client{Timeout: 10 * time.Second},
 		},
