@@ -32,6 +32,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/luxfi/kms/pkg/secret"
 	"github.com/luxfi/kms/pkg/zapclient"
 )
 
@@ -88,6 +89,17 @@ func GetSecrets(ctx context.Context) (map[string]string, error) {
 }
 
 // GetSecretsWith fetches every secret with explicit configuration.
+//
+// cfg.Path is a subtree root, so the result spans the sub-paths beneath it.
+// Each record is read back at ITS OWN coordinate — never at the queried root —
+// because a secret in a sub-path is not addressable from the root and re-joining
+// its bare name there would look up a key that does not exist.
+//
+// The result is keyed by name because os.Setenv is: an environment is a flat
+// namespace. Two records under the selected subtree that share a name therefore
+// have no distinct answer, and this returns an error naming both coordinates
+// rather than picking one. Choosing silently is how a process boots with the
+// wrong DATABASE_URL and never learns.
 func GetSecretsWith(ctx context.Context, cfg Config) (map[string]string, error) {
 	cfg = cfg.resolve()
 	c, err := zapclient.Dial(ctx, cfg.Addr, cfg.Path)
@@ -96,17 +108,24 @@ func GetSecretsWith(ctx context.Context, cfg Config) (map[string]string, error) 
 	}
 	defer c.Close()
 
-	names, err := c.ListAt(ctx, cfg.Path, cfg.Env)
+	refs, err := c.ListAt(ctx, cfg.Path, cfg.Env)
 	if err != nil {
 		return nil, fmt.Errorf("kms: list %s@%s: %w", cfg.Path, cfg.Env, err)
 	}
-	out := make(map[string]string, len(names))
-	for _, n := range names {
-		v, err := c.GetAt(ctx, cfg.Path, n, cfg.Env)
-		if err != nil {
-			return nil, fmt.Errorf("kms: get %s/%s@%s: %w", cfg.Path, n, cfg.Env, err)
+	out := make(map[string]string, len(refs))
+	seen := make(map[string]secret.Ref, len(refs))
+	for _, ref := range refs {
+		if prev, dup := seen[ref.Name]; dup {
+			return nil, fmt.Errorf("kms: %s is defined twice under %s@%s (%s/%s@%s and %s/%s@%s): an environment cannot hold both",
+				ref.Name, cfg.Path, cfg.Env,
+				prev.Path, prev.Name, prev.Env, ref.Path, ref.Name, ref.Env)
 		}
-		out[n] = v
+		v, err := c.GetAt(ctx, ref.Path, ref.Name, ref.Env)
+		if err != nil {
+			return nil, fmt.Errorf("kms: get %s/%s@%s: %w", ref.Path, ref.Name, ref.Env, err)
+		}
+		seen[ref.Name] = ref
+		out[ref.Name] = v
 	}
 	return out, nil
 }

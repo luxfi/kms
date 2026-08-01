@@ -6,7 +6,7 @@
 //
 //	0x0040  OpSecretGet    { path, name, env }            → { value }
 //	0x0041  OpSecretPut    { path, name, env, value }     → { ok:true }   (admin)
-//	0x0042  OpSecretList   { path, env }                  → { names }
+//	0x0042  OpSecretList   { path, env }                  → { secrets }
 //	0x0043  OpSecretDelete { path, name, env }            → { ok:true }   (admin)
 //
 // Example:
@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/luxfi/kms/pkg/envelope"
+	"github.com/luxfi/kms/pkg/secret"
 	kmszap "github.com/luxfi/kms/pkg/zap"
 	"github.com/luxfi/zap"
 )
@@ -372,23 +373,31 @@ func (c *Client) PutAt(ctx context.Context, path, name, env, value string) error
 	return err
 }
 
-// List names at a path.
-func (c *Client) List(ctx context.Context, env string) ([]string, error) {
+// List enumerates the secrets under the client's default path.
+func (c *Client) List(ctx context.Context, env string) ([]secret.Ref, error) {
 	return c.ListAt(ctx, c.defaultPath, env)
 }
 
-// ListAt names at an explicit path.
-func (c *Client) ListAt(ctx context.Context, path, env string) ([]string, error) {
+// ListAt enumerates the secrets under an explicit path.
+//
+// It answers with COORDINATES, not names. path is a subtree root and env is a
+// filter ("" means every environment), so a result can span sub-paths and
+// environments — and a bare name would then be unaddressable: re-joining it at
+// the queried root names a record that is not there. Each returned Ref feeds
+// straight into GetAt/DeleteAt, which is what makes list-then-get total.
+func (c *Client) ListAt(ctx context.Context, path, env string) ([]secret.Ref, error) {
 	body, _ := json.Marshal(map[string]string{"path": path, "env": env})
 	resp, err := c.call(ctx, OpSecretList, body)
 	if err != nil {
 		return nil, err
 	}
-	var out struct{ Names []string }
+	var out struct {
+		Secrets []secret.Ref `json:"secrets"`
+	}
 	if err := json.Unmarshal(resp, &out); err != nil {
 		return nil, fmt.Errorf("zapclient: decode List: %w", err)
 	}
-	return out.Names, nil
+	return out.Secrets, nil
 }
 
 // Delete removes a secret. Admin-only.

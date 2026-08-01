@@ -1,6 +1,10 @@
 package store
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/luxfi/kms/pkg/secret"
+)
 
 // One canonical spelling per path. The POST body carries a free-form path while
 // a GET's path comes from the URL, so the two framings used to disagree over a
@@ -40,7 +44,7 @@ func TestPutThenGetAcrossPathSpellings(t *testing.T) {
 	if err := s.Put(&Secret{Path: "svc/", Env: "prod", Name: "TOKEN", Ciphertext: []byte("v2")}); err != nil {
 		t.Fatalf("re-put: %v", err)
 	}
-	refs, err := s.Find(Query{Path: "svc", Env: "prod"})
+	refs, _, err := s.Find(secret.Query{Path: "svc", Env: "prod"})
 	if err != nil {
 		t.Fatalf("find: %v", err)
 	}
