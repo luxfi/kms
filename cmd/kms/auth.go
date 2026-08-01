@@ -95,6 +95,57 @@ func orgAuthorizes(tokenOrg, requested string) bool {
 		strings.HasPrefix(requested, tokenOrg+"-")
 }
 
+// authorizesHome reports whether these claims may touch THIS deployment's
+// secret store.
+//
+// The store is one flat keyspace — kms/secrets/{path}/{env}/{name}, no org
+// component (see registerSecretRoutes). So the {org} in the URL scopes NOTHING:
+// it is caller-chosen, and requireOrgJWT only ever lets a caller name an org its
+// own token already authorizes. A caller naming its OWN org and then asking for
+// another tenant's PATH therefore passed every check and read the record — the
+// URL org check is not a tenant boundary, it only proves the caller didn't lie
+// about itself.
+//
+// The boundary is this: one IAM signs tokens for every brand and ~90
+// applications, so "validly signed" says nothing about which store you may
+// reach. KMS_HOME_ORG names the org(s) that own THIS deployment's store, and a
+// caller is admitted only when its own org authorizes one of them — by the same
+// boundary-safe rule the URL org uses, so a parent org reaches the store it owns
+// while a sub-scope or a foreign brand does not.
+//
+// kms-admin / superadmin is the cross-cutting override for platform audit and
+// rotation. It is granted in IAM, so it is not something a tenant can assert
+// about itself.
+//
+// A nil/empty homeOrgs set means "unconfigured", and the gate goes inert. That
+// state is unreachable in a real deployment: main refuses to boot the secret
+// surface without it (requireHomeOrgConfig).
+func (a *orgJWTAuth) authorizesHome(c *orgClaims) bool {
+	if hasRole(c.Roles, roleKMSAdmin) || hasRole(c.Roles, roleSuperadmin) {
+		return true
+	}
+	for _, home := range a.homeOrgs {
+		for _, o := range c.orgs() {
+			if orgAuthorizes(o, home) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// requireHomeOrgConfig returns an error when the secret surface would run with
+// no home org configured. main calls it after wiring auth and refuses to boot on
+// error: an unconfigured gate authorizes any valid IAM token from any org, which
+// is precisely the state this fix exists to end. Failing to boot leaves the
+// prior pod serving — a stalled rollout, never an open store.
+func requireHomeOrgConfig(homeOrgs []string) error {
+	if len(homeOrgs) == 0 {
+		return errors.New("KMS_HOME_ORG is required: the secret store belongs to the org that owns this deployment (e.g. KMS_HOME_ORG=hanzo). Without it the secret surface would authorize any valid IAM token from any org")
+	}
+	return nil
+}
+
 // orgJWTAuth verifies tokens against the IAM JWKS. Issuer is checked
 // (must equal expectedIssuer). Audience is NOT enforced because IAM
 // client_credentials grants don't pin an audience to the resource
@@ -110,6 +161,12 @@ type orgJWTAuth struct {
 	jwksURL string
 	issuers []string // accepted `iss` values; a white-label KMS trusts every brand IAM that shares its signing keys
 	cache   *jwksCache
+
+	// homeOrgs is the set of orgs this deployment's secret store belongs to
+	// (KMS_HOME_ORG). It is the tenant boundary — see authorizesHome for why the
+	// URL org is not one. Set at the composition root; main refuses to boot with
+	// it empty.
+	homeOrgs []string
 }
 
 // newOrgJWTAuth wires the validator from env. iamEndpoint is the URL
@@ -150,16 +207,16 @@ func newOrgJWTAuth(iamEndpoint, expectedIssuer string) *orgJWTAuth {
 	}
 }
 
-// parseIssuers normalizes KMS_EXPECTED_ISSUER into the set of accepted
-// `iss` values. A comma-separated list lets one KMS serve multiple
-// white-label brands that share IAM signing keys — e.g. a Lux-brand KMS
-// trusting both `https://hanzo.id` and `https://lux.id`. Order-preserving,
-// de-duplicated, trailing slashes trimmed.
-func parseIssuers(s string) []string {
+// normalizeSet splits a comma-separated env value into an order-preserving,
+// de-duplicated set, applying norm to each entry BEFORE the empty/dup check so
+// two spellings that normalize to the same value collapse to one. One helper
+// backs both the issuer list and the home-org list — exactly one way to parse a
+// CSV env into a set.
+func normalizeSet(s string, norm func(string) string) []string {
 	out := []string{}
 	seen := map[string]bool{}
 	for _, part := range strings.Split(s, ",") {
-		v := strings.TrimRight(strings.TrimSpace(part), "/")
+		v := norm(strings.TrimSpace(part))
 		if v == "" || seen[v] {
 			continue
 		}
@@ -167,6 +224,24 @@ func parseIssuers(s string) []string {
 		out = append(out, v)
 	}
 	return out
+}
+
+// parseHomeOrgs normalizes KMS_HOME_ORG into the set of orgs this deployment's
+// secret store belongs to. Comma-separated for the rare shared-store case; a
+// single value ("hanzo") is the norm. Trailing slashes are meaningless to an org
+// slug, so unlike issuers they are NOT trimmed — an org is a bare slug, and
+// silently accepting "hanzo/" would let a typo name a different tenant.
+func parseHomeOrgs(s string) []string {
+	return normalizeSet(s, func(v string) string { return v })
+}
+
+// parseIssuers normalizes KMS_EXPECTED_ISSUER into the set of accepted
+// `iss` values. A comma-separated list lets one KMS serve multiple
+// white-label brands that share IAM signing keys — e.g. a Lux-brand KMS
+// trusting both `https://hanzo.id` and `https://lux.id`. Order-preserving,
+// de-duplicated, trailing slashes trimmed.
+func parseIssuers(s string) []string {
+	return normalizeSet(s, func(v string) string { return strings.TrimRight(v, "/") })
 }
 
 // issuerAllowed reports whether a token's `iss` claim is one of the
@@ -309,17 +384,29 @@ func (a *orgJWTAuth) requireOrgJWT(next http.HandlerFunc) http.HandlerFunc {
 			})
 			return
 		}
+		// The check above only proves the caller did not lie about WHO it is —
+		// the org it named is one its own token already authorizes. The store is
+		// org-flat, so that says nothing about WHICH store it may read: naming
+		// your own org and then another tenant's path reached the record. This
+		// is the tenant boundary. Inert when unconfigured (main boot-guards it).
+		if len(a.homeOrgs) > 0 && !a.authorizesHome(claims) {
+			log.Printf("kms: home-org reject: orgs=%v (path=%s)", claims.orgs(), r.URL.Path)
+			writeJSON(w, http.StatusForbidden, map[string]any{
+				"statusCode": 403, "message": "token does not authorize this KMS",
+			})
+			return
+		}
 		next(w, r)
 	}
 }
 
-// requireJWT admits any validated bearer and stamps NOTHING from the URL: the
-// tenant is the TOKEN's, which is the whole point of the org-less secret
-// surface (/v1/kms/secrets*). It is requireOrgJWT minus the URL-vs-token
-// reconciliation — there is no URL org left to reconcile. The org the token
-// names is currently advisory here because the secret store is not org-keyed;
-// the store partition is the deployment (one KMS per plane), matching how
-// every existing caller already uses this service.
+// requireJWT gates the org-less secret surface (/v1/kms/secrets*). There is no
+// URL org to reconcile, so the tenant boundary here is the only one that ever
+// mattered: the TOKEN's org against this deployment's home org. The store
+// partition is the deployment (one KMS per plane), so a caller is admitted only
+// when its own org authorizes a home org — otherwise the shared IAM's token for
+// any of ~90 apps across every brand would read the whole store through this
+// door. Inert only when homeOrgs is unconfigured, which main refuses to boot.
 func (a *orgJWTAuth) requireJWT(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if a == nil {
@@ -335,10 +422,18 @@ func (a *orgJWTAuth) requireJWT(next http.HandlerFunc) http.HandlerFunc {
 			})
 			return
 		}
-		if _, err := a.validate(r.Context(), raw); err != nil {
+		claims, err := a.validate(r.Context(), raw)
+		if err != nil {
 			log.Printf("kms: auth reject: %v (path=%s)", err, r.URL.Path)
 			writeJSON(w, http.StatusUnauthorized, map[string]any{
 				"statusCode": 401, "message": "invalid token",
+			})
+			return
+		}
+		if len(a.homeOrgs) > 0 && !a.authorizesHome(claims) {
+			log.Printf("kms: home-org reject: orgs=%v (path=%s)", claims.orgs(), r.URL.Path)
+			writeJSON(w, http.StatusForbidden, map[string]any{
+				"statusCode": 403, "message": "token does not authorize this KMS",
 			})
 			return
 		}
