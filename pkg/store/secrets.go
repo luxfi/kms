@@ -69,8 +69,19 @@ func NewSecretStore(db *badger.DB) *SecretStore {
 }
 
 // secretKey returns the ZapDB key for a secret: kms/secrets/{path}/{env}/{name}
+//
+// The path is normalized to ONE spelling first, by the same normalizePath that
+// Find already applies to a query. Without it a write and a read of the same
+// secret disagree: the POST body carries a free-form path, so a caller writing
+// "/svc" stored kms/secrets//svc/... while every GET — whose path comes from the
+// URL, where the router has already collapsed the separator — looked up
+// kms/secrets/svc/... . The write answered 201 and the read answered 404, so a
+// consumer took an empty credential from a store that had reported success, and
+// the stranded record was addressable only as %2Fsvc: invisible to the very
+// spelling that created it. One normalizer for the query and for the key is what
+// makes a write always readable back.
 func secretKey(path, name, env string) []byte {
-	return []byte(fmt.Sprintf("kms/secrets/%s/%s/%s", path, env, name))
+	return []byte(fmt.Sprintf("kms/secrets/%s/%s/%s", normalizePath(path), env, name))
 }
 
 // splitSecretKey inverts secretKey: it recovers the (path, env, name) triple a
