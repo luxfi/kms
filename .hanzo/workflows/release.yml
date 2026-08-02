@@ -94,7 +94,15 @@ jobs:
           # that is destroyed seconds later. It encrypts nothing that outlives the
           # probe, so it is not a secret and does not belong in KMS.
           key="$(head -c 32 /dev/urandom | base64 -w0 2>/dev/null || head -c 32 /dev/urandom | base64)"
-          cid=$(docker run -d -e KMS_ENCRYPTION_KEY_B64="$key" "$img")
+          # KMS_HOME_ORG is the second startup gate, and equally deliberate:
+          #   "the secret store belongs to the org that owns this deployment …
+          #    Without it the secret surface would authorize any valid IAM token
+          #    from any org"
+          # A smoke probe needs a value, not the right value; nothing is stored.
+          cid=$(docker run -d \
+            -e KMS_ENCRYPTION_KEY_B64="$key" \
+            -e KMS_HOME_ORG=smoke \
+            "$img")
           for i in $(seq 1 15); do
             if docker exec "$cid" curl -sf http://localhost:8080/healthz >/dev/null 2>&1; then
               echo "healthz ok"; docker rm -f "$cid"; exit 0
