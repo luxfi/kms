@@ -82,7 +82,19 @@ jobs:
           set -euo pipefail
           img="${{ steps.meta.outputs.probe }}"
           docker run --rm --entrypoint sh "$img" -c 'command -v kms'
-          cid=$(docker run -d "$img")
+          # kms REFUSES TO SERVE without an at-rest key, by design —
+          # pkg/atrest: "Callers translate it into a refusal to serve; nothing may
+          # treat it as 'encryption off'." So the smoke container needs one, and
+          # without it every release since at least six commits ago died on
+          #   kms: KMS_ENCRYPTION_KEY_B64 is empty: no at-rest encryption key configured
+          #   ::error::kms never answered /healthz
+          # which reads as a broken binary and is the security posture working.
+          #
+          # Generated per run and never stored: 32 random bytes for a container
+          # that is destroyed seconds later. It encrypts nothing that outlives the
+          # probe, so it is not a secret and does not belong in KMS.
+          key="$(head -c 32 /dev/urandom | base64 -w0 2>/dev/null || head -c 32 /dev/urandom | base64)"
+          cid=$(docker run -d -e KMS_ENCRYPTION_KEY_B64="$key" "$img")
           for i in $(seq 1 15); do
             if docker exec "$cid" curl -sf http://localhost:8080/healthz >/dev/null 2>&1; then
               echo "healthz ok"; docker rm -f "$cid"; exit 0
