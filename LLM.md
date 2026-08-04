@@ -199,9 +199,9 @@ restart the IAM pod (it caches application records in-memory).
 
 ## MPC-rooted Root Encryption Key (2026-06-07)
 
-The master-key split-brain that paused the Casibase→lux-kms-go cluster
-rewrite is resolved by sourcing the Root Encryption Key (REK) from a
-luxfi/mpc threshold cluster instead of a static K8s Secret env var.
+The Root Encryption Key (REK) comes from a luxfi/mpc threshold cluster
+rather than a static K8s Secret env var, which is what resolved the
+master-key split-brain.
 
 ### Boundary
 
@@ -236,40 +236,21 @@ path/name/env.
   when `MPC_REK_ENDPOINT` is unset. Slated for removal after every
   deployment migrates.
 
-### Casibase migration (`cmd/casibase-import`)
-
-The ~50 secrets in `hanzo/kms` (Casibase Node-Fastify
-`ghcr.io/hanzoai/kms:1.0.7`) are sealed under the Casibase
-`ROOT_ENCRYPTION_KEY` env var. lux-kms-go uses an incompatible envelope
-under an MPC-rooted REK. The one-shot bridge is `cmd/casibase-import`:
-
-```
-$ kubectl exec -n hanzo deploy/casibase-kms -- /api/v3/secrets/raw?... > dump.json
-$ MPC_REK_ENDPOINT=mpc-0.lux-mpc.svc:9999,... casibase-import \
-    --in dump.json \
-    --old-key-file ./casibase-root.key \
-    --data-dir /data/kms \
-    --dry-run            # verify decode first
-$ casibase-import --in dump.json --old-key-file ./casibase-root.key --data-dir /data/kms
-```
-
-Status: SCAFFOLDED. The new-side (Seal under MPC-rooted REK, Put into
-ZapDB) is complete. The Casibase decoder stub
-(`cmd/casibase-import/main.go::decryptCasibase`) returns `not yet
-implemented` until the Casibase v1.0.7 envelope format is decoded — see
-the function's godoc for the extension point. The Casibase encryption
-code at `hanzoai/kms@1.0.7:src/services/secret/encrypt.ts` is the
-reference; once decoded here, the tool decrypts under the supplied OLD
-key and re-seals under the live cluster's REK epoch.
-
 ### Re-key (REK rotation)
 
-Out of scope for this PR. Design hook:
+`cmd/kms-rekey` is the one tool that moves a store between keys, and
+rotation is the job it already does — read every record under the old
+key, write it under the new one, into a fresh directory:
 
-1. Operator triggers MPC reshare ceremony for `kms/rek/v(N+1)`.
-2. Run `cmd/rek-rotate` (future): bootstrap epoch N + epoch N+1, walk
-   every record in ZapDB, Open under N, Seal under N+1, Put.
+1. Operator triggers the MPC reshare ceremony for `kms/rek/v(N+1)`.
+2. Stop the server (ZapDB takes a directory lock) and run `kms-rekey`
+   with epoch N as the source key and N+1 as the destination.
 3. Roll KMS pods with `MPC_REK_KEY_ID=kms/rek/v(N+1)`.
+
+It reads `KMS_REKEY_FROM_B64` / `KMS_ENCRYPTION_KEY_B64` rather than
+bootstrapping two MPC epochs itself; supplying those from the ceremony
+is the operator's step. A second binary for REK rotation would be a
+second way to do the one thing this one does.
 
 Replica coordination during the migration window: every replica fetches
 the same epoch N+1 from MPC (the cluster is the single source of
@@ -277,13 +258,15 @@ truth), so cross-replica consistency is automatic. There is no leader
 election in KMS; the migration tool runs once from any pod or any
 out-of-cluster operator with the MPC bearer.
 
-### What this PR does NOT change
+### What the REK is NOT
 
-- The per-secret AES-256-GCM envelope shape (`pkg/store/crypto.go`).
-- The ZapDB-at-rest encryption (`KMS_ENCRYPTION_KEY_B64`, separate
-  knob, controls Badger-level encryption — orthogonal to the
-  application envelope).
-- The IAM JWT validation at the HTTP edge.
+Four things sit next to the REK and are separate from it:
+
+- The per-secret AES-256-GCM envelope shape (`pkg/store/crypto.go`) —
+  the REK wraps the DEKs, it is not the DEK.
+- ZapDB-at-rest encryption (`KMS_ENCRYPTION_KEY_B64`) — Badger-level,
+  orthogonal to the application envelope, its own knob.
+- IAM JWT validation at the HTTP edge.
 - The ZAP secrets-server wire shape (`pkg/zapserver`, `pkg/zapclient`).
 
 ### LP-103 bearer-mint (still future)
