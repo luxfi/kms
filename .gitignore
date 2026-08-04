@@ -19,3 +19,9 @@
 # Data
 /data/
 *.json.bak
+
+# Scratch worktrees. `git worktree add .worktrees/<name>` is a local convenience
+# and its checkouts are not this repo's content — untracked they showed up as one
+# 107M `?? .worktrees/` entry, which one `git add -A` turns into a commit of a
+# second copy of the tree.
+.worktrees/
