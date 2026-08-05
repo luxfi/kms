@@ -18,16 +18,29 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/luxfi/zap"
+
+	kmszap "github.com/luxfi/kms/pkg/zap"
 )
 
-// errServer stands up a zap.Node that answers every opcode with the
-// server's error envelope, framed exactly as pkg/api/zap_kms_server.go
-// frames it: opcode(2 LE) || {"error": "..."}.
+// errServer stands up a zap.Node that speaks the real protocol —
+// handshake, then auth — and answers every KMS opcode with the server's
+// error envelope, sealed exactly as pkg/api/zap_kms_server.go seals it.
 func errServer(t *testing.T, msg string) string {
+	t.Helper()
+	return serveWith(t, func(op uint16, _ []byte) []byte {
+		b, _ := json.Marshal(map[string]string{"error": msg})
+		return b
+	})
+}
+
+// serveWith runs a minimal MPC-side server. reply is called with the
+// OPENED payload and returns the plaintext body to seal back.
+func serveWith(t *testing.T, reply func(op uint16, payload []byte) []byte) string {
 	t.Helper()
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -44,13 +57,10 @@ func errServer(t *testing.T, msg string) string {
 		NoDiscovery: true,
 	})
 
-	reply := func(_ context.Context, _ string, m *zap.Message) (*zap.Message, error) {
-		raw := m.Bytes()
-		if len(raw) < zap.HeaderSize+2 {
-			return nil, errors.New("short request")
-		}
-		op := binary.LittleEndian.Uint16(raw[zap.HeaderSize : zap.HeaderSize+2])
-		body, _ := json.Marshal(map[string]string{"error": msg})
+	var mu sync.Mutex
+	sessions := map[string]*kmszap.Session{}
+
+	frame := func(op uint16, body []byte) (*zap.Message, error) {
 		out := make([]byte, 2+len(body))
 		binary.LittleEndian.PutUint16(out[0:2], op)
 		copy(out[2:], body)
@@ -58,9 +68,60 @@ func errServer(t *testing.T, msg string) string {
 		b.WriteBytes(out)
 		return zap.Parse(b.Finish())
 	}
-	node.Handle(0, reply)
-	for _, op := range []uint16{OpStatus, OpKeygen, OpSign, OpReshare, OpWallet, OpDecrypt} {
-		node.Handle(op, reply)
+
+	handler := func(_ context.Context, from string, m *zap.Message) (*zap.Message, error) {
+		raw := m.Bytes()
+		if len(raw) < zap.HeaderSize+2 {
+			return nil, errors.New("short request")
+		}
+		op := binary.LittleEndian.Uint16(raw[zap.HeaderSize : zap.HeaderSize+2])
+		body := raw[zap.HeaderSize+2:]
+
+		if op == kmszap.OpClientHello {
+			replyWire, res, err := kmszap.ServerRespond(kmszap.CapMLKEM768, body)
+			if err != nil {
+				return nil, err
+			}
+			sess, err := kmszap.NewSession(res.SessionKey, res.Hybrid)
+			if err != nil {
+				return nil, err
+			}
+			mu.Lock()
+			sessions[from] = sess
+			mu.Unlock()
+			return frame(kmszap.OpServerHello, replyWire)
+		}
+
+		mu.Lock()
+		sess := sessions[from]
+		mu.Unlock()
+		if sess == nil {
+			return frame(op, []byte(`{"error":"handshake required"}`))
+		}
+		payload, err := sess.Open(kmszap.DirClientToServer, body)
+		if err != nil {
+			return frame(op, []byte(`{"error":"session decrypt failed"}`))
+		}
+
+		var out []byte
+		if op == kmszap.OpAuth {
+			out = []byte(`{"subject":"lux/lux-kms","owner":"lux"}`)
+		} else {
+			out = reply(op, payload)
+		}
+		sealed, err := sess.Seal(kmszap.DirServerToClient, out)
+		if err != nil {
+			return nil, err
+		}
+		return frame(op, sealed)
+	}
+
+	node.Handle(0, handler)
+	for _, op := range []uint16{
+		kmszap.OpClientHello, kmszap.OpAuth,
+		OpStatus, OpKeygen, OpSign, OpReshare, OpWallet, OpDecrypt,
+	} {
+		node.Handle(op, handler)
 	}
 	if err := node.Start(); err != nil {
 		t.Fatalf("start err-server: %v", err)
@@ -70,9 +131,16 @@ func errServer(t *testing.T, msg string) string {
 	return addr
 }
 
+// testToken is the IAM credential the client presents.
+func testToken(context.Context) (string, error) { return "test-iam-token", nil }
+
+// dial connects a fresh client. Each gets a unique node ID: luxfi/zap
+// rejects a second connection claiming a NodeID that is already connected,
+// so reusing one across subtests would fail on that, not on anything the
+// test means to assert.
 func dial(t *testing.T, addr string) *ZapClient {
 	t.Helper()
-	c, err := NewZapClient("test-client", addr)
+	c, err := NewZapClient(fmt.Sprintf("test-client-%s", t.Name()), addr, testToken)
 	if err != nil {
 		t.Fatalf("NewZapClient: %v", err)
 	}
@@ -159,37 +227,10 @@ func TestErrorBodyNeverDecodesAsSuccess(t *testing.T) {
 // TestSuccessBodyStillDecodes is the control: the error check must not
 // break the happy path. A body with no "error" key flows through intact.
 func TestSuccessBodyStillDecodes(t *testing.T) {
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("pick port: %v", err)
-	}
-	port := l.Addr().(*net.TCPAddr).Port
-	l.Close()
-	addr := fmt.Sprintf("127.0.0.1:%d", port)
-
-	node := zap.NewNode(zap.NodeConfig{
-		NodeID: "ok-server", ServiceType: "_lux-kms._tcp",
-		Port: port, NoDiscovery: true,
+	addr := serveWith(t, func(uint16, []byte) []byte {
+		b, _ := json.Marshal(SignResult{R: "aa", S: "bb", Signature: "ccdd"})
+		return b
 	})
-	ok := func(_ context.Context, _ string, m *zap.Message) (*zap.Message, error) {
-		raw := m.Bytes()
-		op := binary.LittleEndian.Uint16(raw[zap.HeaderSize : zap.HeaderSize+2])
-		body, _ := json.Marshal(SignResult{R: "aa", S: "bb", Signature: "ccdd"})
-		out := make([]byte, 2+len(body))
-		binary.LittleEndian.PutUint16(out[0:2], op)
-		copy(out[2:], body)
-		b := zap.NewBuilder(len(out) + 64)
-		b.WriteBytes(out)
-		return zap.Parse(b.Finish())
-	}
-	node.Handle(0, ok)
-	node.Handle(OpSign, ok)
-	if err := node.Start(); err != nil {
-		t.Fatalf("start ok-server: %v", err)
-	}
-	defer node.Stop()
-	time.Sleep(50 * time.Millisecond)
-
 	c := dial(t, addr)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -200,5 +241,15 @@ func TestSuccessBodyStillDecodes(t *testing.T) {
 	if res.R != "aa" || res.S != "bb" || res.Signature != "ccdd" {
 		t.Fatalf("success body corrupted: %+v", res)
 	}
-	t.Logf("success path intact: %+v", res)
+	t.Logf("success path intact over the sealed wire: %+v", res)
+}
+
+// TestClientRequiresToken: a client with no credential fails at
+// construction rather than at the first threshold operation.
+func TestClientRequiresToken(t *testing.T) {
+	if _, err := NewZapClient("test-client", "127.0.0.1:1", nil); err == nil {
+		t.Fatal("SECURITY: built a ZAP client with no IAM token source")
+	} else {
+		t.Logf("refused: %v", err)
+	}
 }

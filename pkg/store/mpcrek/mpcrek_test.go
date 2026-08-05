@@ -32,16 +32,20 @@ func (f *fakeDecrypter) Close() { f.closed = true }
 func withDialer(t *testing.T, fake MPCDecrypter) func() {
 	t.Helper()
 	prev := dialer
-	dialer = func(_, _ string) (MPCDecrypter, error) { return fake, nil }
+	dialer = func(_, _ string, _ mpc.TokenSource) (MPCDecrypter, error) { return fake, nil }
 	return func() { dialer = prev }
 }
 
 func withDialErr(t *testing.T, err error) func() {
 	t.Helper()
 	prev := dialer
-	dialer = func(_, _ string) (MPCDecrypter, error) { return nil, err }
+	dialer = func(_, _ string, _ mpc.TokenSource) (MPCDecrypter, error) { return nil, err }
 	return func() { dialer = prev }
 }
+
+// testToken stands in for the IAM credential minter. Bootstrap requires
+// one because MPC refuses a peer it cannot identify.
+func testToken(context.Context) (string, error) { return "test-iam-token", nil }
 
 func TestBootstrap_ValidConfig_Returns32Bytes(t *testing.T) {
 	rek := make([]byte, 32)
@@ -53,6 +57,7 @@ func TestBootstrap_ValidConfig_Returns32Bytes(t *testing.T) {
 	defer restore()
 
 	got, err := Bootstrap(context.Background(), Config{
+		Token: testToken,
 		Endpoint: "mpc-0.lux-mpc.svc:9999",
 		KeyID:    "kms/rek/v1",
 		NodeID:   "kms-0",
@@ -120,6 +125,7 @@ func TestBootstrap_RejectsWrongLength(t *testing.T) {
 			defer restore()
 
 			_, err := Bootstrap(context.Background(), Config{
+				Token: testToken,
 				Endpoint: "e",
 				KeyID:    "k",
 			})
@@ -136,6 +142,7 @@ func TestBootstrap_RejectsAllZeroREK(t *testing.T) {
 	defer restore()
 
 	_, err := Bootstrap(context.Background(), Config{
+		Token: testToken,
 		Endpoint: "e",
 		KeyID:    "k",
 	})
@@ -150,6 +157,7 @@ func TestBootstrap_PropagatesDialError(t *testing.T) {
 	defer restore()
 
 	_, err := Bootstrap(context.Background(), Config{
+		Token: testToken,
 		Endpoint: "e",
 		KeyID:    "k",
 	})
@@ -165,6 +173,7 @@ func TestBootstrap_PropagatesDecryptError(t *testing.T) {
 	defer restore()
 
 	_, err := Bootstrap(context.Background(), Config{
+		Token: testToken,
 		Endpoint: "e",
 		KeyID:    "k",
 	})
@@ -185,6 +194,7 @@ func TestBootstrap_DefaultTimeout(t *testing.T) {
 	defer restore()
 
 	got, err := Bootstrap(context.Background(), Config{
+		Token: testToken,
 		Endpoint: "e",
 		KeyID:    "k",
 		// Timeout intentionally zero.
@@ -223,7 +233,8 @@ func TestZero_OnReturnedREK_ForensicCheck(t *testing.T) {
 	restore := withDialer(t, fake)
 	defer restore()
 
-	got, err := Bootstrap(context.Background(), Config{Endpoint: "e", KeyID: "k"})
+	got, err := Bootstrap(context.Background(), Config{
+		Token: testToken,Endpoint: "e", KeyID: "k"})
 	if err != nil {
 		t.Fatalf("Bootstrap: %v", err)
 	}
@@ -242,7 +253,8 @@ func TestBootstrap_NilResultFromDecrypter(t *testing.T) {
 	restore := withDialer(t, fake)
 	defer restore()
 
-	_, err := Bootstrap(context.Background(), Config{Endpoint: "e", KeyID: "k"})
+	_, err := Bootstrap(context.Background(), Config{
+		Token: testToken,Endpoint: "e", KeyID: "k"})
 	if err == nil {
 		t.Fatal("Bootstrap returned nil error on nil DecryptResult")
 	}

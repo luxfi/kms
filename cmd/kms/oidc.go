@@ -49,6 +49,8 @@ import (
 
 	gojose "github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+
+	"github.com/luxfi/kms/pkg/mpc"
 )
 
 const (
@@ -536,13 +538,50 @@ func (c *oidcConfig) handleLogout(w http.ResponseWriter, _ *http.Request) {
 // the access_token. The canonical Hanzo IAM token endpoint lives under
 // the /v1/iam API prefix (c.tokenPath, default /v1/iam/oauth/token).
 func (c *oidcConfig) exchangeCode(ctx context.Context, code, redirectURI string) (string, error) {
-	form := url.Values{
+	return c.postToken(ctx, url.Values{
 		"grant_type":    {"authorization_code"},
 		"code":          {code},
 		"client_id":     {c.clientID},
 		"client_secret": {c.clientSecret},
 		"redirect_uri":  {redirectURI},
+	})
+}
+
+// iamTokenSource returns the credential minter KMS presents to other
+// services, or nil when IAM is not configured — nil makes the consumer
+// fail at construction rather than dial a peer that will refuse it.
+//
+// The token is minted per call. IAM tokens are short-lived by design, and
+// the ZAP client authenticates once per connection, so there is nothing
+// here worth caching.
+func iamTokenSource() mpc.TokenSource {
+	cfg := loadOIDCConfig()
+	if cfg == nil {
+		return nil
 	}
+	return cfg.serviceToken
+}
+
+// serviceToken mints KMS's own machine credential with the
+// client_credentials grant. This is the identity KMS presents to MPC over
+// ZAP (pkg/mpc.TokenSource).
+//
+// It closes the bootstrap loop the obvious way: the client secret is
+// DERIVED from the brand (deriveFromOwner), and IAM provisions the same
+// "<owner>-kms" client with the same derived secret on boot. Nothing here
+// is read from KMS, so the service that stores every secret does not need
+// a stored secret to prove who it is.
+func (c *oidcConfig) serviceToken(ctx context.Context) (string, error) {
+	return c.postToken(ctx, url.Values{
+		"grant_type":    {"client_credentials"},
+		"client_id":     {c.clientID},
+		"client_secret": {c.clientSecret},
+	})
+}
+
+// postToken posts a form to IAM's token endpoint and returns the
+// access_token.
+func (c *oidcConfig) postToken(ctx context.Context, form url.Values) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
 		c.iamEndpoint+c.tokenPath,
 		strings.NewReader(form.Encode()))
