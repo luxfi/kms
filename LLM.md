@@ -173,7 +173,7 @@ the ZAP ops 0x0040-0x0043, one store behind both.
 ## One KMS per org. Env is a field, not a hostname.
 
 There is one KMS endpoint per org. Every caller — devnet, testnet,
-mainnet — points at the same `kms.lux.network` for Lux (or
+mainnet — points at the same `kms.lux.cloud` for Lux (or
 `kms.hanzo.ai` for Hanzo, Zoo, Pars). The env (`dev` / `test` /
 `main`) is a field on each secret, passed as `?env=` on GET/DELETE
 and the `env` JSON field on POST. No `kms.dev.*` / `kms.test.*`
