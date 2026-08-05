@@ -12,19 +12,20 @@ import (
 var ErrSecretNotFound = errors.New("store: secret not found")
 
 // Secret storage modes.
+//
+// A mode names the bytes on disk, so a reader can pick the right unwrap
+// path from the record alone. It describes what Seal did — never what a
+// future version intends to do.
 const (
-	// ModeStandard: AES-256-GCM payload + ML-KEM wrapped DEK.
-	// Fast, PQ-safe. No threshold required. Default for all secrets.
-	ModeStandard = "aead+mlkem"
-
-	// ModeThresholdReveal: payload or DEK under T-Chain threshold FHE key.
-	// Decrypt requires t-of-n validator cooperation via E2S protocol.
-	// Use for high-value secrets, sealed recovery, conditional access.
-	ModeThresholdReveal = "tfhe"
-
-	// ModeConfidentialCompute: CKKS ciphertext for computation on encrypted data.
-	// Use for ML inference on encrypted inputs.
-	ModeConfidentialCompute = "ckks"
+	// ModeStandard: AES-256-GCM payload under a per-secret DEK, and that
+	// DEK wrapped with AES-256-GCM under the REK. Symmetric end to end.
+	//
+	// Both layers are AES-256, which stands up to Grover at ~128-bit
+	// equivalent, so this envelope needs no post-quantum key agreement:
+	// the REK is never transmitted and there is no public-key ciphertext
+	// for an adversary to harvest. PQ belongs on the paths that DO move
+	// key material — see pkg/zap/handshake.go for the wire.
+	ModeStandard = "aes256-gcm"
 )
 
 // Key prefix for secrets in ZapDB.
@@ -32,24 +33,19 @@ var secretPrefix = []byte("kms/secrets/")
 
 // Secret is an encrypted record stored in ZapDB. Plaintext is never stored.
 //
-// Standard path (default):
+//	DEK        = random 256-bit key
+//	Ciphertext = AES-256-GCM(plaintext, DEK), AAD = path/name/env
+//	WrappedDEK = AES-256-GCM(DEK, REK),       AAD = name
 //
-//	DEK = random 256-bit key
-//	Ciphertext = AES-256-GCM(plaintext, DEK)
-//	WrappedDEK = ML-KEM-Encaps(DEK, recipientPK)
-//	Policy, handles, receipts anchored on K-Chain
-//
-// Threshold reveal path (opt-in):
-//
-//	Ciphertext = TFHE-Encrypt(plaintext, collectivePK)
-//	Decrypt requires T-Chain quorum (t-of-n E2S shares)
+// The AAD on each layer is what stops a swap: a record moved to another
+// path/name/env fails to open.
 type Secret struct {
 	Name       string    `json:"name"`
 	Path       string    `json:"path"`        // e.g. "/ci", "/myservice/local"
 	Env        string    `json:"env"`         // dev, test, main
-	Ciphertext []byte    `json:"ciphertext"`  // AES-GCM ciphertext or TFHE ciphertext
-	WrappedDEK []byte    `json:"wrapped_dek"` // ML-KEM encapsulated DEK (standard mode only)
-	Scheme     string    `json:"scheme"`      // aead+mlkem (default), tfhe, ckks
+	Ciphertext []byte    `json:"ciphertext"`  // AES-256-GCM under the DEK
+	WrappedDEK []byte    `json:"wrapped_dek"` // AES-256-GCM under the REK
+	Scheme     string    `json:"scheme"`      // ModeStandard
 	KeyHandle  string    `json:"key_handle"`  // K-Chain key/policy handle
 	PolicyID   string    `json:"policy_id"`   // access policy (who can decrypt)
 	CreatedAt  time.Time `json:"created_at"`
