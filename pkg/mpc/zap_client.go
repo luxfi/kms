@@ -138,7 +138,34 @@ func (c *ZapClient) call(ctx context.Context, op uint16, payload any) ([]byte, e
 	if len(body) <= zap.HeaderSize+2 {
 		return []byte("{}"), nil
 	}
-	return body[zap.HeaderSize+2:], nil // skip header + opcode
+	respBody := body[zap.HeaderSize+2:] // skip header + opcode
+
+	// The server signals every handler failure as {"error": "..."} under
+	// the SAME opcode it was asked for, so the opcode check above cannot
+	// catch it. Go's json decoder ignores unknown fields, so an unread
+	// "error" key decodes cleanly into any success struct and surfaces as
+	// a zero-valued success — Reshare, whose only signal is this error
+	// return, would report a refused reshare as done. Read it here, once,
+	// for every opcode.
+	var werr struct {
+		Error string `json:"error"`
+	}
+	if json.Unmarshal(respBody, &werr) == nil && werr.Error != "" {
+		return nil, &WireError{Op: op, Message: werr.Error}
+	}
+	return respBody, nil
+}
+
+// WireError is an error body returned by the MPC server over ZAP. It is
+// the ZAP-transport sibling of APIError: same contract ({"error": "..."}),
+// keyed by opcode instead of HTTP status.
+type WireError struct {
+	Op      uint16
+	Message string
+}
+
+func (e *WireError) Error() string {
+	return fmt.Sprintf("mpc zap: op=0x%04x: %s", e.Op, e.Message)
 }
 
 // Keygen creates a new MPC wallet.
