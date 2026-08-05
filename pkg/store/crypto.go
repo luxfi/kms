@@ -2,13 +2,9 @@ package store
 
 // AES-256-GCM Seal/Open helpers wrapping the generic SecretStore.
 //
-// This is the v1 envelope: master key (32 bytes, unsealed at boot) seals
-// every Secret's DEK with AES-256-GCM. The DEK seals the plaintext.
-//
-// v2 (tracked upstream in luxfi/crypto/xwing): replace the master→DEK wrap
-// with an ML-KEM-768 recipient-public-key encapsulation (`ModeStandard`
-// "aead+mlkem"), so the master key is PQ-wrapped at rest. The struct field
-// `WrappedDEK` is already shaped for that.
+// The envelope: the REK (32 bytes, sourced at boot — see pkg/store/mpcrek)
+// seals every Secret's DEK with AES-256-GCM, and the DEK seals the
+// plaintext. Symmetric throughout; ModeStandard names exactly that.
 //
 // Plaintext never leaves memory. The caller is responsible for zeroing
 // the returned byte slice when done.
