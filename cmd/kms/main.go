@@ -328,8 +328,11 @@ func main() {
 	// configured".
 	var signBackend zapserver.SignBackend
 	if vaultID != "" {
-		// Trust at the network boundary (NetworkPolicy + ZAP wire).
-		zapClient, err := mpc.NewZapClient(nodeID, mpcAddr)
+		// MPC refuses a peer it cannot identify, so KMS presents its own
+		// IAM machine credential. iamTokenSource is nil when IAM is not
+		// configured, and NewZapClient then fails loudly rather than
+		// dialing a cluster that will refuse it.
+		zapClient, err := mpc.NewZapClient(nodeID, mpcAddr, iamTokenSource())
 		switch {
 		case err != nil:
 			log.Printf("kms: WARNING: mpc zap client init failed: %v — degrading to secrets-only mode", err)
@@ -861,6 +864,7 @@ func loadREK() []byte {
 			KeyID:    keyID,
 			NodeID:   nodeID,
 			Timeout:  timeout,
+			Token:    iamTokenSource(),
 		})
 		if err != nil {
 			// Fail-closed. The deployment asked for MPC-rooted REK and

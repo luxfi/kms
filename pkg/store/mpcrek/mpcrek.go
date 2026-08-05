@@ -16,11 +16,15 @@
 // # Construction (Architecture B)
 //
 // The REK is fetched from a t-of-n luxfi/mpc cluster ONCE at boot via
-// ZAP. The KMS pod authenticates with its IAM JWT (org-scoped,
-// `client_credentials` grant). MPC stores the REK as a sealed entry
-// keyed by `kms/rek/<epoch>`; on `OpDecrypt` it cooperatively unwraps
-// the entry under its own t-of-n share set and returns the plaintext
-// REK over the AEAD-sealed ZAP wire (X25519+ML-KEM-768 handshake).
+// ZAP. The KMS pod runs the X25519+ML-KEM-768 handshake and then proves
+// its identity with an IAM access token (`client_credentials`, the
+// brand-derived `<org>-kms` client — see cmd/kms/oidc.go serviceToken).
+// MPC refuses a peer that does neither. Every frame after the handshake,
+// including the REK itself, is AEAD-sealed under the negotiated key.
+//
+// MPC stores the REK as a sealed entry keyed by `kms/rek/<epoch>`; on
+// `OpDecrypt` it cooperatively unwraps the entry under its own t-of-n
+// share set and returns the plaintext REK over that sealed wire.
 //
 // The KMS process holds the REK in heap memory for its lifetime. On
 // shutdown the slice is zeroed (best-effort; the Go GC offers no harder
@@ -112,6 +116,11 @@ type Config struct {
 	KeyID    string
 	NodeID   string
 	Timeout  time.Duration
+
+	// Token mints the IAM credential KMS presents to the MPC cluster. It
+	// is required: MPC refuses a peer it cannot identify, so a bootstrap
+	// without one could only ever be refused.
+	Token mpc.TokenSource
 }
 
 // Validate returns an error if any required field is unset.
@@ -121,6 +130,9 @@ func (c Config) Validate() error {
 	}
 	if strings.TrimSpace(c.KeyID) == "" {
 		return fmt.Errorf("%w: KeyID is required", ErrUnconfigured)
+	}
+	if c.Token == nil {
+		return fmt.Errorf("%w: Token is required", ErrUnconfigured)
 	}
 	return nil
 }
@@ -134,8 +146,8 @@ type MPCDecrypter interface {
 }
 
 // dialer is overridable in tests. Production wires NewZapClient.
-var dialer = func(nodeID, endpoint string) (MPCDecrypter, error) {
-	c, err := mpc.NewZapClient(nodeID, endpoint)
+var dialer = func(nodeID, endpoint string, token mpc.TokenSource) (MPCDecrypter, error) {
+	c, err := mpc.NewZapClient(nodeID, endpoint, token)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +178,7 @@ func Bootstrap(ctx context.Context, cfg Config) ([]byte, error) {
 	dialCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	client, err := dialer(nodeID, cfg.Endpoint)
+	client, err := dialer(nodeID, cfg.Endpoint, cfg.Token)
 	if err != nil {
 		return nil, fmt.Errorf("mpcrek: dial %s: %w", cfg.Endpoint, err)
 	}

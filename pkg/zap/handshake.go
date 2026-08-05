@@ -66,6 +66,17 @@ import (
 const (
 	OpClientHello uint16 = 0x00F0
 	OpServerHello uint16 = 0x00F1
+
+	// OpAuth carries the peer's IAM access token, sealed under the session
+	// key the hello pair just derived. It comes AFTER the handshake, never
+	// before: a credential sent ahead of the key agreement rides in the
+	// clear and is replayable by anyone watching the wire.
+	//
+	// Sealing also binds the token to this session. The KEM ciphertext is
+	// encapsulated to the client's ephemeral public key, so a peer replaying
+	// a captured ClientHello cannot derive the key and therefore cannot
+	// produce a frame that opens on the far side.
+	OpAuth uint16 = 0x00F2
 )
 
 // Capability bits. A peer ANDs its caps with the remote caps and uses
