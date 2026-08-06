@@ -296,20 +296,38 @@ func main() {
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 	}))
 
-	// Legacy: env-backed secret fetch.
+	// Single-name secret fetch, from the STORE.
+	//
+	// It read os.Getenv(name) — the KMS process's OWN ENVIRONMENT — and that is
+	// not a secret store. The consequences were not theoretical: a secret written
+	// through POST /v1/kms/secrets landed in ZapDB and then 404'd here, because
+	// the write and the read were addressing different things entirely. A secret
+	// that HAPPENED to share a name with one of the pod's env vars answered 200
+	// with the pod's value. So the same endpoint reported a real secret missing
+	// and a stale one present, and neither answer mentioned which it was doing.
+	//
+	// A store keyed by (path, env, name) cannot be read by name alone, so both
+	// are query parameters with the same defaults the sibling routes use — env
+	// defaults to "default" on READS only (see envRequired: a write may never
+	// default, because a silent bucket choice splits the write from its reader).
 	mux.HandleFunc("GET /v1/kms/secrets/{name}", func(w http.ResponseWriter, r *http.Request) {
 		name := r.PathValue("name")
 		if name == "" {
 			writeJSON(w, http.StatusBadRequest, map[string]any{"message": "secret name required"})
 			return
 		}
-		val := os.Getenv(name)
-		if val == "" {
+		path := r.URL.Query().Get("path")
+		env := r.URL.Query().Get("env")
+		if env == "" {
+			env = "default"
+		}
+		sec, err := secStore.Get(path, name, env)
+		if err != nil {
 			writeJSON(w, http.StatusNotFound, map[string]any{"message": "not found"})
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{
-			"secret": map[string]any{"secretKey": name, "secretValue": val},
+			"secret": map[string]any{"secretKey": name, "secretValue": string(sec.Ciphertext)},
 		})
 	})
 
