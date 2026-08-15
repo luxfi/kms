@@ -14,6 +14,8 @@
 //  2. ML-KEM-768 KEM encapsulation (FIPS 203 / NIST PQC Level 3).
 //  3. Combined shared secret = HKDF-SHA256(X25519_shared || MLKEM_shared).
 //  4. Derived AES-256-GCM session key for the rest of the connection.
+//  5. A binding: a second, separately labelled derivation from the same
+//     secret, which names this channel and no other.
 //
 // Capability negotiation: a 2-byte cap bitmap rides in every hello frame.
 // Bit 0 = ML-KEM-768 supported. If a peer clears bit 0, both sides fall
@@ -33,15 +35,20 @@
 //	  +2    [32]byte x25519_pk  // ephemeral X25519 public key
 //	  +34   [1088]byte mlkem_ct // ML-KEM-768 ciphertext (omit if !cap0)
 //
-// The combined secret feeds HKDF-SHA256 with info "kms/zap/v1/session"
-// and a transcript hash salt (SHA-256 of the concatenated hello frames).
-// Output is a 32-byte AES-256-GCM session key.
+// The combined secret feeds HKDF-SHA256 with a transcript hash salt
+// (SHA-256 of the concatenated hello frames) and yields two 32-byte
+// outputs under distinct labels: "kms/zap/v1/session" is the
+// AES-256-GCM session key, "kms/zap/v1/bind" is the binding.
 //
-// Backwards-compat: a peer that doesn't speak this opcode set will
-// return a ZAP error or unknown-handler reply — the client treats that
-// as "no PQ handshake available" and proceeds in classical-only mode
-// (X25519-only, with a one-line warning). A KMS instance running this
-// package always advertises bit 0 set.
+// The binding is what makes the key agreement worth having. Ephemeral
+// key agreement alone tells each side it is talking to *somebody* over
+// a private channel; it does not say to whom. A caller that already
+// holds a trusted signing identity closes that gap by signing the
+// binding along with its request (see pkg/envelope): the signature then
+// names a channel, and the peer accepts it only on the channel it
+// names. Two endpoints share a binding exactly when they share the
+// secret — which is to say, exactly when nobody sits between them
+// holding keys of their own.
 package zap
 
 import (
@@ -83,6 +90,14 @@ const (
 	MLKEMSharedSize = mlkem.SharedKeySize  // 32
 
 	SessionKeySize = 32 // AES-256-GCM
+	BindSize       = 32 // channel binding
+)
+
+// HKDF labels. Each output is a separate expansion of the same shared
+// secret, so knowing one says nothing about the other.
+const (
+	infoSession = "kms/zap/v1/session"
+	infoBind    = "kms/zap/v1/bind"
 )
 
 // Errors.
@@ -94,8 +109,14 @@ var (
 
 // HandshakeResult is the output of a completed handshake. SessionKey is
 // 32 bytes suitable for AES-256-GCM. Hybrid is true iff ML-KEM-768 ran.
+//
+// Bind names this channel. It is 32 bytes, it is not on the wire, and
+// only the two endpoints that ran this handshake can compute it. A
+// caller signs it into every request so the peer can tell a request
+// made to it from a request made to somebody else and passed along.
 type HandshakeResult struct {
 	SessionKey []byte // 32 bytes
+	Bind       []byte // 32 bytes
 	Hybrid     bool   // true = X25519+ML-KEM-768; false = X25519 only
 	PeerCaps   uint16 // capability bitmap the peer advertised
 }
@@ -219,9 +240,10 @@ func ServerRespond(localCaps uint16, clientHelloWire []byte) (replyWire []byte, 
 		return nil, nil, err
 	}
 
-	sessionKey := combineAndDerive(xShared, mlkemShared, clientHelloWire, replyWire)
+	sessionKey, bind := combineAndDerive(xShared, mlkemShared, clientHelloWire, replyWire)
 	return replyWire, &HandshakeResult{
 		SessionKey: sessionKey,
+		Bind:       bind,
 		Hybrid:     hybrid,
 		PeerCaps:   client.Caps,
 	}, nil
@@ -262,9 +284,10 @@ func (c *ClientState) ClientFinish(serverHelloWire []byte) (*HandshakeResult, er
 		mlkemShared = ss
 	}
 
-	sessionKey := combineAndDerive(xShared, mlkemShared, c.helloBytes, serverHelloWire)
+	sessionKey, bind := combineAndDerive(xShared, mlkemShared, c.helloBytes, serverHelloWire)
 	return &HandshakeResult{
 		SessionKey: sessionKey,
+		Bind:       bind,
 		Hybrid:     hybrid,
 		PeerCaps:   server.Caps,
 	}, nil
@@ -274,11 +297,15 @@ func (c *ClientState) ClientFinish(serverHelloWire []byte) (*HandshakeResult, er
 //
 //	IKM      = X25519_shared || ML_KEM_shared
 //	salt     = SHA-256(client_hello || server_hello)
-//	info     = "kms/zap/v1/session"
-//	session  = HKDF-SHA256(IKM, salt, info, 32)
+//	session  = HKDF-SHA256(IKM, salt, "kms/zap/v1/session", 32)
+//	bind     = HKDF-SHA256(IKM, salt, "kms/zap/v1/bind", 32)
 //
 // When hybrid is false (mlkemShared == nil), IKM = X25519_shared alone.
-func combineAndDerive(xShared, mlkemShared, clientHello, serverHello []byte) []byte {
+//
+// The salt covers both hello frames, so the pair is unique to this
+// exchange. Anyone who substitutes a key of their own to read the
+// traffic changes the secret, and lands on a different binding.
+func combineAndDerive(xShared, mlkemShared, clientHello, serverHello []byte) (session, bind []byte) {
 	ikm := make([]byte, 0, len(xShared)+len(mlkemShared))
 	ikm = append(ikm, xShared...)
 	if mlkemShared != nil {
@@ -291,8 +318,14 @@ func combineAndDerive(xShared, mlkemShared, clientHello, serverHello []byte) []b
 	h.Write(serverHello)
 	h.Sum(salt[:0])
 
-	r := hkdf.New(newSHA256, ikm, salt[:], []byte("kms/zap/v1/session"))
-	out := make([]byte, SessionKeySize)
+	return expand(ikm, salt[:], infoSession, SessionKeySize),
+		expand(ikm, salt[:], infoBind, BindSize)
+}
+
+// expand reads one labelled HKDF-SHA256 output.
+func expand(ikm, salt []byte, info string, size int) []byte {
+	r := hkdf.New(newSHA256, ikm, salt, []byte(info))
+	out := make([]byte, size)
 	if _, err := io.ReadFull(r, out); err != nil {
 		// HKDF over a fixed-size SHA-256 with 32-byte output is
 		// infallible. Treat as an unrecoverable invariant violation.

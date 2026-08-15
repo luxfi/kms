@@ -226,11 +226,11 @@ func TestVerifierWithLedger_ValidFreshNonce_Accepted(t *testing.T) {
 	now := time.Unix(1_717_200_000, 0)
 	env, err := envelope.Build(ledgerHeader(ident), ident, 0x0040,
 		json.RawMessage(`{"path":"hanzo/commerce","name":"k","env":"prod"}`),
-		freshNonce(t), now)
+		freshNonce(t), testBind, now)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
-	if _, err := v.Verify(context.Background(), env, now); err != nil {
+	if _, err := v.Verify(context.Background(), env, now, testBind); err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
 }
@@ -250,14 +250,14 @@ func TestVerifierWithLedger_Replay_Rejected(t *testing.T) {
 	now := time.Unix(1_717_200_000, 0)
 	env, err := envelope.Build(ledgerHeader(ident), ident, 0x0040,
 		json.RawMessage(`{"path":"hanzo/commerce","name":"k","env":"prod"}`),
-		freshNonce(t), now)
+		freshNonce(t), testBind, now)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
-	if _, err := v.Verify(context.Background(), env, now); err != nil {
+	if _, err := v.Verify(context.Background(), env, now, testBind); err != nil {
 		t.Fatalf("first Verify: %v", err)
 	}
-	_, err = v.Verify(context.Background(), env, now)
+	_, err = v.Verify(context.Background(), env, now, testBind)
 	if !errors.Is(err, envelope.ErrReplay) {
 		t.Fatalf("second Verify err=%v want ErrReplay", err)
 	}
@@ -285,11 +285,11 @@ func TestVerifierWithLedger_PostTTL_NonceReuse_AcceptedThenStale(t *testing.T) {
 	now := time.Unix(1_717_200_000, 0)
 	env, err := envelope.Build(ledgerHeader(ident), ident, 0x0040,
 		json.RawMessage(`{"path":"hanzo/commerce","name":"k","env":"prod"}`),
-		freshNonce(t), now)
+		freshNonce(t), testBind, now)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
-	if _, err := v.Verify(context.Background(), env, now); err != nil {
+	if _, err := v.Verify(context.Background(), env, now, testBind); err != nil {
 		t.Fatalf("first Verify: %v", err)
 	}
 	// Step `now` past TTL. The wall-clock check inside Verify is what
@@ -299,7 +299,7 @@ func TestVerifierWithLedger_PostTTL_NonceReuse_AcceptedThenStale(t *testing.T) {
 	// cannot be a replay because the verifier rejects it before the
 	// ledger ever sees it.
 	tooLate := now.Add(envelope.MaxClockSkew + time.Second)
-	_, err = v.Verify(context.Background(), env, tooLate)
+	_, err = v.Verify(context.Background(), env, tooLate, testBind)
 	if err == nil || errors.Is(err, envelope.ErrReplay) {
 		t.Fatalf("post-TTL Verify err=%v (want non-nil, NOT ErrReplay)", err)
 	}

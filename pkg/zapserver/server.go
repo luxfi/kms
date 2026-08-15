@@ -78,9 +78,9 @@ type Server struct {
 	// configured" (mirrors the fail-open MPC posture of the key
 	// routes). The KMS never holds full key material — the backend
 	// delegates to the luxfi/mpc t-of-n cluster.
-	signer    SignBackend
-	log       log.Logger
-	now       func() time.Time
+	signer SignBackend
+	log    log.Logger
+	now    func() time.Time
 
 	// Per-peer hybrid handshake sessions. Keyed by ZAP NodeID. A peer
 	// with no entry has not run the application-layer hybrid handshake
@@ -214,19 +214,21 @@ func (s *Server) Register(n *zap.Node) {
 		if op == kmszap.OpClientHello {
 			return s.respondHandshake(from, payload), nil
 		}
-		// If this peer already negotiated a session, the payload is
-		// expected to be AEAD-sealed; open it before dispatch and seal
-		// the response.
+		// Every op below carries or returns secret material, and each is
+		// authorized by an envelope that names a channel. A peer without
+		// a session has neither, so there is nothing to open and nothing
+		// to check it against.
 		sess := s.session(from)
-		if sess != nil {
-			pt, err := sess.Open(kmszap.DirClientToServer, payload)
-			if err != nil {
-				s.log.Warn("kms.zap session open failed", "from", from, "op", op, "err", err)
-				return respond(statusError, errJSON("session decrypt failed")), nil
-			}
-			payload = pt
+		if sess == nil {
+			return respond(statusForbid, errJSON("no session")), nil
 		}
-		ident, innerReq, decisionErr := s.verifyAndAuthorize(ctx, payload, op)
+		pt, err := sess.Open(kmszap.DirClientToServer, payload)
+		if err != nil {
+			s.log.Warn("kms.zap session open failed", "from", from, "op", op, "err", err)
+			return respond(statusError, errJSON("session decrypt failed")), nil
+		}
+		payload = pt
+		ident, innerReq, decisionErr := s.verifyAndAuthorize(ctx, payload, op, sess.Bind())
 		if decisionErr != nil {
 			s.log.Info("kms.zap authz",
 				"decision", "forbid",
@@ -331,7 +333,7 @@ func (s *Server) respondHandshake(from string, helloBytes []byte) *zap.Message {
 		s.log.Warn("kms.zap handshake failed", "from", from, "err", err)
 		return respond(statusError, errJSON(err.Error()))
 	}
-	sess, err := kmszap.NewSession(result.SessionKey, result.Hybrid)
+	sess, err := kmszap.NewSession(result)
 	if err != nil {
 		s.log.Error("kms.zap session init failed", "from", from, "err", err)
 		return respond(statusError, errJSON(err.Error()))
@@ -377,15 +379,17 @@ func (s *Server) wrap(op uint16, h handlerFn) zap.Handler {
 			return respond(statusError, errJSON("empty payload")), nil
 		}
 		payload := raw[2:]
-		if sess := s.session(from); sess != nil {
-			pt, err := sess.Open(kmszap.DirClientToServer, payload)
-			if err != nil {
-				s.log.Warn("kms.zap session open failed", "from", from, "err", err)
-				return respond(statusError, errJSON("session decrypt failed")), nil
-			}
-			payload = pt
+		sess := s.session(from)
+		if sess == nil {
+			return respond(statusForbid, errJSON("no session")), nil
 		}
-		ident, innerReq, decisionErr := s.verifyAndAuthorize(ctx, payload, op)
+		pt, err := sess.Open(kmszap.DirClientToServer, payload)
+		if err != nil {
+			s.log.Warn("kms.zap session open failed", "from", from, "err", err)
+			return respond(statusError, errJSON("session decrypt failed")), nil
+		}
+		payload = pt
+		ident, innerReq, decisionErr := s.verifyAndAuthorize(ctx, payload, op, sess.Bind())
 		if decisionErr != nil {
 			s.log.Info("kms.zap authz",
 				"decision", "forbid",
@@ -411,7 +415,10 @@ func (s *Server) wrap(op uint16, h handlerFn) zap.Handler {
 // On any failure the returned error is a single sentence safe for the
 // wire (no internal state). The caller emits the audit row and writes
 // statusForbid.
-func (s *Server) verifyAndAuthorize(ctx context.Context, raw []byte, op uint16) (Identity, []byte, error) {
+// bind is the binding of the channel the request arrived on. Every
+// transport supplies its own; the envelope is honoured only if it names
+// the same one.
+func (s *Server) verifyAndAuthorize(ctx context.Context, raw []byte, op uint16, bind []byte) (Identity, []byte, error) {
 	env, err := ParseEnvelope(raw)
 	if err != nil {
 		return Identity{}, nil, fmt.Errorf("envelope: %w", err)
@@ -419,7 +426,7 @@ func (s *Server) verifyAndAuthorize(ctx context.Context, raw []byte, op uint16) 
 	if env.Op != op {
 		return Identity{}, nil, fmt.Errorf("envelope: op mismatch (got 0x%04X want 0x%04X)", env.Op, op)
 	}
-	ident, err := verifyEnvelopeWithLedger(ctx, s.verifier, env, s.now())
+	ident, err := verifyEnvelopeWithLedger(ctx, s.verifier, env, s.now(), bind)
 	if err != nil {
 		// Hide the structured ErrEnvelopeReplay reason behind a wire-
 		// safe phrase so an off-network attacker cannot probe the

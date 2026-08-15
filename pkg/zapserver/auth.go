@@ -70,27 +70,11 @@ func ParseEnvelope(raw []byte) (*Envelope, error) {
 	return envelope.Parse(raw)
 }
 
-// VerifyEnvelope is the no-ledger entry point retained for tests that
-// don't need replay defence. Production callers MUST use a Server
-// (which holds a VerifierWithLedger) — this function does NOT check for
-// replays.
-func VerifyEnvelope(env *Envelope, now time.Time) (Identity, error) {
-	v, err := envelope.Verify(env, now, keys.VerifyServiceEnvelope)
-	if err != nil {
-		return Identity{}, err
-	}
-	return Identity{
-		NodeID:      v.NodeID,
-		FullDigest:  v.FullDigest,
-		ServicePath: v.ServicePath,
-	}, nil
-}
-
 // verifyEnvelopeWithLedger is the canonical wire-side verify. The Server
 // constructs a VerifierWithLedger at boot and routes every envelope
 // through this method. Returns ErrEnvelopeReplay on duplicate nonce.
-func verifyEnvelopeWithLedger(ctx context.Context, v *envelope.VerifierWithLedger, env *Envelope, now time.Time) (Identity, error) {
-	ident, err := v.Verify(ctx, env, now)
+func verifyEnvelopeWithLedger(ctx context.Context, v *envelope.VerifierWithLedger, env *Envelope, now time.Time, bind []byte) (Identity, error) {
+	ident, err := v.Verify(ctx, env, now, bind)
 	if err != nil {
 		return Identity{}, err
 	}
@@ -104,12 +88,12 @@ func verifyEnvelopeWithLedger(ctx context.Context, v *envelope.VerifierWithLedge
 // BuildEnvelope is the canonical helper for callers that hold a
 // *keys.ServiceIdentity. Lifts the public identity into the envelope
 // header and delegates to envelope.Build.
-func BuildEnvelope(ident *keys.ServiceIdentity, op uint16, req json.RawMessage, nonce string, now time.Time) (*Envelope, error) {
+func BuildEnvelope(ident *keys.ServiceIdentity, op uint16, req json.RawMessage, nonce string, bind []byte, now time.Time) (*Envelope, error) {
 	hdr := envelope.IdentityHeader{
 		NodeID:      ident.NodeID,
 		FullDigest:  ident.FullDigest,
 		ServicePath: ident.ServicePath,
 		PublicKey:   ident.PublicKey,
 	}
-	return envelope.Build(hdr, ident, op, req, nonce, now)
+	return envelope.Build(hdr, ident, op, req, nonce, bind, now)
 }

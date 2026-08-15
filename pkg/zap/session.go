@@ -40,25 +40,41 @@ const (
 	DirServerToClient uint32 = 0x53324300 // "S2C\x00"
 )
 
-// Session is the per-connection AEAD state. SessionKey is the 32-byte
-// HKDF output from the handshake; Hybrid records whether ML-KEM-768 ran
-// for operator-visible logging.
+// Session is the per-connection AEAD state, plus the binding that names
+// the channel. Hybrid records whether ML-KEM-768 ran, for
+// operator-visible logging.
 type Session struct {
 	aead    cipher.AEAD
+	bind    []byte
 	hybrid  bool
 	sendCtr atomic.Uint64
 	recvCtr atomic.Uint64
 }
 
-// NewSession wraps a 32-byte handshake-derived key in a Session ready to
-// seal and open frames.
-func NewSession(sessionKey []byte, hybrid bool) (*Session, error) {
-	a, err := SessionAEAD(sessionKey)
+// NewSession turns a completed handshake into a Session ready to seal
+// and open frames.
+//
+// It takes the whole result rather than the key alone so that a session
+// always carries the binding derived alongside its key. There is no
+// other constructor, and therefore no session whose binding belongs to
+// some other exchange.
+func NewSession(r *HandshakeResult) (*Session, error) {
+	if r == nil {
+		return nil, errors.New("zap/session: handshake result is nil")
+	}
+	if len(r.Bind) != BindSize {
+		return nil, fmt.Errorf("zap/session: binding must be %d bytes, got %d", BindSize, len(r.Bind))
+	}
+	a, err := SessionAEAD(r.SessionKey)
 	if err != nil {
 		return nil, err
 	}
-	return &Session{aead: a, hybrid: hybrid}, nil
+	return &Session{aead: a, bind: r.Bind, hybrid: r.Hybrid}, nil
 }
+
+// Bind returns the binding a request must carry to be honoured on this
+// session. Both endpoints compute the same 32 bytes; nobody else can.
+func (s *Session) Bind() []byte { return s.bind }
 
 // Hybrid reports whether the session was negotiated with ML-KEM-768
 // active. Operators log this once per session at INFO.

@@ -12,6 +12,7 @@
 package zapserver
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
@@ -23,6 +24,7 @@ import (
 
 	"github.com/luxfi/ids"
 	"github.com/luxfi/keys"
+	"github.com/luxfi/kms/pkg/envelope"
 	"github.com/luxfi/kms/pkg/store"
 	"github.com/luxfi/log"
 	badger "github.com/luxfi/zapdb"
@@ -32,6 +34,11 @@ import (
 // value the bip39 reference test suite pins.
 const testMnemonic = "abandon abandon abandon abandon abandon abandon " +
 	"abandon abandon abandon abandon abandon about"
+
+// testBind stands in for the binding a real transport derives with its
+// peer. These tests drive verifyAndAuthorize directly, below the
+// transport, so the same value serves as both sides of one channel.
+var testBind = bytes.Repeat([]byte{0x5A}, envelope.BindSize)
 
 // newTestServer wires a Server backed by an in-memory ZapDB SecretStore
 // plus an authorizer over caller-supplied authority sets. The master
@@ -105,7 +112,13 @@ func buildInner(t *testing.T, v any) json.RawMessage {
 // the server verifies under its Now).
 func signedEnvelopeBytes(t *testing.T, ident *keys.ServiceIdentity, op uint16, inner json.RawMessage, now time.Time, nonce string) []byte {
 	t.Helper()
-	env, err := BuildEnvelope(ident, op, inner, nonce, now)
+	return envelopeFor(t, ident, op, inner, now, nonce, testBind)
+}
+
+// envelopeFor is the same, for a named channel.
+func envelopeFor(t *testing.T, ident *keys.ServiceIdentity, op uint16, inner json.RawMessage, now time.Time, nonce string, bind []byte) []byte {
+	t.Helper()
+	env, err := BuildEnvelope(ident, op, inner, nonce, bind, now)
 	if err != nil {
 		t.Fatalf("BuildEnvelope: %v", err)
 	}
@@ -130,7 +143,7 @@ func TestAuthz_ValidatorRead_AllowsGetList(t *testing.T) {
 	getRaw := signedEnvelopeBytes(t, ident, OpSecretGet, buildInner(t, getReq{
 		Path: "hanzo/auto", Name: "api-key", Env: "prod",
 	}), now, "nonce-1")
-	verifiedIdent, payload, err := s.verifyAndAuthorize(context.Background(), getRaw, OpSecretGet)
+	verifiedIdent, payload, err := s.verifyAndAuthorize(context.Background(), getRaw, OpSecretGet, testBind)
 	if err != nil {
 		t.Fatalf("validator Get authz: %v", err)
 	}
@@ -146,7 +159,7 @@ func TestAuthz_ValidatorRead_AllowsGetList(t *testing.T) {
 	listRaw := signedEnvelopeBytes(t, ident, OpSecretList, buildInner(t, listReq{
 		Path: "hanzo/auto", Env: "prod",
 	}), now, "nonce-2")
-	verifiedIdent, payload, err = s.verifyAndAuthorize(context.Background(), listRaw, OpSecretList)
+	verifiedIdent, payload, err = s.verifyAndAuthorize(context.Background(), listRaw, OpSecretList, testBind)
 	if err != nil {
 		t.Fatalf("validator List authz: %v", err)
 	}
@@ -169,7 +182,7 @@ func TestAuthz_ValidatorWrite_Denied(t *testing.T) {
 		Path: "hanzo/auto", Name: "k", Env: "prod",
 		Value: base64.StdEncoding.EncodeToString([]byte("v")),
 	}), now, "nonce-1")
-	if _, _, err := s.verifyAndAuthorize(context.Background(), putRaw, OpSecretPut); err == nil {
+	if _, _, err := s.verifyAndAuthorize(context.Background(), putRaw, OpSecretPut, testBind); err == nil {
 		t.Fatalf("validator Put should be forbidden")
 	}
 
@@ -177,7 +190,7 @@ func TestAuthz_ValidatorWrite_Denied(t *testing.T) {
 	delRaw := signedEnvelopeBytes(t, ident, OpSecretDelete, buildInner(t, delReq{
 		Path: "hanzo/auto", Name: "k", Env: "prod",
 	}), now, "nonce-2")
-	if _, _, err := s.verifyAndAuthorize(context.Background(), delRaw, OpSecretDelete); err == nil {
+	if _, _, err := s.verifyAndAuthorize(context.Background(), delRaw, OpSecretDelete, testBind); err == nil {
 		t.Fatalf("validator Delete should be forbidden")
 	}
 }
@@ -197,7 +210,7 @@ func TestAuthz_OperatorWrite_Allowed(t *testing.T) {
 		Path: "hanzo/commerce", Name: "api-key", Env: "prod",
 		Value: base64.StdEncoding.EncodeToString([]byte("sk_live_xxx")),
 	}), now, "nonce-1")
-	verifiedIdent, payload, err := s.verifyAndAuthorize(context.Background(), putRaw, OpSecretPut)
+	verifiedIdent, payload, err := s.verifyAndAuthorize(context.Background(), putRaw, OpSecretPut, testBind)
 	if err != nil {
 		t.Fatalf("operator Put authz: %v", err)
 	}
@@ -233,7 +246,7 @@ func TestAuthz_NonValidator_DeniedAllOps(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			raw := signedEnvelopeBytes(t, stranger, c.op, buildInner(t, c.inner), now, c.name+"-nonce")
-			if _, _, err := s.verifyAndAuthorize(context.Background(), raw, c.op); err == nil {
+			if _, _, err := s.verifyAndAuthorize(context.Background(), raw, c.op, testBind); err == nil {
 				t.Fatalf("stranger %s should be forbidden", c.name)
 			}
 		})
@@ -252,7 +265,7 @@ func TestAuthz_StaleEnvelope_Rejected(t *testing.T) {
 	raw := signedEnvelopeBytes(t, ident, OpSecretGet, buildInner(t, getReq{
 		Path: "hanzo/auto", Name: "k", Env: "prod",
 	}), old, "nonce-stale")
-	if _, _, err := s.verifyAndAuthorize(context.Background(), raw, OpSecretGet); err == nil {
+	if _, _, err := s.verifyAndAuthorize(context.Background(), raw, OpSecretGet, testBind); err == nil {
 		t.Fatalf("stale envelope should be rejected")
 	}
 }
@@ -269,7 +282,7 @@ func TestAuthz_OpcodeMismatch_Rejected(t *testing.T) {
 	raw := signedEnvelopeBytes(t, ident, OpSecretGet, buildInner(t, getReq{
 		Path: "hanzo/auto", Name: "k", Env: "prod",
 	}), now, "nonce-mismatch")
-	if _, _, err := s.verifyAndAuthorize(context.Background(), raw, OpSecretList); err == nil {
+	if _, _, err := s.verifyAndAuthorize(context.Background(), raw, OpSecretList, testBind); err == nil {
 		t.Fatalf("opcode mismatch should be rejected")
 	}
 }
@@ -291,11 +304,11 @@ func TestAuthz_ReplayedEnvelope_Rejected(t *testing.T) {
 	}), now, "nonce-replay")
 
 	// First call: must accept.
-	if _, _, err := s.verifyAndAuthorize(context.Background(), raw, OpSecretGet); err != nil {
+	if _, _, err := s.verifyAndAuthorize(context.Background(), raw, OpSecretGet, testBind); err != nil {
 		t.Fatalf("first call: %v", err)
 	}
 	// Second call (same bytes): must reject with ErrEnvelopeReplay.
-	_, _, err := s.verifyAndAuthorize(context.Background(), raw, OpSecretGet)
+	_, _, err := s.verifyAndAuthorize(context.Background(), raw, OpSecretGet, testBind)
 	if !errors.Is(err, ErrEnvelopeReplay) {
 		t.Fatalf("second call err=%v want ErrEnvelopeReplay", err)
 	}
@@ -315,18 +328,18 @@ func TestAuthz_FreshNonce_AcceptedAfterReplay(t *testing.T) {
 	raw1 := signedEnvelopeBytes(t, ident, OpSecretGet, buildInner(t, getReq{
 		Path: "hanzo/auto", Name: "api-key", Env: "prod",
 	}), now, "nonce-A")
-	if _, _, err := s.verifyAndAuthorize(context.Background(), raw1, OpSecretGet); err != nil {
+	if _, _, err := s.verifyAndAuthorize(context.Background(), raw1, OpSecretGet, testBind); err != nil {
 		t.Fatalf("first call: %v", err)
 	}
 	// Same envelope replayed → rejected.
-	if _, _, err := s.verifyAndAuthorize(context.Background(), raw1, OpSecretGet); !errors.Is(err, ErrEnvelopeReplay) {
+	if _, _, err := s.verifyAndAuthorize(context.Background(), raw1, OpSecretGet, testBind); !errors.Is(err, ErrEnvelopeReplay) {
 		t.Fatalf("replay: %v", err)
 	}
 	// Same identity, fresh nonce → accepted.
 	raw2 := signedEnvelopeBytes(t, ident, OpSecretGet, buildInner(t, getReq{
 		Path: "hanzo/auto", Name: "api-key", Env: "prod",
 	}), now, "nonce-B")
-	if _, _, err := s.verifyAndAuthorize(context.Background(), raw2, OpSecretGet); err != nil {
+	if _, _, err := s.verifyAndAuthorize(context.Background(), raw2, OpSecretGet, testBind); err != nil {
 		t.Fatalf("fresh-nonce call: %v", err)
 	}
 }
@@ -357,7 +370,7 @@ func TestAuthz_TamperedRequest_Rejected(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal tampered: %v", err)
 	}
-	if _, _, err := s.verifyAndAuthorize(context.Background(), tampered, OpSecretPut); err == nil {
+	if _, _, err := s.verifyAndAuthorize(context.Background(), tampered, OpSecretPut, testBind); err == nil {
 		t.Fatalf("tampered request should be rejected")
 	}
 }
@@ -410,13 +423,13 @@ func TestEnvelope_RoundTrip(t *testing.T) {
 	defer ident.Wipe()
 	inner := buildInner(t, getReq{Path: "hanzo/auto", Name: "k", Env: "prod"})
 
-	env, err := BuildEnvelope(ident, OpSecretGet, inner, "nonce", time.Unix(1_717_200_000, 0))
+	env, err := BuildEnvelope(ident, OpSecretGet, inner, "nonce", testBind, time.Unix(1_717_200_000, 0))
 	if err != nil {
 		t.Fatalf("BuildEnvelope: %v", err)
 	}
-	verified, err := VerifyEnvelope(env, time.Unix(1_717_200_000, 0))
+	verified, err := envelope.Verify(env, time.Unix(1_717_200_000, 0), keys.VerifyServiceEnvelope, testBind)
 	if err != nil {
-		t.Fatalf("VerifyEnvelope: %v", err)
+		t.Fatalf("Verify: %v", err)
 	}
 	if verified.NodeID != ident.NodeID {
 		t.Fatalf("NodeID mismatch: got %s want %s", verified.NodeID, ident.NodeID)

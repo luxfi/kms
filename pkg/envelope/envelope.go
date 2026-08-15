@@ -21,6 +21,7 @@
 //	  "nonce": "base64(16 bytes)",             // anti-replay
 //	  "op":    64,                             // wire opcode
 //	  "req":   <raw JSON of the request>,      // unwrapped at dispatch
+//	  "bind":  "base64(32 bytes)",             // the channel it is for
 //	  "sig":   "base64(ML-DSA-65 sig)"         // over the digest below
 //	}
 //
@@ -29,14 +30,23 @@
 //	SHAKE256("lux-svc-envelope-v1" || FullDigest || canonical(env))
 //
 // where canonical(env) is the deterministic-JSON encoding of
-// {v, ts, nonce, op, req}. Tying the FullDigest into the prehash
-// prevents an attacker from swapping out the identity block while
-// keeping a valid signature on the payload.
+// {v, id, ts, nonce, op, req, bind}. Tying the FullDigest into the
+// prehash prevents an attacker from swapping out the identity block
+// while keeping a valid signature on the payload.
+//
+// Bind is the channel this envelope was made for — the binding the
+// transport derived when it agreed keys with its peer (pkg/zap). A
+// signature says who wrote a request; the binding says who it was
+// written to. Verify checks it against the channel the envelope
+// actually arrived on, so a request addressed to one peer is inert in
+// anybody else's hands: whoever relays it can neither re-sign it for
+// their own channel nor make their channel look like the one it names.
 
 package envelope
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -57,6 +67,13 @@ import (
 // Production audit logs record the verbose reason; the wire body does
 // not echo it.
 var ErrReplay = errors.New("envelope: replay-detected")
+
+// ErrChannel is returned when a validly-signed envelope names a channel
+// other than the one it arrived on. The wire surface says only that
+// much: the two bindings are secrets of their respective channels, and
+// the reply is the same whether the caller sent the wrong one, an empty
+// one, or arrived over a channel that has none.
+var ErrChannel = errors.New("envelope: wrong channel")
 
 // (package envelope is intentionally decoupled from luxfi/keys — see
 // VerifierFunc / Signer — so the kms zapclient can take a Signer
@@ -104,8 +121,13 @@ type Envelope struct {
 	Nonce   string          `json:"nonce"`
 	Op      uint16          `json:"op"`
 	Req     json.RawMessage `json:"req"`
+	Bind    []byte          `json:"bind"`
 	Sig     []byte          `json:"sig"`
 }
+
+// BindSize is the length of the channel binding, matching the
+// transport's derivation in pkg/zap.
+const BindSize = 32
 
 // Identity is the identity block carried inside an Envelope.
 type Identity struct {
@@ -166,6 +188,9 @@ func Parse(raw []byte) (*Envelope, error) {
 	if strings.TrimSpace(env.Nonce) == "" {
 		return nil, errors.New("envelope: nonce is required")
 	}
+	if len(env.Bind) != BindSize {
+		return nil, fmt.Errorf("envelope: binding length=%d, want %d", len(env.Bind), BindSize)
+	}
 	return &env, nil
 }
 
@@ -192,10 +217,19 @@ const EnvelopeDomain = "lux-svc-envelope-v1"
 //   - Identity binding: env.ID.Node MUST be the prefix of env.ID.Digest.
 //   - Signature: delegated to the verifier (which knows the
 //     keys.envelopeDigest construction).
+//   - Channel: env.Bind MUST equal bind, the binding of the channel the
+//     envelope arrived on.
+//
+// bind comes from the transport — zap.Session.Bind for the ZAP wire, the
+// TLS exporter for HTTP. It is a parameter rather than a field so that
+// there is no way to verify an envelope without saying where it came
+// from; a caller with nothing to offer supplies nothing, and every
+// envelope fails, which is the right answer for a channel that cannot
+// tell one peer from another.
 //
 // The wall-clock skew check is the only time-dependent step; tests
 // pin `now`.
-func Verify(env *Envelope, now time.Time, verifier VerifierFunc) (VerifiedIdentity, error) {
+func Verify(env *Envelope, now time.Time, verifier VerifierFunc, bind []byte) (VerifiedIdentity, error) {
 	if env == nil {
 		return VerifiedIdentity{}, errors.New("envelope: nil")
 	}
@@ -216,6 +250,13 @@ func Verify(env *Envelope, now time.Time, verifier VerifierFunc) (VerifiedIdenti
 	}
 	if err := verifier(env.ID.PubKey, full, signed, env.Sig); err != nil {
 		return VerifiedIdentity{}, fmt.Errorf("envelope: %w", err)
+	}
+
+	// The signature proves who wrote this. The binding proves they wrote
+	// it to us. Both are needed: a relay can carry a valid signature to a
+	// channel it was never meant for.
+	if subtle.ConstantTimeCompare(env.Bind, bind) != 1 {
+		return VerifiedIdentity{}, ErrChannel
 	}
 
 	var nodeID ids.NodeID
@@ -292,14 +333,17 @@ func NewVerifierWithLedger(cfg VerifierWithLedgerConfig) (*VerifierWithLedger, e
 //
 //  1. Wall-clock freshness check (|now - env.Ts| ≤ MaxClockSkew).
 //  2. ML-DSA-65 signature verification.
-//  3. NodeID prefix check (env.ID.Node ⊑ env.ID.Digest).
-//  4. Nonce ledger insert. Duplicate → ErrReplay.
+//  3. Channel check (env.Bind == bind). Mismatch → ErrChannel.
+//  4. NodeID prefix check (env.ID.Node ⊑ env.ID.Digest).
+//  5. Nonce ledger insert. Duplicate → ErrReplay.
 //
 // The ledger insert runs AFTER signature verification. An unsigned or
 // forged envelope is rejected at step 2 and therefore cannot pump the
-// ledger; only validly-signed envelopes consume nonce-space.
-func (v *VerifierWithLedger) Verify(ctx context.Context, env *Envelope, now time.Time) (VerifiedIdentity, error) {
-	ident, err := Verify(env, now, v.verify)
+// ledger; only validly-signed envelopes consume nonce-space. An envelope
+// for another channel is rejected at step 3, so a relay cannot spend the
+// nonce of the request it intercepted and the real caller can retry.
+func (v *VerifierWithLedger) Verify(ctx context.Context, env *Envelope, now time.Time, bind []byte) (VerifiedIdentity, error) {
+	ident, err := Verify(env, now, v.verify, bind)
 	if err != nil {
 		return VerifiedIdentity{}, err
 	}
@@ -361,6 +405,7 @@ func canonicalBytes(env *Envelope) ([]byte, error) {
 		Nonce   string          `json:"nonce"`
 		Op      uint16          `json:"op"`
 		Req     json.RawMessage `json:"req"`
+		Bind    []byte          `json:"bind"`
 	}{
 		Version: env.Version,
 		ID:      env.ID,
@@ -368,6 +413,7 @@ func canonicalBytes(env *Envelope) ([]byte, error) {
 		Nonce:   env.Nonce,
 		Op:      env.Op,
 		Req:     env.Req,
+		Bind:    env.Bind,
 	}
 	return json.Marshal(c)
 }
@@ -385,8 +431,13 @@ func canonicalBytes(env *Envelope) ([]byte, error) {
 //     of MaxClockSkew + 1m and rejects duplicates — callers MUST use a
 //     fresh nonce per envelope. Reusing a nonce within the window
 //     produces ErrReplay at the verifier.
+//   - bind:   the binding of the channel this envelope will travel on
+//     (zap.Session.Bind). Signed along with the rest, and checked by the
+//     peer against its own side of that channel. Required: an envelope
+//     addressed to nobody in particular is one anybody may collect, so
+//     there is no way to build one.
 //   - now:    wall-clock at signing time.
-func Build(hdr IdentityHeader, signer Signer, op uint16, req json.RawMessage, nonce string, now time.Time) (*Envelope, error) {
+func Build(hdr IdentityHeader, signer Signer, op uint16, req json.RawMessage, nonce string, bind []byte, now time.Time) (*Envelope, error) {
 	if signer == nil {
 		return nil, errors.New("envelope: signer is nil")
 	}
@@ -395,6 +446,9 @@ func Build(hdr IdentityHeader, signer Signer, op uint16, req json.RawMessage, no
 	}
 	if len(hdr.PublicKey) == 0 {
 		return nil, errors.New("envelope: identity header is empty")
+	}
+	if len(bind) != BindSize {
+		return nil, fmt.Errorf("envelope: binding must be %d bytes, got %d", BindSize, len(bind))
 	}
 	env := &Envelope{
 		Version: Version,
@@ -409,6 +463,7 @@ func Build(hdr IdentityHeader, signer Signer, op uint16, req json.RawMessage, no
 		Nonce: nonce,
 		Op:    op,
 		Req:   req,
+		Bind:  bind,
 	}
 	signed, err := canonicalBytes(env)
 	if err != nil {
