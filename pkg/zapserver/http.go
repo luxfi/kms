@@ -26,6 +26,14 @@
 //	OpSecretDelete 0x0043  write  (operator authority)   { path, name, env }
 //	OpSign         0x0050  write  (operator authority)   { validator_id, key_type, message }
 //	OpVerify       0x0051  read   (validator authority)  { validator_id, key_type, message, signature }
+//
+// Like the ZAP wire, this transport supplies the binding of the channel
+// the request arrived on, and the core honours an envelope only on the
+// channel it names. Here that binding is the TLS exporter (RFC 5705).
+// A caller reaching this endpoint over plaintext, or through anything
+// that terminates TLS on its behalf, is on a different channel than the
+// one it agreed keys on, and its envelopes are refused — which is the
+// same answer the ZAP wire gives, for the same reason.
 
 package zapserver
 
@@ -34,7 +42,27 @@ import (
 	"errors"
 	"io"
 	"net/http"
+
+	"github.com/luxfi/kms/pkg/envelope"
 )
+
+// bindLabel is the RFC 5705 exporter label this surface derives its
+// channel binding under.
+const bindLabel = "EXPORTER-kms-bind"
+
+// channel returns the binding of the connection r arrived on. A
+// connection with no keys of its own has no binding, and nil is the
+// honest answer: it names no channel, so it can carry no envelope.
+func channel(r *http.Request) []byte {
+	if r.TLS == nil {
+		return nil
+	}
+	bind, err := r.TLS.ExportKeyingMaterial(bindLabel, nil, envelope.BindSize)
+	if err != nil {
+		return nil
+	}
+	return bind
+}
 
 // MaxEnvelopeBytes caps the /v1/sdk request body. A Put envelope carries
 // a base64 secret value; 4 MiB is generous for certs / key bundles while
@@ -81,7 +109,7 @@ func (s *Server) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	// collapses to 403. Replay is deliberately vague ("forbidden") so an
 	// off-network attacker cannot probe the nonce ledger via status; the
 	// other reasons carry no secret and match the ZAP wire behaviour.
-	ident, inner, err := s.verifyAndAuthorize(r.Context(), raw, env.Op)
+	ident, inner, err := s.verifyAndAuthorize(r.Context(), raw, env.Op, channel(r))
 	if err != nil {
 		httpJSON(w, http.StatusForbidden, forbidReason(err))
 		return

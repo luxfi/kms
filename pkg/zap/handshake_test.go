@@ -50,11 +50,11 @@ func TestHandshake_HybridRoundTrip(t *testing.T) {
 	}
 
 	// Build sessions on both sides and round-trip a payload each way.
-	cSess, err := NewSession(cResult.SessionKey, cResult.Hybrid)
+	cSess, err := NewSession(cResult)
 	if err != nil {
 		t.Fatalf("client NewSession: %v", err)
 	}
-	sSess, err := NewSession(sResult.SessionKey, sResult.Hybrid)
+	sSess, err := NewSession(sResult)
 	if err != nil {
 		t.Fatalf("server NewSession: %v", err)
 	}
@@ -134,8 +134,8 @@ func TestHandshake_FallbackClassicalOnly(t *testing.T) {
 		t.Fatalf("classical-only session key mismatch")
 	}
 
-	cSess, _ := NewSession(cResult.SessionKey, cResult.Hybrid)
-	sSess, _ := NewSession(sResult.SessionKey, sResult.Hybrid)
+	cSess, _ := NewSession(cResult)
+	sSess, _ := NewSession(sResult)
 	plain := []byte("classical-only-payload")
 	sealed, _ := cSess.Seal(DirClientToServer, plain)
 	got, err := sSess.Open(DirClientToServer, sealed)
@@ -178,8 +178,8 @@ func TestHandshake_ReplayDefense(t *testing.T) {
 	}
 
 	// Capture an application frame sealed under run #1's session.
-	sess1Server, _ := NewSession(server1Result.SessionKey, server1Result.Hybrid)
-	sess1Client, _ := NewSession(client1Result.SessionKey, client1Result.Hybrid)
+	sess1Server, _ := NewSession(server1Result)
+	sess1Client, _ := NewSession(client1Result)
 	captured, err := sess1Server.Seal(DirServerToClient, []byte("highly-sensitive-payload"))
 	if err != nil {
 		t.Fatalf("seal captured frame: %v", err)
@@ -206,7 +206,7 @@ func TestHandshake_ReplayDefense(t *testing.T) {
 
 	// Attacker now holds reply2 and tries to open the captured frame
 	// under the replayed session. This must fail.
-	sess2Attacker, err := NewSession(server2Result.SessionKey, server2Result.Hybrid)
+	sess2Attacker, err := NewSession(server2Result)
 	if err != nil {
 		t.Fatalf("attacker NewSession: %v", err)
 	}
@@ -243,7 +243,7 @@ func TestSession_NonceDirectionality(t *testing.T) {
 		t.Fatalf("ClientFinish: %v", err)
 	}
 
-	sess, _ := NewSession(sRes.SessionKey, sRes.Hybrid)
+	sess, _ := NewSession(sRes)
 	sealedS2C, err := sess.Seal(DirServerToClient, []byte("server-emitted"))
 	if err != nil {
 		t.Fatalf("Seal: %v", err)
@@ -261,8 +261,8 @@ func TestSession_TamperRejection(t *testing.T) {
 	reply, sRes, _ := ServerRespond(CapMLKEM768, hello)
 	cRes, _ := cs.ClientFinish(reply)
 
-	cSess, _ := NewSession(cRes.SessionKey, cRes.Hybrid)
-	sSess, _ := NewSession(sRes.SessionKey, sRes.Hybrid)
+	cSess, _ := NewSession(cRes)
+	sSess, _ := NewSession(sRes)
 	sealed, _ := cSess.Seal(DirClientToServer, []byte("integrity-test"))
 	// Flip one bit in the middle of the ciphertext.
 	tampered := make([]byte, len(sealed))
@@ -270,5 +270,75 @@ func TestSession_TamperRejection(t *testing.T) {
 	tampered[len(tampered)/2] ^= 0x01
 	if _, err := sSess.Open(DirClientToServer, tampered); err == nil {
 		t.Fatalf("Open accepted tampered ciphertext")
+	}
+}
+
+// A session carries the binding derived alongside its key. There is no
+// constructor that takes one without the other, so a session whose name
+// belongs to a different exchange cannot be made by accident.
+func TestASessionCannotBeMadeWithoutABinding(t *testing.T) {
+	_, hello, err := NewClient(CapMLKEM768)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, result, err := ServerRespond(CapMLKEM768, hello)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Bind) != BindSize {
+		t.Fatalf("handshake produced a %d-byte binding, want %d", len(result.Bind), BindSize)
+	}
+	for _, c := range []struct {
+		name string
+		bind []byte
+	}{
+		{"absent", nil},
+		{"empty", []byte{}},
+		{"short", result.Bind[:BindSize-1]},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if _, err := NewSession(&HandshakeResult{SessionKey: result.SessionKey, Bind: c.bind}); err == nil {
+				t.Error("made a session with no usable binding")
+			}
+		})
+	}
+	if _, err := NewSession(nil); err == nil {
+		t.Error("made a session out of nothing")
+	}
+}
+
+// The binding is not the session key, and neither is derivable from the
+// other by looking at it.
+func TestTheBindingIsNotTheSessionKey(t *testing.T) {
+	_, hello, err := NewClient(CapMLKEM768)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, result, err := ServerRespond(CapMLKEM768, hello)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Equal(result.SessionKey, result.Bind) {
+		t.Fatal("the session key and the binding are the same bytes")
+	}
+}
+
+// Two handshakes name two different channels. Everything downstream
+// rests on this.
+func TestTwoHandshakesNameDifferentChannels(t *testing.T) {
+	binds := map[string]bool{}
+	for i := 0; i < 8; i++ {
+		_, hello, err := NewClient(CapMLKEM768)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, result, err := ServerRespond(CapMLKEM768, hello)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if binds[string(result.Bind)] {
+			t.Fatal("two handshakes produced the same binding")
+		}
+		binds[string(result.Bind)] = true
 	}
 }

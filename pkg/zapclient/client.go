@@ -65,19 +65,14 @@ type Client struct {
 	defaultPath string
 	log         *slog.Logger
 
-	// Hybrid handshake session. Populated by handshake() after Dial.
-	// nil means handshake skipped (peer didn't speak the new opcode set
-	// or LocalCaps disabled the bit) — request bodies remain plaintext.
+	// Hybrid handshake session, established by Dial before the client is
+	// handed back. Never nil on a returned client: the dial fails rather
+	// than yield one, because every call signs this session's binding and
+	// there is nothing to sign without it.
 	session *kmszap.Session
 	// sessionHybrid records whether the established session ran ML-KEM-768
-	// (true) or fell back to classical X25519-only (false). Consulted by the
-	// RequireSession downgrade guard.
+	// (true) or fell back to classical X25519-only (false).
 	sessionHybrid bool
-	// requireSession, when set, makes the client FAIL CLOSED rather than
-	// transmit or accept any secret over a plaintext (no-session) channel.
-	// Set by callers routing high-value secrets — the staking identity and
-	// the root deploy mnemonic. See Config.RequireSession.
-	requireSession bool
 	// Capability bitmap the client offers in ClientHello. Defaults to
 	// CapMLKEM768 in DialWithConfig; set to 0 in Config.LocalCaps to
 	// force a classical-only path for testing the fallback.
@@ -115,34 +110,6 @@ type Config struct {
 	// CapsExplicit, when true, means LocalCaps was set deliberately and
 	// the zero-value default should not be applied. Use to send caps=0.
 	CapsExplicit bool
-	// SkipHandshake disables the application-layer hybrid handshake
-	// entirely. Reserved for talking to legacy peers that don't speak
-	// OpClientHello. The connection then falls back to plaintext payloads.
-	SkipHandshake bool
-
-	// RequireSession makes the dial FAIL CLOSED unless an AEAD session is
-	// established by the hybrid handshake. It is the defense against the
-	// plaintext-downgrade attack: an on-path adversary who drops or rejects
-	// the ClientHello would otherwise force session=nil and the client would
-	// send the request — and ACCEPT the response — in unauthenticated
-	// plaintext, letting the adversary forge the reply (a valid-BIP39
-	// mnemonic, or a staking-identity blob with a recomputed checksum). With
-	// RequireSession set:
-	//   - DialWithConfig errors (does not proceed) when the handshake is
-	//     skipped/fails and no session results;
-	//   - a classical-only negotiated session is refused when this client
-	//     offered ML-KEM-768 (post-quantum-downgrade guard);
-	//   - call() refuses any secret opcode while session==nil, so the
-	//     response is ALWAYS AEAD-opened, never read as plaintext.
-	// NOTE: the hybrid handshake is unauthenticated ephemeral key agreement;
-	// RequireSession closes the plaintext downgrade and forces an AEAD
-	// channel, but it does NOT by itself authenticate the server. Full MITM
-	// resistance additionally requires the server to sign the ServerHello /
-	// transcript with a pinned static identity — a bilateral protocol change
-	// tracked separately. Callers must still trust the peer address (K8s
-	// NetworkPolicy / in-cluster boundary) for server authenticity today.
-	RequireSession bool
-
 	// IdentityHeader is the public block embedded in every envelope.
 	// Required for the secret-opcode surface; absent → the wire path
 	// fails fast at first request. Build it via
@@ -196,7 +163,6 @@ func DialWithConfig(ctx context.Context, cfg Config) (*Client, error) {
 		localCaps:      caps,
 		identityHeader: cfg.IdentityHeader,
 		signer:         cfg.Signer,
-		requireSession: cfg.RequireSession,
 	}
 
 	if cfg.PeerAddr != "" {
@@ -236,49 +202,27 @@ func DialWithConfig(ctx context.Context, cfg Config) (*Client, error) {
 
 	// Application-layer hybrid handshake. Per LP-022, every ZAP
 	// connection runs an X25519 + ML-KEM-768 hybrid key agreement
-	// before any secret opcode flows. A peer that doesn't speak
-	// OpClientHello returns a ZAP error and we fall back to plaintext.
-	var hsErr error
-	if !cfg.SkipHandshake {
-		if err := c.handshake(ctx); err != nil {
-			hsErr = err
-			c.log.Warn("zapclient: handshake skipped — proceeding plaintext",
-				"peer", c.peerID, "err", err)
-			// Forward-compat: don't tear down the client; some legacy
-			// peers may not speak OpClientHello yet. The connection still
-			// works for opcodes that don't expect AEAD-sealed bodies.
-			c.session = nil
-		}
+	// before any secret opcode flows. It is the only way to obtain the
+	// binding each call signs, so a dial that cannot complete it has
+	// nothing to return.
+	if err := c.handshake(ctx); err != nil {
+		n.Stop()
+		return nil, fmt.Errorf("zapclient: handshake: %w", err)
 	}
-
-	// Fail-closed session requirement. Callers routing high-value secrets
-	// (staking identity, root deploy mnemonic) set RequireSession so the
-	// plaintext-downgrade path — forced by an on-path attacker dropping or
-	// rejecting the handshake, or a SkipHandshake misconfiguration — is
-	// refused here rather than silently sending/accepting unauthenticated
-	// plaintext downstream.
-	if c.requireSession {
-		switch {
-		case c.session == nil:
-			n.Stop()
-			if hsErr != nil {
-				return nil, fmt.Errorf("zapclient: secure session required but handshake failed: %w", hsErr)
-			}
-			return nil, errors.New("zapclient: secure session required but none established (handshake skipped or peer does not speak OpClientHello)")
-		case (c.localCaps&kmszap.CapMLKEM768 != 0) && !c.sessionHybrid:
-			// We offered ML-KEM-768 but the peer negotiated classical-only.
-			// For a post-quantum staking secret this is a downgrade — refuse.
-			n.Stop()
-			return nil, errors.New("zapclient: hybrid PQ session required but peer negotiated classical-only (ML-KEM-768 downgrade refused)")
-		}
+	// We offered ML-KEM-768 and the peer answered classical-only. That is
+	// a downgrade, and the secrets on this wire are meant to outlive
+	// classical cryptography.
+	if (c.localCaps&kmszap.CapMLKEM768 != 0) && !c.sessionHybrid {
+		n.Stop()
+		return nil, errors.New("zapclient: peer negotiated classical-only (ML-KEM-768 downgrade refused)")
 	}
 	return c, nil
 }
 
 // handshake runs the client side of the hybrid PQ handshake against the
 // resolved peer and stores the derived session on the client. A non-nil
-// error means the peer rejected or could not complete; the caller may
-// log and proceed in classical-only/plaintext mode.
+// error means the peer rejected or could not complete, and the dial
+// fails with it.
 func (c *Client) handshake(ctx context.Context) error {
 	state, helloWire, err := kmszap.NewClient(c.localCaps)
 	if err != nil {
@@ -315,7 +259,7 @@ func (c *Client) handshake(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("zapclient: ClientFinish: %w", err)
 	}
-	sess, err := kmszap.NewSession(result.SessionKey, result.Hybrid)
+	sess, err := kmszap.NewSession(result)
 	if err != nil {
 		return fmt.Errorf("zapclient: session init: %w", err)
 	}
@@ -416,22 +360,17 @@ func (c *Client) DeleteAt(ctx context.Context, path, name, env string) error {
 //
 // Wire format on both directions: opcode(2 LE) || envelope-json for
 // the request, status(1 byte) || json for the response, all packed in
-// a ZAP Message via the Builder. When the client has a hybrid session,
-// the envelope is sealed before the opcode prefix is added and the
-// response payload is opened on receipt.
+// a ZAP Message via the Builder. The envelope is sealed under the
+// session before the opcode prefix is added, and the response payload
+// is opened on receipt.
 //
-// Envelope construction binds the request body, opcode, timestamp,
-// and a fresh per-call nonce into an ML-DSA-65 signature the server
-// verifies before authorization runs. Without an identity wired in
-// Config the wire path fails fast.
+// Envelope construction covers the request body, opcode, timestamp, a
+// fresh per-call nonce, and this session's binding with one ML-DSA-65
+// signature the server verifies before authorization runs. Without an
+// identity wired in Config the wire path fails fast.
 func (c *Client) call(ctx context.Context, op uint16, body []byte) ([]byte, error) {
-	// Fail-closed backstop: never transmit or accept a secret opcode over a
-	// plaintext channel when a secure session was required. DialWithConfig
-	// already refuses to return a sessionless client under RequireSession;
-	// this guarantees it at the call site too, so the response below is always
-	// AEAD-opened (never read as attacker-forgeable plaintext).
-	if c.requireSession && c.session == nil {
-		return nil, errors.New("zapclient: secure session required but not established (refusing to transmit secret in plaintext)")
+	if c.session == nil {
+		return nil, errors.New("zapclient: no session")
 	}
 	if c.signer == nil || len(c.identityHeader.PublicKey) == 0 {
 		return nil, errors.New("zapclient: no identity wired (Config.IdentityHeader + Signer)")
@@ -441,7 +380,10 @@ func (c *Client) call(ctx context.Context, op uint16, body []byte) ([]byte, erro
 		return nil, fmt.Errorf("zapclient: nonce: %w", err)
 	}
 	nonce := base64.StdEncoding.EncodeToString(nonceBytes)
-	env, err := envelope.Build(c.identityHeader, c.signer, op, body, nonce, time.Now())
+	// The envelope names the session it is about to go out on. The peer
+	// honours it only on that session, so relaying it elsewhere buys the
+	// relay nothing but a refusal.
+	env, err := envelope.Build(c.identityHeader, c.signer, op, body, nonce, c.session.Bind(), time.Now())
 	if err != nil {
 		return nil, fmt.Errorf("zapclient: envelope: %w", err)
 	}
@@ -449,13 +391,9 @@ func (c *Client) call(ctx context.Context, op uint16, body []byte) ([]byte, erro
 	if err != nil {
 		return nil, fmt.Errorf("zapclient: marshal envelope: %w", err)
 	}
-	wireBody := envBytes
-	if c.session != nil {
-		sealed, err := c.session.Seal(kmszap.DirClientToServer, envBytes)
-		if err != nil {
-			return nil, fmt.Errorf("zapclient: seal: %w", err)
-		}
-		wireBody = sealed
+	wireBody, err := c.session.Seal(kmszap.DirClientToServer, envBytes)
+	if err != nil {
+		return nil, fmt.Errorf("zapclient: seal: %w", err)
 	}
 	// Request: opcode in flags field (handler dispatch) + body in payload.
 	// Body still carries the op prefix for the universal handler fallback.
@@ -487,12 +425,9 @@ func (c *Client) call(ctx context.Context, op uint16, body []byte) ([]byte, erro
 		return nil, io.ErrUnexpectedEOF
 	}
 	status, payload := raw[0], raw[1:]
-	if c.session != nil {
-		pt, err := c.session.Open(kmszap.DirServerToClient, payload)
-		if err != nil {
-			return nil, fmt.Errorf("zapclient: open: %w", err)
-		}
-		payload = pt
+	payload, err = c.session.Open(kmszap.DirServerToClient, payload)
+	if err != nil {
+		return nil, fmt.Errorf("zapclient: open: %w", err)
 	}
 	switch status {
 	case statusOK:
