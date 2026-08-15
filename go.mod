@@ -39,7 +39,7 @@ require (
 	github.com/luxfi/cache v1.3.1 // indirect
 	github.com/luxfi/constants v1.6.2 // indirect
 	github.com/luxfi/container v0.2.1 // indirect
-	github.com/luxfi/crypto v1.20.2 // indirect
+	github.com/luxfi/crypto v1.20.5 // indirect
 	github.com/luxfi/formatting v1.1.1 // indirect
 	github.com/luxfi/geth v1.20.1 // indirect
 	github.com/luxfi/go-bip32 v1.1.0 // indirect

@@ -167,7 +167,7 @@ github.com/luxfi/constants
 # github.com/luxfi/container v0.2.1
 ## explicit; go 1.26.4
 github.com/luxfi/container
-# github.com/luxfi/crypto v1.20.2
+# github.com/luxfi/crypto v1.20.5
 ## explicit; go 1.26.4
 github.com/luxfi/crypto
 github.com/luxfi/crypto/backend
