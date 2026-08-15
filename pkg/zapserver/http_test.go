@@ -14,8 +14,15 @@ package zapserver
 import (
 	"bytes"
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
+	"math/big"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -25,6 +32,7 @@ import (
 
 	"github.com/luxfi/ids"
 	"github.com/luxfi/keys"
+	"github.com/luxfi/kms/pkg/envelope"
 	"github.com/luxfi/kms/pkg/store"
 	"github.com/luxfi/log"
 	badger "github.com/luxfi/zapdb"
@@ -107,12 +115,75 @@ func newHTTPServer(t *testing.T, validators, operators []ids.NodeID, signer Sign
 	return srv, srv.HTTPHandler()
 }
 
-// do issues a signed-envelope POST to /v1/sdk/secrets and returns the
-// recorder.
+// tlsChannel runs a real TLS handshake over an in-memory pipe and hands
+// back the server's view of it. Both ends of that handshake are the
+// test, so the exporter it yields is the same value a real client on the
+// far end would compute — which is what lets these tests address an
+// envelope to the connection they are about to send it on.
+func tlsChannel(t *testing.T) *tls.ConnectionState {
+	t.Helper()
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("gen key: %v", err)
+	}
+	tmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: "kms-test"},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
+		DNSNames:     []string{"kms-test"},
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, pub, priv)
+	if err != nil {
+		t.Fatalf("cert: %v", err)
+	}
+	cert := tls.Certificate{Certificate: [][]byte{der}, PrivateKey: priv}
+
+	cliPipe, srvPipe := net.Pipe()
+	t.Cleanup(func() { cliPipe.Close(); srvPipe.Close() })
+	srvConn := tls.Server(srvPipe, &tls.Config{Certificates: []tls.Certificate{cert}})
+	cliConn := tls.Client(cliPipe, &tls.Config{InsecureSkipVerify: true, ServerName: "kms-test"})
+
+	done := make(chan error, 1)
+	go func() { done <- srvConn.Handshake() }()
+	if err := cliConn.Handshake(); err != nil {
+		t.Fatalf("client handshake: %v", err)
+	}
+	if err := <-done; err != nil {
+		t.Fatalf("server handshake: %v", err)
+	}
+	state := srvConn.ConnectionState()
+	return &state
+}
+
+// bindOf is the binding the KMS derives for a connection — the same one
+// the caller must name in its envelope.
+func bindOf(t *testing.T, state *tls.ConnectionState) []byte {
+	t.Helper()
+	b, err := state.ExportKeyingMaterial(bindLabel, nil, envelope.BindSize)
+	if err != nil {
+		t.Fatalf("exporter: %v", err)
+	}
+	return b
+}
+
+// do issues a signed-envelope POST to /v1/sdk/secrets over a TLS
+// connection, with the envelope addressed to that connection, and
+// returns the recorder.
 func do(t *testing.T, h http.Handler, ident *keys.ServiceIdentity, op uint16, inner any, nonce string, now time.Time) *httptest.ResponseRecorder {
 	t.Helper()
-	raw := signedEnvelopeBytes(t, ident, op, buildInner(t, inner), now, nonce)
+	state := tlsChannel(t)
+	raw := envelopeFor(t, ident, op, buildInner(t, inner), now, nonce, bindOf(t, state))
+	return send(t, h, raw, state)
+}
+
+// send posts already-built envelope bytes over the given connection.
+// Tests that send twice reuse one connection, which is what a replay
+// actually looks like.
+func send(t *testing.T, h http.Handler, raw []byte, state *tls.ConnectionState) *httptest.ResponseRecorder {
+	t.Helper()
 	req := httptest.NewRequest(http.MethodPost, "/v1/sdk/secrets", bytes.NewReader(raw))
+	req.TLS = state
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	return rec
@@ -249,15 +320,14 @@ func TestHTTP_Replay_403(t *testing.T) {
 	srv, h := newHTTPServer(t, []ids.NodeID{ident.NodeID}, nil, nil)
 	seedHTTP(t, srv, "hanzo/auto", "api-key", "prod", "v")
 
-	raw := signedEnvelopeBytes(t, ident, OpSecretGet, buildInner(t, getReq{Path: "hanzo/auto", Name: "api-key", Env: "prod"}), httpTestClock, "replay-nonce")
+	state := tlsChannel(t)
+	raw := envelopeFor(t, ident, OpSecretGet, buildInner(t, getReq{Path: "hanzo/auto", Name: "api-key", Env: "prod"}), httpTestClock, "replay-nonce", bindOf(t, state))
 
-	first := httptest.NewRecorder()
-	h.ServeHTTP(first, httptest.NewRequest(http.MethodPost, "/v1/sdk/secrets", bytes.NewReader(raw)))
+	first := send(t, h, raw, state)
 	if first.Code != http.StatusOK {
 		t.Fatalf("first code=%d body=%s", first.Code, first.Body.String())
 	}
-	second := httptest.NewRecorder()
-	h.ServeHTTP(second, httptest.NewRequest(http.MethodPost, "/v1/sdk/secrets", bytes.NewReader(raw)))
+	second := send(t, h, raw, state)
 	if second.Code != http.StatusForbidden {
 		t.Fatalf("replay code=%d want 403", second.Code)
 	}
@@ -390,17 +460,16 @@ func TestHTTP_Sign_Replay_403(t *testing.T) {
 	rec := &recorderSigner{}
 	_, h := newHTTPServer(t, []ids.NodeID{op.NodeID}, []ids.NodeID{op.NodeID}, rec)
 
-	raw := signedEnvelopeBytes(t, op, OpSign, buildInner(t, signReq{
+	state := tlsChannel(t)
+	raw := envelopeFor(t, op, OpSign, buildInner(t, signReq{
 		ValidatorID: "val-1", KeyType: "corona", Message: base64.StdEncoding.EncodeToString([]byte("m")),
-	}), httpTestClock, "sign-replay")
+	}), httpTestClock, "sign-replay", bindOf(t, state))
 
-	r1 := httptest.NewRecorder()
-	h.ServeHTTP(r1, httptest.NewRequest(http.MethodPost, "/v1/sdk/secrets", bytes.NewReader(raw)))
+	r1 := send(t, h, raw, state)
 	if r1.Code != http.StatusOK {
 		t.Fatalf("first sign code=%d", r1.Code)
 	}
-	r2 := httptest.NewRecorder()
-	h.ServeHTTP(r2, httptest.NewRequest(http.MethodPost, "/v1/sdk/secrets", bytes.NewReader(raw)))
+	r2 := send(t, h, raw, state)
 	if r2.Code != http.StatusForbidden {
 		t.Fatalf("replayed sign code=%d want 403", r2.Code)
 	}
@@ -466,5 +535,55 @@ func TestHTTP_Verify_NonValidator_403(t *testing.T) {
 	}
 	if len(rec.verifyCalls) != 0 {
 		t.Fatalf("backend verify reached on forbidden request")
+	}
+}
+
+// An envelope that reaches this surface over a connection with no keys
+// of its own is refused. Without that, the HTTP door would launder any
+// envelope an on-path attacker lifted off the ZAP wire: it would arrive
+// signed, fresh, unreplayed, and addressed to somewhere else entirely.
+func TestHTTPWithoutAChannelIsRefused(t *testing.T) {
+	ident := newIdentity(t, "hanzo/auto")
+	defer ident.Wipe()
+	srv, h := newHTTPServer(t, []ids.NodeID{ident.NodeID}, nil, nil)
+	seedHTTP(t, srv, "hanzo/auto", "api-key", "prod", "the-secret")
+
+	state := tlsChannel(t)
+	raw := envelopeFor(t, ident, OpSecretGet,
+		buildInner(t, getReq{Path: "hanzo/auto", Name: "api-key", Env: "prod"}),
+		httpTestClock, "no-channel", bindOf(t, state))
+
+	// Same bytes, presented on nothing.
+	rec := send(t, h, raw, nil)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("code=%d want 403 body=%s", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), "the-secret") {
+		t.Fatalf("the secret came back: %s", rec.Body.String())
+	}
+}
+
+// The same, one step subtler: a real TLS connection, but not the one the
+// envelope was written for.
+func TestHTTPOnAnotherChannelIsRefused(t *testing.T) {
+	ident := newIdentity(t, "hanzo/auto")
+	defer ident.Wipe()
+	srv, h := newHTTPServer(t, []ids.NodeID{ident.NodeID}, nil, nil)
+	seedHTTP(t, srv, "hanzo/auto", "api-key", "prod", "the-secret")
+
+	mine, theirs := tlsChannel(t), tlsChannel(t)
+	if bytes.Equal(bindOf(t, mine), bindOf(t, theirs)) {
+		t.Fatal("two TLS connections produced the same binding")
+	}
+	raw := envelopeFor(t, ident, OpSecretGet,
+		buildInner(t, getReq{Path: "hanzo/auto", Name: "api-key", Env: "prod"}),
+		httpTestClock, "other-channel", bindOf(t, mine))
+
+	rec := send(t, h, raw, theirs)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("code=%d want 403 body=%s", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), "the-secret") {
+		t.Fatalf("the secret came back: %s", rec.Body.String())
 	}
 }

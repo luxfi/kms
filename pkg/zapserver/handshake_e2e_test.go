@@ -203,38 +203,39 @@ func TestHandshakeE2E_FallbackClassicalOnly(t *testing.T) {
 	}
 }
 
-// TestHandshakeE2E_NoSession_LegacyClient documents the forward-compat
-// path: a client built with SkipHandshake=true talks to the server
-// without ever running OpClientHello. Bodies flow plaintext on both
-// sides; the server's wrap path detects no session for that peer and
-// skips Open/Seal. This is the bridge for in-place rolling upgrades.
-func TestHandshakeE2E_NoSession_LegacyClient(t *testing.T) {
-	addr, _ := bootServer(t)
+// A peer that will not agree keys cannot be talked to at all. There is
+// no plaintext path to fall back to, so the dial fails and no client is
+// returned — nothing exists that could have carried a secret in the
+// clear. Here the peer is a bare ZAP node with no KMS server on it, so
+// nothing answers OpClientHello.
+func TestHandshakeE2E_PeerThatAgreesNoKeysIsRefused(t *testing.T) {
+	port := freePort(t)
+	bare := zap.NewNode(zap.NodeConfig{
+		NodeID:      "bare-" + strconv.Itoa(port),
+		ServiceType: "_kms._tcp",
+		Port:        port,
+		NoDiscovery: true,
+	})
+	if err := bare.Start(); err != nil {
+		t.Fatalf("zap.Node start: %v", err)
+	}
+	t.Cleanup(func() { bare.Stop() })
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	ident, hdr := newE2EIdentity(t, "ats/test-service-legacy")
+	ident, hdr := newE2EIdentity(t, "ats/test-service-bare")
 	defer ident.Wipe()
 	c, err := zapclient.DialWithConfig(ctx, zapclient.Config{
-		NodeID:         "test-client-legacy",
-		PeerAddr:       addr,
+		NodeID:         "test-client-bare",
+		PeerAddr:       "127.0.0.1:" + strconv.Itoa(port),
 		DefaultPath:    "ats",
-		SkipHandshake:  true,
 		IdentityHeader: hdr,
 		Signer:         ident,
 	})
-	if err != nil {
-		t.Fatalf("Dial (legacy): %v", err)
-	}
-	defer c.Close()
-
-	value, err := c.Get(ctx, "settlement-key", "dev")
-	if err != nil {
-		t.Fatalf("Get (legacy plaintext): %v", err)
-	}
-	if value != "hunter2" {
-		t.Fatalf("Get value mismatch: got %q want %q", value, "hunter2")
+	if err == nil {
+		c.Close()
+		t.Fatal("dialled a peer that agreed no keys")
 	}
 }
 
