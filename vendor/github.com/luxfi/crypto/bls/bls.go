@@ -172,8 +172,30 @@ func PublicKeyFromCompressedBytes(pkBytes []byte) (*PublicKey, error) {
 	return &PublicKey{pk: pk}, nil
 }
 
+// PublicKeyToUncompressedBytes returns the UNCOMPRESSED (x‖y) G1 encoding — 2*PublicKeyLen
+// bytes. It used to return PublicKeyToCompressedBytes(key), i.e. PublicKeyLen bytes: a
+// function that contradicted its own name, and silently, because both results parse (circl's
+// G1.SetBytes reads the compression bit and accepts either width).
+//
+// A validator set registered with uncompressed keys is exactly the Hanzo 36963 halt: the
+// verifier could not parse a registered key, so no vote counted and the chain sat at one
+// height while every other signal looked healthy. The parse side is fixed; a serializer that
+// silently narrows would re-open it from the other end, in whichever build is compiled
+// WITHOUT cgo — this file — while the cgo build returned the correct 96 bytes. Two builds
+// disagreeing on a wire encoding is the worst shape for this bug to have.
+//
+// circl's bls.PublicKey only marshals compressed (MarshalBinary → BytesCompressed), so go
+// through the G1 element itself, which exposes both widths.
 func PublicKeyToUncompressedBytes(key *PublicKey) []byte {
-	return PublicKeyToCompressedBytes(key)
+	compressed := PublicKeyToCompressedBytes(key)
+	if len(compressed) == 0 {
+		return nil
+	}
+	var g bls12381.G1
+	if err := g.SetBytes(compressed); err != nil {
+		return nil
+	}
+	return g.Bytes()
 }
 
 func PublicKeyFromValidUncompressedBytes(pkBytes []byte) *PublicKey {
