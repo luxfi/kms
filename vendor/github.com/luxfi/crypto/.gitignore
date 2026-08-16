@@ -33,3 +33,4 @@ target/
 test-results/
 tmp/
 *.eco
+*.test
