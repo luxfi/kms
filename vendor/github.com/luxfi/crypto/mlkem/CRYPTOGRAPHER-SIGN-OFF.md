@@ -112,9 +112,14 @@ wrappers around libjade's already-verified ML-KEM-768 kernel.
   wire-format byte-equality theorem
   (`wire_format_byte_equal` is structurally axiomatized but the
   body says `ct.toNat >= 0`, a placeholder). The empirical
-  realization is the NIST KAT vector check at
-  `~/work/lux/crypto/mlkem/kat_test.go`, which passes 100% on the
-  NIST PQ Round-3 mlkem768 KAT files. A follow-up pass would
+  realization is the determinism check at `mlkem/kat_test.go`. Note
+  what it does and does not establish: its vectors are GENERATED FROM
+  cloudflare/circl, not loaded from NIST, and no NIST KAT file exists
+  in this repository. It therefore pins that our wrapper stays
+  byte-identical to circl; conformance to FIPS 203 is inherited from
+  circl's own ACVP validation and is not re-established here. An
+  earlier revision of this document claimed these were NIST Round-3
+  vectors, which they are not. A follow-up pass would
   tighten the Lean side to import the KAT byte-arrays as
   ground-truth literals; the EC side already states the
   byte-equality theorem correctly.
