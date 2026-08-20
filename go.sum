@@ -4,6 +4,8 @@ codeberg.org/go-fonts/liberation v0.5.0/go.mod h1:zS/2e1354/mJ4pGzIIaEtm/59VFCFn
 codeberg.org/go-latex/latex v0.1.0/go.mod h1:LA0q/AyWIYrqVd+A9Upkgsb+IqPcmSTKc9Dny04MHMw=
 codeberg.org/go-pdf/fpdf v0.10.0/go.mod h1:Y0DGRAdZ0OmnZPvjbMp/1bYxmIPxm0ws4tfoPOc4LjU=
 connectrpc.com/connect v1.19.1/go.mod h1:tN20fjdGlewnSFeZxLKb0xwIZ6ozc3OQs2hTXy4du9w=
+filippo.io/age v1.3.1 h1:hbzdQOJkuaMEpRCLSN1/C5DX74RPcNCk6oqhKMXmZi0=
+filippo.io/age v1.3.1/go.mod h1:EZorDTYUxt836i3zdori5IJX/v2Lj6kWFU0cfh6C0D4=
 filippo.io/edwards25519 v1.2.0/go.mod h1:xzAOLCNug/yB62zG1bQ8uziwrIqIuxhctzJT18Q77mc=
 filippo.io/hpke v0.4.0 h1:p575VVQ6ted4pL+it6M00V/f2qTZITO0zgmdKCkd5+A=
 filippo.io/hpke v0.4.0/go.mod h1:EmAN849/P3qdeK+PCMkDpDm83vRHM5cDipBJ8xbQLVY=
@@ -232,6 +234,8 @@ github.com/luxfi/constants v1.6.2/go.mod h1:r0oH8C/+r/XFYBq1AJxt6zWRKKRKgDzrEMop
 github.com/luxfi/container v0.2.1 h1:MTnfKXzS5+oxV5jKZerdOxSA6iMPaQI9/FWGufizzaw=
 github.com/luxfi/container v0.2.1/go.mod h1:B+uM0wP0lGvt/SSK7QOEn/qBcsHzILVHlKikdCyzSgM=
 github.com/luxfi/corona v0.10.4/go.mod h1:44Tjnm2uRG22kmmLfCzR8QEO8OXZ3jR/OnUKLsnjVJ8=
+github.com/luxfi/crypto v1.20.5 h1:kL69Ewyr90A/wQsTnIK8Zj6cHUPYvM1WHhgSErc2Yh0=
+github.com/luxfi/crypto v1.20.5/go.mod h1:gic3n9puSJhZFonBfmIwc5Cck/SMqetxpcfzrk9gna8=
 github.com/luxfi/crypto/ipa v1.2.4/go.mod h1:43J6f6rcfUMrZt4cQectMOZb6Ps+fAEj8ZTPC3Kk+gE=
 github.com/luxfi/database v1.21.1/go.mod h1:Gc7Z2OPrrcYLnAL8B1trOnguXauOlSDV5tkviLN6Xec=
 github.com/luxfi/dkg v0.3.5/go.mod h1:M+WH7GFRN+YUD851Rlnumdp0Md98kplNN8pVx65U8I8=
@@ -507,5 +511,3 @@ gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 rsc.io/pdf v0.1.1/go.mod h1:n8OzWcQ6Sp37PL01nO98y4iUCRdTGarVfzxY20ICaU4=
-github.com/luxfi/crypto v1.20.5 h1:kL69Ewyr90A/wQsTnIK8Zj6cHUPYvM1WHhgSErc2Yh0=
-github.com/luxfi/crypto v1.20.5/go.mod h1:gic3n9puSJhZFonBfmIwc5Cck/SMqetxpcfzrk9gna8=
