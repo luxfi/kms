@@ -9,10 +9,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlcipher-dev gcc libc6-dev pkg-config git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-ARG GITHUB_TOKEN
-RUN git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
 # No GOPRIVATE — luxfi/hanzoai Go modules are PUBLIC; resolve via public proxy +
 # sumdb (immutable). GOPRIVATE would route `direct` and re-poison go.sum.
+# Every module in this graph is public, so nothing is fetched from the git host
+# and the build needs no credential.
 
 WORKDIR /build
 COPY go.mod go.sum ./
