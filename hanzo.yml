@@ -23,7 +23,7 @@ build:
   dockerfile: ./Dockerfile
   context: .
   image: ghcr.io/luxfi/kms
-  tag-pattern: "{{git.branch}}"
+  tag-pattern: "{{git.tag}}"
   push: true
   dispatch: native
 
