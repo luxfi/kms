@@ -46,7 +46,7 @@ func TestSecretRoutes_NoEnvVarLeak(t *testing.T) {
 
 	// The SAME registrar main() calls — this is the real route set, not a mock.
 	mux := http.NewServeMux()
-	registerSecretRoutes(mux, auth, secStore)
+	registerSecretRoutes(mux, auth, secStore, testREK())
 
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
@@ -117,7 +117,7 @@ func TestSecretRoutes_OrgScopedReadStillWorks(t *testing.T) {
 	}
 
 	mux := http.NewServeMux()
-	registerSecretRoutes(mux, auth, secStore)
+	registerSecretRoutes(mux, auth, secStore, testREK())
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
@@ -148,7 +148,7 @@ func TestSecretRoutes_UnauthOrgReadRejected(t *testing.T) {
 	secStore := newTestSecretStore(t)
 
 	mux := http.NewServeMux()
-	registerSecretRoutes(mux, auth, secStore)
+	registerSecretRoutes(mux, auth, secStore, testREK())
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
@@ -181,7 +181,7 @@ func TestSecretRoutes_ListAndGetDoNotShadow(t *testing.T) {
 	}
 
 	mux := http.NewServeMux()
-	registerSecretRoutes(mux, auth, secStore)
+	registerSecretRoutes(mux, auth, secStore, testREK())
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
@@ -246,7 +246,7 @@ func TestSecretRoutes_RootLevelSecretIsAddressable(t *testing.T) {
 	}
 
 	mux := http.NewServeMux()
-	registerSecretRoutes(mux, auth, secStore)
+	registerSecretRoutes(mux, auth, secStore, testREK())
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 

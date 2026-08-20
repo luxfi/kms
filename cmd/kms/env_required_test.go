@@ -51,7 +51,7 @@ func postJSON(t *testing.T, url string, body map[string]string) *http.Response {
 // A write that omits env fails loud (400) and lands nowhere.
 func TestPutSecret_WithoutEnv_400(t *testing.T) {
 	secStore := newTestSecretStore(t)
-	srv := httptest.NewServer(putSecretHandler(secStore))
+	srv := httptest.NewServer(putSecretHandler(secStore, testREK()))
 	defer srv.Close()
 
 	resp := postJSON(t, srv.URL, map[string]string{
@@ -77,7 +77,7 @@ func TestPutSecret_WithoutEnv_400(t *testing.T) {
 // resolution the kms-operator uses, and is not visible in any other bucket.
 func TestPutSecret_WithEnvProd_StoredUnderProd(t *testing.T) {
 	secStore := newTestSecretStore(t)
-	srv := httptest.NewServer(putSecretHandler(secStore))
+	srv := httptest.NewServer(putSecretHandler(secStore, testREK()))
 	defer srv.Close()
 
 	const secret = "z-password-98f3-do-not-log"
@@ -96,7 +96,20 @@ func TestPutSecret_WithEnvProd_StoredUnderProd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("project/env/path read (prod): %v", err)
 	}
-	if h := sha256hex(string(got.Ciphertext)); h != want {
+	// What is stored must NOT be what was sent. This assertion used to require
+	// the opposite — byte-identical — which is how a door that wrote plaintext
+	// into a field named Ciphertext passed its own test for as long as it did.
+	if h := sha256hex(string(got.Ciphertext)); h == want {
+		t.Fatal("the stored bytes are the plaintext")
+	}
+	if len(got.WrappedDEK) == 0 {
+		t.Fatal("no wrapped DEK: the record was written without being sealed")
+	}
+	pt, err := store.Open(testREK(), got)
+	if err != nil {
+		t.Fatalf("the sealed record does not open: %v", err)
+	}
+	if h := sha256hex(string(pt)); h != want {
 		t.Fatalf("round-trip value digest mismatch: got %s want %s", h, want)
 	}
 
@@ -104,4 +117,15 @@ func TestPutSecret_WithEnvProd_StoredUnderProd(t *testing.T) {
 	if _, err := secStore.Get("iam-passwords", "Z_PASSWORD", "default"); err == nil {
 		t.Fatal("prod write must not be visible in env=default")
 	}
+}
+
+// testREK is a fixed 32-byte root key. The real one comes from the MPC cluster;
+// a test needs only that one exists, because the property under test is that the
+// door seals with whatever root it is given.
+func testREK() []byte {
+	k := make([]byte, 32)
+	for i := range k {
+		k[i] = byte(i + 1)
+	}
+	return k
 }
