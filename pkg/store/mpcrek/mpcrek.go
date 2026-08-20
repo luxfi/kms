@@ -32,13 +32,13 @@
 // Architecture A — every secret read becomes an MPC round-trip — was
 // rejected because:
 //
-//   1. Throughput: ATS/BD/TA hot paths fan out >100 KMS reads per
-//      request. A 50ms ZAP RTT times 100 = 5s added latency.
-//   2. Threat model parity: a compromised KMS process leaks plaintext
-//      either way; per-secret round-trips do not improve the worst
-//      case.
-//   3. Auditability: one fetch-at-boot is a single, named event in the
-//      MPC audit log. Per-secret reads dilute the signal.
+//  1. Throughput: ATS/BD/TA hot paths fan out >100 KMS reads per
+//     request. A 50ms ZAP RTT times 100 = 5s added latency.
+//  2. Threat model parity: a compromised KMS process leaks plaintext
+//     either way; per-secret round-trips do not improve the worst
+//     case.
+//  3. Auditability: one fetch-at-boot is a single, named event in the
+//     MPC audit log. Per-secret reads dilute the signal.
 //
 // Architecture B keeps the existing envelope, which is well-built
 // (AES-256-GCM, per-secret DEK, AAD binding path/name/env, version
@@ -112,6 +112,14 @@ type Config struct {
 	KeyID    string
 	NodeID   string
 	Timeout  time.Duration
+
+	// Sealed is the REK, encrypted to the ring's group key.
+	//
+	// It travels with the request because the ring keeps shares and not the
+	// things they open: there is no record on the other side to name. That is
+	// what lets this live in a config map — it is ciphertext, and the only
+	// thing that opens it is a quorum of nodes none of which is here.
+	Sealed []byte
 }
 
 // Validate returns an error if any required field is unset.
@@ -121,6 +129,9 @@ func (c Config) Validate() error {
 	}
 	if strings.TrimSpace(c.KeyID) == "" {
 		return fmt.Errorf("%w: KeyID is required", ErrUnconfigured)
+	}
+	if len(c.Sealed) == 0 {
+		return fmt.Errorf("%w: Sealed is required — the ring holds shares, not ciphertexts", ErrUnconfigured)
 	}
 	return nil
 }
@@ -172,12 +183,11 @@ func Bootstrap(ctx context.Context, cfg Config) ([]byte, error) {
 	}
 	defer client.Close()
 
-	// The MPC cluster's stored REK record is opaque to KMS — we pass
-	// the keyID and let the cluster's t-of-n share set unwrap. The
-	// "ciphertext" field is empty: there is no caller-supplied
-	// ciphertext for a stored key fetch; the MPC side reads its own
-	// record by keyID and threshold-decrypts.
-	res, err := client.Decrypt(dialCtx, cfg.KeyID, nil)
+	// The keyID names the SHARE SET; the ciphertext comes from here. The ring
+	// answers with shares and stores nothing that needs opening, so there is no
+	// record on that side to fetch by name — which is why the sealed REK can
+	// sit somewhere public and this call carries it.
+	res, err := client.Decrypt(dialCtx, cfg.KeyID, cfg.Sealed)
 	if err != nil {
 		return nil, fmt.Errorf("mpcrek: threshold decrypt key=%s: %w", cfg.KeyID, err)
 	}

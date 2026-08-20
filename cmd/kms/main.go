@@ -1053,6 +1053,18 @@ func loadREK() []byte {
 		}
 		nodeID := envOr("KMS_NODE_ID", "kms-0") + "-rek-bootstrap"
 
+		// The sealed REK. Ciphertext, so it travels as ordinary configuration —
+		// a config map, a file, an environment variable are all fine, because
+		// the only thing that opens it is a quorum of the ring.
+		sealedB64 := envOr("MPC_REK_SEALED_B64", "")
+		if sealedB64 == "" {
+			log.Fatalf("kms: MPC_REK_ENDPOINT is set but MPC_REK_SEALED_B64 is not; the ring holds shares, not ciphertexts")
+		}
+		sealed, derr := base64.StdEncoding.DecodeString(sealedB64)
+		if derr != nil {
+			log.Fatalf("kms: MPC_REK_SEALED_B64 is not base64: %v", derr)
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
@@ -1062,6 +1074,7 @@ func loadREK() []byte {
 			KeyID:    keyID,
 			NodeID:   nodeID,
 			Timeout:  timeout,
+			Sealed:   sealed,
 		})
 		if err != nil {
 			// Fail-closed. The deployment asked for MPC-rooted REK and
