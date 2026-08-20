@@ -70,6 +70,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/luxfi/age"
 	"log"
 	"log/slog"
 	"net/http"
@@ -995,12 +996,23 @@ func startReplicator(db *badger.DB, nodeID string) *badger.Replicator {
 		Interval:  intv,
 	}
 
-	// Age encryption for backups.
-	recipientStr := os.Getenv("REPLICATE_AGE_RECIPIENT")
-	if recipientStr != "" {
-		// Age recipient parsing happens inside the Replicator via the age package.
-		// The ReplicatorConfig accepts the raw recipient/identity interfaces.
+	// Age encryption for backups. The recipient has to be parsed and handed to
+	// the replicator; reading the variable does nothing on its own. It used to
+	// read it, log that encryption was on, and pass nothing — so the copy left
+	// unencrypted while the log said otherwise.
+	//
+	// Asking for encryption and not getting it is the one outcome worth refusing:
+	// replication that silently ships an unencrypted copy of the store is worse
+	// than no replication, because the operator believes it is protected.
+	if recipientStr := strings.TrimSpace(os.Getenv("REPLICATE_AGE_RECIPIENT")); recipientStr != "" {
+		recipient, err := age.ParseX25519Recipient(recipientStr)
+		if err != nil {
+			log.Fatalf("kms: REPLICATE_AGE_RECIPIENT is set but unusable (%v) — refusing to replicate unencrypted", err)
+		}
+		cfg.AgeRecipient = recipient
 		log.Printf("kms: S3 replication with age encryption enabled")
+	} else {
+		log.Printf("kms: WARNING: S3 replication has no age recipient — the copy carries whatever the store holds")
 	}
 
 	replicator, err := badger.NewReplicator(db, cfg)
