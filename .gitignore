@@ -25,3 +25,4 @@
 # 107M `?? .worktrees/` entry, which one `git add -A` turns into a commit of a
 # second copy of the tree.
 .worktrees/
+kms-fetch
