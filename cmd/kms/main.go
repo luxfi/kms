@@ -223,7 +223,14 @@ func main() {
 	// process environment (KMS_MASTER_KEY_B64 root REK, MPC_TOKEN, S3 keys) is
 	// never reachable over HTTP. Secrets flow ONLY through these org-scoped
 	// routes and the ZAP wire. Regression: TestSecretRoutes_NoEnvVarLeak.
-	registerSecretRoutes(mux, auth, secStore)
+	// The REK is resolved BEFORE the routes, because the HTTP door seals with it
+	// exactly as the ZAP door does. It used to load further down, after these
+	// routes were built, which is why this door had no key and wrote what it was
+	// given.
+	masterKey := loadREK()
+	defer mpcrek.Zero(masterKey)
+
+	registerSecretRoutes(mux, auth, secStore, masterKey)
 
 	// MPC key management (only when MPC_VAULT_ID is set).
 	//
@@ -297,8 +304,6 @@ func main() {
 	// from anything on the pod.
 	zapPortStr := envOr("ZAP_PORT", "9999")
 	zapPort, _ := strconv.Atoi(zapPortStr)
-	masterKey := loadREK()
-	defer mpcrek.Zero(masterKey)
 	if masterKey != nil {
 		// One authorizer + one nonce ledger back BOTH transports (the
 		// in-cluster ZAP wire and the HTTP /v1/sdk surface) — one
@@ -414,7 +419,7 @@ func main() {
 // kms-operator and in-cluster clients read via the org-scoped path or ZAP) and
 // process env is never a secret-fetch source. Regression that keeps it gone:
 // TestSecretRoutes_NoEnvVarLeak.
-func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.SecretStore) {
+func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.SecretStore, masterKey []byte) {
 	listHandler := func(w http.ResponseWriter, r *http.Request) {
 		q, err := parseListQuery(r.URL.Query())
 		if err != nil {
@@ -468,8 +473,33 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 			writeJSON(w, http.StatusNotFound, map[string]any{"message": "not found"})
 			return
 		}
+		// A sealed record carries a wrapped DEK; one written before this door
+		// sealed anything does not. That difference is what tells them apart, so
+		// a record from either era reads correctly here.
+		//
+		// A bare record is re-sealed as it is read. Nothing has to be migrated on
+		// a schedule and no flag day is needed: the bare ones convert as they are
+		// used, and the population only shrinks. A read that cannot re-seal still
+		// answers — the value is already readable, and refusing would take a
+		// working secret away to punish a write that already happened.
+		value := sec.Ciphertext
+		if len(sec.WrappedDEK) > 0 {
+			pt, oerr := store.Open(masterKey, sec)
+			if oerr != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]any{"message": "cannot open secret"})
+				return
+			}
+			defer mpcrek.Zero(pt)
+			value = pt
+		} else if len(masterKey) == 32 {
+			if resealed, serr := store.Seal(masterKey, sec.Path, sec.Name, sec.Env, value); serr == nil {
+				if perr := secStore.Put(resealed); perr != nil {
+					log.Printf("kms: could not re-seal %s/%s: %v", sec.Path, sec.Name, perr)
+				}
+			}
+		}
 		writeJSON(w, http.StatusOK, map[string]any{
-			"secret": map[string]any{"value": string(sec.Ciphertext)},
+			"secret": map[string]any{"value": string(value)},
 		})
 	}
 	deleteHandler := func(w http.ResponseWriter, r *http.Request) {
@@ -532,7 +562,7 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 	// POST /v1/kms/orgs/{org}/secrets — create a secret. The handler is a
 	// named func (putSecretHandler) so the env-required contract is unit
 	// testable without standing up the full server.
-	mux.HandleFunc("POST /v1/kms/orgs/{org}/secrets", auth.requireOrgJWT(putSecretHandler(secStore)))
+	mux.HandleFunc("POST /v1/kms/orgs/{org}/secrets", auth.requireOrgJWT(putSecretHandler(secStore, masterKey)))
 
 	// DELETE /v1/kms/orgs/{org}/secrets/{rest...}/{name}
 	mux.HandleFunc("DELETE /v1/kms/orgs/{org}/secrets/{rest...}", auth.requireOrgJWT(deleteHandler))
@@ -548,7 +578,7 @@ func registerSecretRoutes(mux *http.ServeMux, auth *orgJWTAuth, secStore *store.
 	// the release after those sweep; new callers use these.
 	mux.HandleFunc("GET /v1/kms/secrets", auth.requireJWT(listHandler))
 	mux.HandleFunc("GET /v1/kms/secrets/{rest...}", auth.requireJWT(getHandler))
-	mux.HandleFunc("POST /v1/kms/secrets", auth.requireJWT(putSecretHandler(secStore)))
+	mux.HandleFunc("POST /v1/kms/secrets", auth.requireJWT(putSecretHandler(secStore, masterKey)))
 	mux.HandleFunc("DELETE /v1/kms/secrets/{rest...}", auth.requireJWT(deleteHandler))
 }
 
@@ -624,7 +654,7 @@ func parseListQuery(v url.Values) (secret.Query, error) {
 // value. So a write with no env fails loud (400). Reads (GET) keep a
 // backward-compatible default: a read cannot plant a value another reader
 // later trusts, and legacy readers that omit env must keep working.
-func putSecretHandler(secStore *store.SecretStore) http.HandlerFunc {
+func putSecretHandler(secStore *store.SecretStore, masterKey []byte) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Path  string `json:"path"`
@@ -642,11 +672,23 @@ func putSecretHandler(secStore *store.SecretStore) http.HandlerFunc {
 			})
 			return
 		}
-		sec := &store.Secret{
-			Name:       req.Name,
-			Path:       req.Path,
-			Env:        req.Env,
-			Ciphertext: []byte(req.Value),
+		// Sealed with the same call the ZAP door makes, under the MPC-rooted REK:
+		// a fresh per-secret DEK, the value under it with path/name/env as AAD, and
+		// the DEK wrapped under the REK. The field is named Ciphertext and now
+		// holds ciphertext. Without a key there is nothing to seal WITH, and
+		// writing the value bare is the thing being fixed, so this refuses.
+		if len(masterKey) != 32 {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]any{
+				"message": "no root key: this store cannot seal a secret, so it will not take one",
+			})
+			return
+		}
+		plaintext := []byte(req.Value)
+		sec, err := store.Seal(masterKey, req.Path, req.Name, req.Env, plaintext)
+		mpcrek.Zero(plaintext)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]any{"message": err.Error()})
+			return
 		}
 		if err := secStore.Put(sec); err != nil {
 			// A coordinate the key cannot encode unambiguously is the caller's

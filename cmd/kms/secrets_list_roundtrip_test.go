@@ -63,7 +63,7 @@ func newListFixture(t *testing.T) *listFixture {
 	auth, bearer, cleanup := newTestKeyAuth(t, roleKMSAdmin)
 	t.Cleanup(cleanup)
 	mux := http.NewServeMux()
-	registerSecretRoutes(mux, auth, newTestSecretStore(t))
+	registerSecretRoutes(mux, auth, newTestSecretStore(t), testREK())
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	return &listFixture{t: t, srv: srv, tok: bearer}

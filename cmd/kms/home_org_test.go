@@ -44,7 +44,7 @@ func newTenantFixture(t *testing.T, homeOrgs ...string) *tenantFixture {
 	auth.homeOrgs = homeOrgs
 
 	mux := http.NewServeMux()
-	registerSecretRoutes(mux, auth, newTestSecretStore(t))
+	registerSecretRoutes(mux, auth, newTestSecretStore(t), testREK())
 	srv := httptest.NewServer(mux)
 
 	return &tenantFixture{

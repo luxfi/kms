@@ -18,7 +18,7 @@ func TestSecretRoutes_TenantSurface(t *testing.T) {
 	defer cleanup()
 	secStore := newTestSecretStore(t)
 	mux := http.NewServeMux()
-	registerSecretRoutes(mux, auth, secStore)
+	registerSecretRoutes(mux, auth, secStore, testREK())
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
