@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
+	kmszap "github.com/luxfi/kms/pkg/zap"
 	"github.com/luxfi/zap"
 )
 
@@ -25,8 +27,9 @@ const (
 
 // ZapClient communicates with the MPC daemon over ZAP.
 type ZapClient struct {
-	node   *zap.Node
-	peerID string
+	node    *zap.Node
+	peerID  string
+	session *kmszap.Session
 }
 
 // NewZapClient creates a ZAP client for MPC communication.
@@ -77,9 +80,70 @@ func NewZapClient(nodeID, mpcAddr string) (*ZapClient, error) {
 		if len(peers) > 0 {
 			c.peerID = peers[0]
 		}
+		// What this connection carries is the root key every per-secret DEK is
+		// wrapped under, so it is agreed with a hybrid handshake — X25519 with
+		// ML-KEM-768 — and every payload after it is sealed under that session.
+		// The daemon has always answered OpClientHello and seals its own replies
+		// once a session exists; this side simply never asked.
+		ctx, cancel := context.WithTimeout(context.Background(), handshakeTimeout)
+		defer cancel()
+		if err := c.handshake(ctx); err != nil {
+			return nil, fmt.Errorf("mpc: session handshake: %w", err)
+		}
 	}
 
 	return c, nil
+}
+
+// handshakeTimeout bounds the hybrid agreement. It runs once, at dial.
+const handshakeTimeout = 10 * time.Second
+
+// handshake agrees the session this client seals under. It runs at construction
+// so no caller can hold a ZapClient that talks in the clear: a client that
+// cannot agree a session is not returned.
+func (c *ZapClient) handshake(ctx context.Context) error {
+	state, helloWire, err := kmszap.NewClient(kmszap.CapMLKEM768)
+	if err != nil {
+		return fmt.Errorf("build ClientHello: %w", err)
+	}
+	payload := make([]byte, 2+len(helloWire))
+	binary.LittleEndian.PutUint16(payload[:2], kmszap.OpClientHello)
+	copy(payload[2:], helloWire)
+
+	b := zap.NewBuilder(len(payload) + 64)
+	b.WriteBytes(payload)
+	msg, err := zap.Parse(b.Finish())
+	if err != nil {
+		return fmt.Errorf("build ClientHello message: %w", err)
+	}
+	resp, err := c.node.Call(ctx, c.peerID, msg)
+	if err != nil {
+		return fmt.Errorf("call: %w", err)
+	}
+	raw := resp.Root().Bytes(0)
+	if len(raw) < 1 {
+		body := resp.Bytes()
+		if len(body) <= zap.HeaderSize {
+			return errors.New("short ServerHello")
+		}
+		raw = body[zap.HeaderSize:]
+	}
+	if len(raw) < 1 {
+		return errors.New("short ServerHello")
+	}
+	if raw[0] != 0x00 {
+		return fmt.Errorf("rejected: status=0x%02X body=%s", raw[0], string(raw[1:]))
+	}
+	result, err := state.ClientFinish(raw[1:])
+	if err != nil {
+		return fmt.Errorf("ClientFinish: %w", err)
+	}
+	sess, err := kmszap.NewSession(result)
+	if err != nil {
+		return fmt.Errorf("session init: %w", err)
+	}
+	c.session = sess
+	return nil
 }
 
 // splitAddrs parses a CSV of host:port (with optional whitespace) into a
@@ -105,8 +169,19 @@ func (c *ZapClient) call(ctx context.Context, op uint16, payload any) ([]byte, e
 	if err != nil {
 		return nil, err
 	}
+	// Sealed under the session agreed at dial. There is no unsealed path: a
+	// client without a session was never returned, so this cannot silently
+	// fall back to sending the request in the clear.
+	if c.session == nil {
+		return nil, errors.New("mpc: no session; refusing to send in the clear")
+	}
+	sealed, err := c.session.Seal(kmszap.DirClientToServer, data)
+	if err != nil {
+		return nil, fmt.Errorf("mpc: seal op=0x%04x: %w", op, err)
+	}
+	data = sealed
 
-	// Build ZAP message: opcode (2 bytes LE) + JSON payload.
+	// Build ZAP message: opcode (2 bytes LE) + sealed payload.
 	b := zap.NewBuilder(len(data) + 64)
 	opBytes := make([]byte, 2)
 	binary.LittleEndian.PutUint16(opBytes, op)
@@ -139,6 +214,12 @@ func (c *ZapClient) call(ctx context.Context, op uint16, payload any) ([]byte, e
 		return []byte("{}"), nil
 	}
 	respBody := body[zap.HeaderSize+2:] // skip header + opcode
+	// The daemon seals its replies under the same session, so this opens them.
+	opened, err := c.session.Open(kmszap.DirServerToClient, respBody)
+	if err != nil {
+		return nil, fmt.Errorf("mpc: open response op=0x%04x: %w", op, err)
+	}
+	respBody = opened
 
 	// Surface server-side errors. mpcd frames failures as {"error":"..."}
 	// under the SAME opcode as the request (pkg/api/zap_kms_server.go errBody).
