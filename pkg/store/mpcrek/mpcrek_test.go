@@ -53,6 +53,7 @@ func TestBootstrap_ValidConfig_Returns32Bytes(t *testing.T) {
 	defer restore()
 
 	got, err := Bootstrap(context.Background(), Config{
+		Sealed:   []byte("sealed-rek"),
 		Endpoint: "mpc-0.lux-mpc.svc:9999",
 		KeyID:    "kms/rek/v1",
 		NodeID:   "kms-0",
@@ -82,11 +83,14 @@ func TestBootstrap_Validate(t *testing.T) {
 		name string
 		cfg  Config
 	}{
-		{"empty endpoint", Config{KeyID: "k"}},
-		{"empty keyID", Config{Endpoint: "e"}},
+		{"empty endpoint", Config{KeyID: "k", Sealed: []byte("x")}},
+		{"empty keyID", Config{Endpoint: "e", Sealed: []byte("x")}},
 		{"both empty", Config{}},
-		{"whitespace endpoint", Config{Endpoint: "   ", KeyID: "k"}},
-		{"whitespace keyID", Config{Endpoint: "e", KeyID: "  "}},
+		{"whitespace endpoint", Config{Endpoint: "   ", KeyID: "k", Sealed: []byte("x")}},
+		{"whitespace keyID", Config{Endpoint: "e", KeyID: "  ", Sealed: []byte("x")}},
+		// The ring holds shares, not ciphertexts: a bootstrap that names a key
+		// and brings nothing to open has nothing to ask for.
+		{"nothing sealed", Config{Endpoint: "e", KeyID: "k"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -120,6 +124,7 @@ func TestBootstrap_RejectsWrongLength(t *testing.T) {
 			defer restore()
 
 			_, err := Bootstrap(context.Background(), Config{
+				Sealed:   []byte("sealed-rek"),
 				Endpoint: "e",
 				KeyID:    "k",
 			})
@@ -136,6 +141,7 @@ func TestBootstrap_RejectsAllZeroREK(t *testing.T) {
 	defer restore()
 
 	_, err := Bootstrap(context.Background(), Config{
+		Sealed:   []byte("sealed-rek"),
 		Endpoint: "e",
 		KeyID:    "k",
 	})
@@ -150,6 +156,7 @@ func TestBootstrap_PropagatesDialError(t *testing.T) {
 	defer restore()
 
 	_, err := Bootstrap(context.Background(), Config{
+		Sealed:   []byte("sealed-rek"),
 		Endpoint: "e",
 		KeyID:    "k",
 	})
@@ -165,6 +172,7 @@ func TestBootstrap_PropagatesDecryptError(t *testing.T) {
 	defer restore()
 
 	_, err := Bootstrap(context.Background(), Config{
+		Sealed:   []byte("sealed-rek"),
 		Endpoint: "e",
 		KeyID:    "k",
 	})
@@ -185,6 +193,7 @@ func TestBootstrap_DefaultTimeout(t *testing.T) {
 	defer restore()
 
 	got, err := Bootstrap(context.Background(), Config{
+		Sealed:   []byte("sealed-rek"),
 		Endpoint: "e",
 		KeyID:    "k",
 		// Timeout intentionally zero.
@@ -223,7 +232,7 @@ func TestZero_OnReturnedREK_ForensicCheck(t *testing.T) {
 	restore := withDialer(t, fake)
 	defer restore()
 
-	got, err := Bootstrap(context.Background(), Config{Endpoint: "e", KeyID: "k"})
+	got, err := Bootstrap(context.Background(), Config{Endpoint: "e", KeyID: "k", Sealed: []byte("sealed-rek")})
 	if err != nil {
 		t.Fatalf("Bootstrap: %v", err)
 	}
