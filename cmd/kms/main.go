@@ -17,11 +17,11 @@
 //	  MPC_REK_ENDPOINT   - MPC ZAP CSV for threshold-rooted Root Encryption Key
 //	                       fetch. When set, kmsd refuses to start unless the
 //	                       MPC cluster returns a 32-byte REK. Takes precedence
-//	                       over KMS_MASTER_KEY_B64.
+//	                       The only source of a root key.
 //	  MPC_REK_KEY_ID     - MPC-side identifier of the wrapped REK record
 //	                       (default "kms/rek/v1"). Bump alongside reshare.
 //	  MPC_REK_TIMEOUT    - REK bootstrap timeout (Go duration, default "10s").
-//	  KMS_MASTER_KEY_B64 - LEGACY 32-byte master key (base64). Used only when
+//	  KMS_MASTER_KEY_B64 - REFUSED. A root key in the environment is readable by
 //	                       MPC_REK_ENDPOINT is unset. Slated for removal once
 //	                       every KMS deployment ships with MPC-rooted REK.
 //	  KMS_DATA_DIR       - ZapDB data directory (default "/data/kms")
@@ -298,7 +298,7 @@ func main() {
 	//
 	// The master key (Root Encryption Key) protecting every per-secret DEK is
 	// resolved by loadREK below. Preferred source is a luxfi/mpc threshold
-	// cluster (MPC_REK_ENDPOINT); fallback is KMS_MASTER_KEY_B64 for the
+	// cluster (MPC_REK_ENDPOINT). There is no environment fallback for the
 	// migration window. If MPC_REK_ENDPOINT is set, kmsd FAILS CLOSED on any
 	// fetch error — there is no env-var fallback in MPC mode, since the
 	// whole point of MPC-rooting the REK is that it must not be derivable
@@ -357,7 +357,7 @@ func main() {
 			log.Printf("kms: ZAP wire transport disabled (ZAP_PORT=0); /v1/sdk HTTP surface still active")
 		}
 	} else {
-		log.Printf("kms: secrets plane disabled (set MPC_REK_ENDPOINT or KMS_MASTER_KEY_B64 to enable /v1/sdk + ZAP)")
+		log.Printf("kms: secrets plane disabled (set MPC_REK_ENDPOINT + MPC_REK_SEALED_B64 to enable /v1/sdk + ZAP)")
 	}
 
 	// IAM OIDC SSO — /v1/sso/oidc/{login,callback}, /v1/sso/whoami, /v1/sso/logout.
@@ -1036,8 +1036,9 @@ func startReplicator(db *badger.DB, nodeID string) *badger.Replicator {
 //     pod can shrug off MPC unavailability and still come up with a
 //     key, we have re-introduced the static-secret weakness we set out
 //     to remove.
-//  2. KMS_MASTER_KEY_B64 set → decode and return. Logged WARN so the
-//     deployment knows it's still on the legacy path.
+//  2. KMS_MASTER_KEY_B64 set → REFUSE TO START. A root key in the
+//     environment is readable by whatever can read Secrets, which is the
+//     reader the ring exists to keep out.
 //  3. Neither set → nil (ZAP secrets-server stays disabled).
 //
 // The returned slice is the live REK for the process lifetime. The
@@ -1086,17 +1087,23 @@ func loadREK() []byte {
 		return rek
 	}
 
-	b64 := envOr("KMS_MASTER_KEY_B64", "")
-	if b64 == "" {
-		return nil
+	// There is no env-var root key. A key in the process environment is a key in
+	// a Secret, and anything that can read Secrets — a cloud API token, a shell in
+	// the pod, a volume snapshot — then holds the one value that opens every
+	// secret this store keeps. Sealing under a root that lives beside the
+	// ciphertext protects nothing from the reader who has both.
+	//
+	// The ring is the whole point: it holds shares, no single holder can produce
+	// the root, and the sealed form travels as ordinary configuration precisely
+	// because ciphertext is safe to leave lying about.
+	//
+	// Refusing rather than ignoring: an operator who set this believes the store
+	// is protected by it, and starting quietly without a root would leave them
+	// believing that while nothing was sealed.
+	if envOr("KMS_MASTER_KEY_B64", "") != "" {
+		log.Fatalf("kms: KMS_MASTER_KEY_B64 is set — a root key in the environment is readable by anything that reads Secrets, so it is not accepted. Set MPC_REK_ENDPOINT and MPC_REK_SEALED_B64.")
 	}
-	mk, err := base64.StdEncoding.DecodeString(b64)
-	if err != nil || len(mk) != 32 {
-		log.Printf("kms: KMS_MASTER_KEY_B64 invalid (need 32 bytes base64); ZAP secrets-server disabled")
-		return nil
-	}
-	log.Printf("kms: WARNING: using legacy KMS_MASTER_KEY_B64 env-var REK; set MPC_REK_ENDPOINT to migrate to MPC-rooted REK")
-	return mk
+	return nil
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {
