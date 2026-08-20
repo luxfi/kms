@@ -2,13 +2,17 @@ package store
 
 // AES-256-GCM Seal/Open helpers wrapping the generic SecretStore.
 //
-// This is the v1 envelope: master key (32 bytes, unsealed at boot) seals
-// every Secret's DEK with AES-256-GCM. The DEK seals the plaintext.
+// The SHARED-KEY envelope: one master key (32 bytes, unsealed at boot) wraps
+// every Secret's DEK with AES-256-GCM, and the DEK seals the plaintext. Whoever
+// holds that key opens every secret it ever wrapped, so the master is worth
+// exactly as much as the whole store and has to live wherever the store's
+// readers live.
 //
-// v2 (tracked upstream in luxfi/crypto/xwing): replace the master→DEK wrap
-// with an ML-KEM-768 recipient-public-key encapsulation (`ModeStandard`
-// "aead+mlkem"), so the master key is PQ-wrapped at rest. The struct field
-// `WrappedDEK` is already shaped for that.
+// recipient.go is the other half of the pair, and the one this was always
+// heading for: SealTo encapsulates the DEK to a recipient's PUBLIC key, so
+// enrolling a credential and reading one become different capabilities and only
+// the second needs a secret. New secrets belong there. This stays for the rows
+// already written under it.
 //
 // Plaintext never leaves memory. The caller is responsible for zeroing
 // the returned byte slice when done.
@@ -90,6 +94,14 @@ func Open(masterKey []byte, secret *Secret) ([]byte, error) {
 	}
 	if secret == nil {
 		return nil, ErrBadEnvelope
+	}
+	// A recipient-sealed secret has no master to try. Saying so HERE is the
+	// difference between "no key held here will ever open this" and an
+	// authentication failure two frames down that reads as a damaged record. It
+	// is also what makes the split legible: a process holding the master learns
+	// from this exactly one thing, which is who to go and ask.
+	if secret.Scheme == ModeRecipient {
+		return nil, fmt.Errorf("crypto: %q is sealed to recipient %s and opens only with that identity", secret.Name, secret.KeyHandle)
 	}
 
 	dek, err := aeadOpen(masterKey, []byte(secret.Name), secret.WrappedDEK)
