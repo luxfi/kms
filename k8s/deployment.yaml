@@ -18,7 +18,21 @@ spec:
     spec:
       containers:
         - name: kms
-          image: ghcr.io/luxfi/kms:latest
+          # A released tag, because a cluster runs a version and not a
+          # moving target. `latest` in this repository resolves to an
+          # archived hanzoai/kms 2.6.7 build whose entrypoint is `kmsd` on
+          # ports 8443/9653 -- this manifest declares 8080/9652 and
+          # KMS_LISTEN=":8080", so the name and the thing it fetches have
+          # drifted apart and the pin is what closes that.
+          #
+          # v1.12.17 is the highest SEMVER CONTAINER TAG that exists. The
+          # module line runs to v1.12.23 and the at-rest seal lands at
+          # v1.12.20, but no container tag was cut for v1.12.18-v1.12.23 --
+          # those builds exist only as sha-<commit> images. Naming a commit
+          # here would put an unreleased build in a cluster, so this pin
+          # names what was released and the seal follows the moment the
+          # publisher cuts v1.12.23.
+          image: ghcr.io/luxfi/kms:v1.12.17
           ports:
             - name: http
               containerPort: 8080
