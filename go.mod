@@ -35,7 +35,7 @@ require (
 	github.com/klauspost/crc32 v1.3.0 // indirect
 	github.com/luxfi/accel v1.2.4 // indirect
 	github.com/luxfi/address v1.1.1 // indirect
-	github.com/luxfi/age v1.6.0 // indirect
+	github.com/luxfi/age v1.6.0
 	github.com/luxfi/cache v1.3.1 // indirect
 	github.com/luxfi/constants v1.6.2 // indirect
 	github.com/luxfi/container v0.2.1 // indirect
@@ -51,7 +51,7 @@ require (
 	github.com/luxfi/protocol v0.0.2 // indirect
 	github.com/luxfi/sampler v1.1.0 // indirect
 	github.com/luxfi/tls v1.1.1 // indirect
-	github.com/luxfi/vm v1.3.1 // indirect
+	github.com/luxfi/vm v1.3.2 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/miekg/dns v1.1.72 // indirect
