@@ -15,15 +15,14 @@
 //	  KMS_NODE_ID        - ZAP node ID (default "kms-0")
 //	  ZAP_PORT           - ZAP secrets-server listen port (default 9999, 0 = disable)
 //	  MPC_REK_ENDPOINT   - MPC ZAP CSV for threshold-rooted Root Encryption Key
-//	                       fetch. When set, kmsd refuses to start unless the
-//	                       MPC cluster returns a 32-byte REK. Takes precedence
-//	                       The only source of a root key.
+//	                       fetch. kmsd refuses to start unless the ring returns
+//	                       a 32-byte REK. The only source of a root key.
 //	  MPC_REK_KEY_ID     - MPC-side identifier of the wrapped REK record
 //	                       (default "kms/rek/v1"). Bump alongside reshare.
 //	  MPC_REK_TIMEOUT    - REK bootstrap timeout (Go duration, default "10s").
-//	  KMS_MASTER_KEY_B64 - REFUSED. A root key in the environment is readable by
-//	                       MPC_REK_ENDPOINT is unset. Slated for removal once
-//	                       every KMS deployment ships with MPC-rooted REK.
+//	  KMS_MASTER_KEY_B64 - REFUSED. A root in the environment is a root in a
+//	                       Secret, readable by whatever reads Secrets. Setting it
+//	                       stops the boot rather than being ignored.
 //	  KMS_DATA_DIR       - ZapDB data directory (default "/data/kms")
 //	  KMS_LISTEN         - HTTP listen address (default ":8080")
 //	  IAM_ENDPOINT       - Hanzo IAM endpoint for auth (default "https://hanzo.id")
@@ -297,12 +296,11 @@ func main() {
 	// port so in-cluster callers can fetch with zero REST round-trip.
 	//
 	// The master key (Root Encryption Key) protecting every per-secret DEK is
-	// resolved by loadREK below. Preferred source is a luxfi/mpc threshold
-	// cluster (MPC_REK_ENDPOINT). There is no environment fallback for the
-	// migration window. If MPC_REK_ENDPOINT is set, kmsd FAILS CLOSED on any
-	// fetch error — there is no env-var fallback in MPC mode, since the
-	// whole point of MPC-rooting the REK is that it must not be derivable
-	// from anything on the pod.
+	// resolved by loadREK below. The only source is a luxfi/mpc threshold ring
+	// (MPC_REK_ENDPOINT), and a fetch that fails stops the boot: the point of
+	// rooting in the ring is that the root is not derivable from anything on the
+	// pod, and reaching for something on the pod when the ring is quiet would
+	// give that away exactly when it matters.
 	zapPortStr := envOr("ZAP_PORT", "9999")
 	zapPort, _ := strconv.Atoi(zapPortStr)
 	if masterKey != nil {
