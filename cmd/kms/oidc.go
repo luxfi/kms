@@ -477,7 +477,17 @@ func (c *oidcConfig) callIAMAddApplication(ctx context.Context, adminID, adminSe
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", "", fmt.Errorf("iam unreachable: %w", err)
+		// The transport error carries the whole request URL, and Go redacts only
+		// userinfo from it — never query. This URL carries the admin credential in
+		// its query, and this error reaches two places that outlive the request:
+		// the audit line, and the 502 body handed to the caller. The caller here is
+		// authenticated as a kms admin and does NOT hold that credential, so
+		// repeating it would hand them one they were never given.
+		//
+		// A caller can also force this at will by hanging up, since the context is
+		// the request's own. So the reason is stated and the error is not carried,
+		// exactly as the token exchange in main.go does.
+		return "", "", errors.New("identity provider unreachable")
 	}
 	defer resp.Body.Close()
 	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
