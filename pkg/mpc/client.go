@@ -116,32 +116,10 @@ type ClusterStatus struct {
 	Version        string `json:"version"`
 }
 
-// EncryptResult is the response from an encrypt operation.
-type EncryptResult struct {
-	Ciphertext []byte `json:"ciphertext"`
-	KeyID      string `json:"key_id"`
-	Scheme     string `json:"scheme"` // aes-gcm (default), tfhe (threshold reveal), ckks (ML)
-}
-
-// DecryptResult is the response from a decrypt operation.
-type DecryptResult struct {
+// RevealResult is what a quorum returns once it has opened a ciphertext.
+type RevealResult struct {
 	Plaintext []byte `json:"plaintext"`
-	Shares    int    `json:"shares_used,omitempty"` // >0 only for threshold schemes
 }
-
-// Encryption schemes.
-const (
-	// SchemeAESGCM is AES-256-GCM with ML-KEM wrapped DEK. Default for secrets.
-	// Fast, PQ-safe key wrapping, no threshold required for decrypt.
-	SchemeAESGCM = "aes-gcm"
-
-	// SchemeTFHE is threshold FHE. Decrypt requires t-of-n validator cooperation.
-	// Use only when threshold-gated reveal or computation on ciphertext is needed.
-	SchemeTFHE = "tfhe"
-
-	// SchemeCKKS is approximate arithmetic FHE for ML inference on encrypted data.
-	SchemeCKKS = "ckks"
-)
 
 // Wallet is the response from GET /v1/wallets/{id}.
 //
@@ -317,50 +295,6 @@ func (c *Client) do(ctx context.Context, method, url string, body []byte) (*http
 		return nil, fmt.Errorf("mpc: request to %s: %w", url, err)
 	}
 	return resp, nil
-}
-
-// Encrypt sends a threshold encrypt request via HTTP (T-Chain API).
-func (c *Client) Encrypt(ctx context.Context, keyID string, plaintext []byte) (*EncryptResult, error) {
-	url := fmt.Sprintf("%s/v1/fhe/encrypt", c.BaseURL)
-	body, err := json.Marshal(map[string]interface{}{"key_id": keyID, "plaintext": plaintext, "scheme": SchemeAESGCM})
-	if err != nil {
-		return nil, fmt.Errorf("mpc: marshal encrypt request: %w", err)
-	}
-	resp, err := c.do(ctx, http.MethodPost, url, body)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, readError(resp)
-	}
-	var result EncryptResult
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("mpc: decode encrypt response: %w", err)
-	}
-	return &result, nil
-}
-
-// Decrypt sends a threshold decrypt request via HTTP (T-Chain API).
-func (c *Client) Decrypt(ctx context.Context, keyID string, ciphertext []byte) (*DecryptResult, error) {
-	url := fmt.Sprintf("%s/v1/fhe/decrypt", c.BaseURL)
-	body, err := json.Marshal(map[string]interface{}{"key_id": keyID, "ciphertext": ciphertext, "scheme": SchemeAESGCM})
-	if err != nil {
-		return nil, fmt.Errorf("mpc: marshal decrypt request: %w", err)
-	}
-	resp, err := c.do(ctx, http.MethodPost, url, body)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, readError(resp)
-	}
-	var result DecryptResult
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("mpc: decode decrypt response: %w", err)
-	}
-	return &result, nil
 }
 
 func readError(resp *http.Response) error {
