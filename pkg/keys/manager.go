@@ -28,51 +28,28 @@ type Signer interface {
 	Status(ctx context.Context) (*mpc.ClusterStatus, error)
 }
 
-// Encryptor handles threshold FHE operations (T-Chain).
-// TFHE for secret decrypt, CKKS for ML inference.
-type Encryptor interface {
-	Encrypt(ctx context.Context, keyID string, plaintext []byte) (*mpc.EncryptResult, error)
-	Decrypt(ctx context.Context, keyID string, ciphertext []byte) (*mpc.DecryptResult, error)
-}
-
-// MPCBackend combines Signer + Encryptor for implementations that provide both
-// (e.g. ZapClient talks to a single MPC daemon that does signing + FHE).
+// MPCBackend is what a manager needs from the daemon.
+//
+// It named an Encryptor too — Encrypt and Decrypt over "threshold FHE
+// (T-Chain)". No node ever served either: one op had no handler at all and the
+// other reached the ring's reveal handler with the wrong request. Nothing
+// called them, and the interface advertising them is what made the real
+// opening operation look like it was already there.
 type MPCBackend interface {
 	Signer
-	Encryptor
 }
 
 // Manager orchestrates validator key lifecycle.
 // K-Chain concern: key registry, policy, metadata.
-// Delegates signing to Signer (M-Chain) and encryption to Encryptor (T-Chain).
 type Manager struct {
-	signer    Signer
-	encryptor Encryptor
-	store     Store
-	vaultID   string
+	signer  Signer
+	store   Store
+	vaultID string
 }
 
 // NewManager creates a key manager.
-// backend implements both Signer and Encryptor (today: single MPC daemon).
-// When M-Chain and T-Chain are separate, pass them individually via NewManagerSplit.
 func NewManager(backend MPCBackend, store Store, vaultID string) *Manager {
-	return &Manager{
-		signer:    backend,
-		encryptor: backend,
-		store:     store,
-		vaultID:   vaultID,
-	}
-}
-
-// NewManagerSplit creates a manager with separate signer and encryptor backends.
-// Use when M-Chain (signing) and T-Chain (FHE) are separate chains.
-func NewManagerSplit(signer Signer, encryptor Encryptor, store Store, vaultID string) *Manager {
-	return &Manager{
-		signer:    signer,
-		encryptor: encryptor,
-		store:     store,
-		vaultID:   vaultID,
-	}
+	return &Manager{signer: backend, store: store, vaultID: vaultID}
 }
 
 // GenerateValidatorKeys creates a new validator key set via MPC DKG.

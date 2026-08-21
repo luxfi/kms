@@ -21,8 +21,11 @@ const (
 	OpSign    uint16 = 0x0011
 	OpReshare uint16 = 0x0012
 	OpWallet  uint16 = 0x0020
-	OpEncrypt uint16 = 0x0030 // encrypt (aes-gcm default, tfhe for threshold reveal)
-	OpDecrypt uint16 = 0x0031 // decrypt (aes-gcm default, tfhe needs t-of-n)
+	// OpReveal asks a quorum to open a ciphertext the caller brings. There is
+	// no matching seal op, and that is the design rather than a gap: sealing
+	// needs the group's public key alone, so it happens where the secret is
+	// made and never travels to the ring.
+	OpReveal uint16 = 0x0031
 )
 
 // ZapClient communicates with the MPC daemon over ZAP.
@@ -313,43 +316,31 @@ func (c *ZapClient) Status(ctx context.Context) (*ClusterStatus, error) {
 	return &status, nil
 }
 
-// Encrypt encrypts plaintext. Default: AES-256-GCM with ML-KEM wrapped DEK (fast, PQ-safe).
-// For threshold-gated reveal, use EncryptThreshold which uses TFHE.
-func (c *ZapClient) Encrypt(ctx context.Context, keyID string, plaintext []byte) (*EncryptResult, error) {
-	payload := struct {
-		KeyID     string `json:"key_id"`
-		Plaintext []byte `json:"plaintext"`
-		Scheme    string `json:"scheme"`
-	}{keyID, plaintext, SchemeAESGCM}
-
-	data, err := c.call(ctx, OpEncrypt, payload)
-	if err != nil {
-		return nil, err
-	}
-	var result EncryptResult
-	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, fmt.Errorf("mpc: decode encrypt: %w", err)
-	}
-	return &result, nil
+// revealRequest is the wire form. Named rather than inline so a test can hold
+// it to the field names the ring reads — the whole operation was unreachable
+// because the request omitted one of them.
+type revealRequest struct {
+	VaultID    string `json:"vault_id"`
+	KeyID      string `json:"key_id"`
+	Ciphertext []byte `json:"ciphertext"`
 }
 
-// Decrypt decrypts ciphertext. Scheme auto-detected from ciphertext header.
-// AES-GCM: unwraps DEK via ML-KEM, decrypts locally (no threshold needed).
-// TFHE: requires t-of-n validator E2S shares via T-Chain.
-func (c *ZapClient) Decrypt(ctx context.Context, keyID string, ciphertext []byte) (*DecryptResult, error) {
-	payload := struct {
-		KeyID      string `json:"key_id"`
-		Ciphertext []byte `json:"ciphertext"`
-		Scheme     string `json:"scheme"`
-	}{keyID, ciphertext, ""} // empty = auto-detect from ciphertext
-
-	data, err := c.call(ctx, OpDecrypt, payload)
+// Reveal asks the ring to open ciphertext sealed to the group key of
+// vault/keyID. A quorum of nodes each answer with a share of the opening and
+// none of them learns the plaintext; the answer is assembled from those.
+//
+// vault is not optional and is why this call used to fail every time: the ring
+// scopes a share set by the org that owns it and refuses a request that names
+// only a key. The old spelling sent key_id and a scheme, and the scheme named
+// TFHE — a thing this path does not use and no node implements.
+func (c *ZapClient) Reveal(ctx context.Context, vault, keyID string, ciphertext []byte) (*RevealResult, error) {
+	data, err := c.call(ctx, OpReveal, revealRequest{vault, keyID, ciphertext})
 	if err != nil {
 		return nil, err
 	}
-	var result DecryptResult
+	var result RevealResult
 	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, fmt.Errorf("mpc: decode decrypt: %w", err)
+		return nil, fmt.Errorf("mpc: decode reveal: %w", err)
 	}
 	return &result, nil
 }
