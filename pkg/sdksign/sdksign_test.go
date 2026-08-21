@@ -41,12 +41,6 @@ func (f *fakeMPC) GetWallet(context.Context, string) (*mpc.Wallet, error) {
 func (f *fakeMPC) Status(context.Context) (*mpc.ClusterStatus, error) {
 	return &mpc.ClusterStatus{Ready: true}, nil
 }
-func (f *fakeMPC) Encrypt(context.Context, string, []byte) (*mpc.EncryptResult, error) {
-	return &mpc.EncryptResult{}, nil
-}
-func (f *fakeMPC) Decrypt(context.Context, string, []byte) (*mpc.DecryptResult, error) {
-	return &mpc.DecryptResult{}, nil
-}
 
 func newManager(t *testing.T) (*keys.Manager, *store.Store, *fakeMPC) {
 	t.Helper()
