@@ -76,7 +76,7 @@ func TestSign_DelegatesToMPC(t *testing.T) {
 	if err != nil {
 		t.Fatalf("bls sign: %v", err)
 	}
-	if f.lastSign.WalletID != "w-bls" || string(f.lastSign.Message) != "header" {
+	if f.lastSign.WalletID != "w-bls" || string(f.lastSign.Payload) != "header" {
 		t.Fatalf("bls delegated wrong: %+v", f.lastSign)
 	}
 	if res.Signature != "canned-sig" || res.R != "0xr" {
