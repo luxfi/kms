@@ -123,22 +123,29 @@ func (c *ZapClient) handshake(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("call: %w", err)
 	}
-	raw := resp.Root().Bytes(0)
-	if len(raw) < 1 {
-		body := resp.Bytes()
-		if len(body) <= zap.HeaderSize {
-			return errors.New("short ServerHello")
-		}
-		raw = body[zap.HeaderSize:]
+
+	// The reply is framed exactly as every other one: opcode (2 bytes, little
+	// endian) then body. This read used to take the first byte for a status and
+	// compare it against zero, so a perfectly good ServerHello — whose opcode
+	// 0x00F1 puts 0xF1 in that byte — was reported as "rejected: status=0xF1"
+	// and no session was ever agreed with mpcd. `call` below always had it
+	// right; this is the same reading, in the same file.
+	body := resp.Bytes()
+	if len(body) < zap.HeaderSize+2 {
+		return fmt.Errorf("short ServerHello: %d bytes", len(body))
 	}
-	if len(raw) < 1 {
-		return errors.New("short ServerHello")
+	if op := binary.LittleEndian.Uint16(body[zap.HeaderSize : zap.HeaderSize+2]); op != kmszap.OpServerHello {
+		return fmt.Errorf("expected ServerHello (0x%04x), got 0x%04x", kmszap.OpServerHello, op)
 	}
-	if raw[0] != 0x00 {
-		return fmt.Errorf("rejected: status=0x%02X body=%s", raw[0], string(raw[1:]))
-	}
-	result, err := state.ClientFinish(raw[1:])
+	raw := body[zap.HeaderSize+2:]
+
+	result, err := state.ClientFinish(raw)
 	if err != nil {
+		// A refusal arrives under the same opcode, carrying {"error":...}
+		// rather than a hello. Say what the daemon said.
+		if msg := zapErrorString(raw); msg != "" {
+			return fmt.Errorf("handshake refused: %s", msg)
+		}
 		return fmt.Errorf("ClientFinish: %w", err)
 	}
 	sess, err := kmszap.NewSession(result)
