@@ -72,12 +72,6 @@ func (f *fakeBackend) Reshare(context.Context, string, mpc.ReshareRequest) error
 func (f *fakeBackend) GetWallet(context.Context, string) (*mpc.Wallet, error) {
 	return nil, errors.New("getwallet unused in failopen tests")
 }
-func (f *fakeBackend) Encrypt(context.Context, string, []byte) (*mpc.EncryptResult, error) {
-	return nil, errors.New("encrypt unused in failopen tests")
-}
-func (f *fakeBackend) Decrypt(context.Context, string, []byte) (*mpc.DecryptResult, error) {
-	return nil, errors.New("decrypt unused in failopen tests")
-}
 
 // authedPost issues a POST carrying a kms-admin bearer — the credential
 // the validator-key routes now require. These tests pin the requireMPC

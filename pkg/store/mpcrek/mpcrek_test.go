@@ -9,7 +9,7 @@ import (
 	"github.com/luxfi/kms/pkg/mpc"
 )
 
-// fakeDecrypter implements MPCDecrypter for tests.
+// fakeDecrypter answers a reveal without a ring.
 type fakeDecrypter struct {
 	plaintext []byte
 	err       error
@@ -262,7 +262,7 @@ func TestBootstrap_NilResultFromDecrypter(t *testing.T) {
 
 	_, err := Bootstrap(context.Background(), Config{Endpoint: "e", Vault: "v", KeyID: "k"})
 	if err == nil {
-		t.Fatal("Bootstrap returned nil error on nil DecryptResult")
+		t.Fatal("Bootstrap returned nil error on a nil result")
 	}
 }
 

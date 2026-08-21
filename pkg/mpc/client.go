@@ -121,20 +121,6 @@ type RevealResult struct {
 	Plaintext []byte `json:"plaintext"`
 }
 
-// Encryption schemes.
-const (
-	// SchemeAESGCM is AES-256-GCM with ML-KEM wrapped DEK. Default for secrets.
-	// Fast, PQ-safe key wrapping, no threshold required for decrypt.
-	SchemeAESGCM = "aes-gcm"
-
-	// SchemeTFHE is threshold FHE. Decrypt requires t-of-n validator cooperation.
-	// Use only when threshold-gated reveal or computation on ciphertext is needed.
-	SchemeTFHE = "tfhe"
-
-	// SchemeCKKS is approximate arithmetic FHE for ML inference on encrypted data.
-	SchemeCKKS = "ckks"
-)
-
 // Wallet is the response from GET /v1/wallets/{id}.
 //
 // EVMAddress is the canonical 20-byte EVM-runtime account address —
