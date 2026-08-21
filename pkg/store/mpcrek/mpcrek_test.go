@@ -17,29 +17,30 @@ type fakeDecrypter struct {
 
 	wantKeyID string
 	gotKeyID  string
+	gotVault  string
 }
 
-func (f *fakeDecrypter) Decrypt(_ context.Context, keyID string, _ []byte) (*mpc.DecryptResult, error) {
-	f.gotKeyID = keyID
+func (f *fakeDecrypter) Reveal(_ context.Context, vault, keyID string, _ []byte) (*mpc.RevealResult, error) {
+	f.gotVault, f.gotKeyID = vault, keyID
 	if f.err != nil {
 		return nil, f.err
 	}
-	return &mpc.DecryptResult{Plaintext: f.plaintext}, nil
+	return &mpc.RevealResult{Plaintext: f.plaintext}, nil
 }
 
 func (f *fakeDecrypter) Close() { f.closed = true }
 
-func withDialer(t *testing.T, fake MPCDecrypter) func() {
+func withDialer(t *testing.T, fake Opener) func() {
 	t.Helper()
 	prev := dialer
-	dialer = func(_, _ string) (MPCDecrypter, error) { return fake, nil }
+	dialer = func(_, _ string) (Opener, error) { return fake, nil }
 	return func() { dialer = prev }
 }
 
 func withDialErr(t *testing.T, err error) func() {
 	t.Helper()
 	prev := dialer
-	dialer = func(_, _ string) (MPCDecrypter, error) { return nil, err }
+	dialer = func(_, _ string) (Opener, error) { return nil, err }
 	return func() { dialer = prev }
 }
 
@@ -55,6 +56,7 @@ func TestBootstrap_ValidConfig_Returns32Bytes(t *testing.T) {
 	got, err := Bootstrap(context.Background(), Config{
 		Sealed:   []byte("sealed-rek"),
 		Endpoint: "mpc-0.lux-mpc.svc:9999",
+		Vault:    "v",
 		KeyID:    "kms/rek/v1",
 		NodeID:   "kms-0",
 		Timeout:  2 * time.Second,
@@ -83,14 +85,16 @@ func TestBootstrap_Validate(t *testing.T) {
 		name string
 		cfg  Config
 	}{
-		{"empty endpoint", Config{KeyID: "k", Sealed: []byte("x")}},
-		{"empty keyID", Config{Endpoint: "e", Sealed: []byte("x")}},
+		{"empty endpoint", Config{Vault: "v", KeyID: "k", Sealed: []byte("x")}},
+		{"empty vault", Config{Endpoint: "e", KeyID: "k", Sealed: []byte("x")}},
+		{"empty keyID", Config{Endpoint: "e", Vault: "v", Sealed: []byte("x")}},
 		{"both empty", Config{}},
-		{"whitespace endpoint", Config{Endpoint: "   ", KeyID: "k", Sealed: []byte("x")}},
-		{"whitespace keyID", Config{Endpoint: "e", KeyID: "  ", Sealed: []byte("x")}},
+		{"whitespace endpoint", Config{Endpoint: "   ", Vault: "v", KeyID: "k", Sealed: []byte("x")}},
+		{"whitespace vault", Config{Endpoint: "e", Vault: "  ", KeyID: "k", Sealed: []byte("x")}},
+		{"whitespace keyID", Config{Endpoint: "e", Vault: "v", KeyID: "  ", Sealed: []byte("x")}},
 		// The ring holds shares, not ciphertexts: a bootstrap that names a key
 		// and brings nothing to open has nothing to ask for.
-		{"nothing sealed", Config{Endpoint: "e", KeyID: "k"}},
+		{"nothing sealed", Config{Endpoint: "e", Vault: "v", KeyID: "k"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -126,6 +130,7 @@ func TestBootstrap_RejectsWrongLength(t *testing.T) {
 			_, err := Bootstrap(context.Background(), Config{
 				Sealed:   []byte("sealed-rek"),
 				Endpoint: "e",
+				Vault:    "v",
 				KeyID:    "k",
 			})
 			if !errors.Is(err, ErrBadREKLength) {
@@ -143,6 +148,7 @@ func TestBootstrap_RejectsAllZeroREK(t *testing.T) {
 	_, err := Bootstrap(context.Background(), Config{
 		Sealed:   []byte("sealed-rek"),
 		Endpoint: "e",
+		Vault:    "v",
 		KeyID:    "k",
 	})
 	if !errors.Is(err, ErrZeroREK) {
@@ -158,6 +164,7 @@ func TestBootstrap_PropagatesDialError(t *testing.T) {
 	_, err := Bootstrap(context.Background(), Config{
 		Sealed:   []byte("sealed-rek"),
 		Endpoint: "e",
+		Vault:    "v",
 		KeyID:    "k",
 	})
 	if err == nil || !errors.Is(err, dialErr) {
@@ -174,6 +181,7 @@ func TestBootstrap_PropagatesDecryptError(t *testing.T) {
 	_, err := Bootstrap(context.Background(), Config{
 		Sealed:   []byte("sealed-rek"),
 		Endpoint: "e",
+		Vault:    "v",
 		KeyID:    "k",
 	})
 	if err == nil || !errors.Is(err, decErr) {
@@ -195,6 +203,7 @@ func TestBootstrap_DefaultTimeout(t *testing.T) {
 	got, err := Bootstrap(context.Background(), Config{
 		Sealed:   []byte("sealed-rek"),
 		Endpoint: "e",
+		Vault:    "v",
 		KeyID:    "k",
 		// Timeout intentionally zero.
 	})
@@ -232,7 +241,7 @@ func TestZero_OnReturnedREK_ForensicCheck(t *testing.T) {
 	restore := withDialer(t, fake)
 	defer restore()
 
-	got, err := Bootstrap(context.Background(), Config{Endpoint: "e", KeyID: "k", Sealed: []byte("sealed-rek")})
+	got, err := Bootstrap(context.Background(), Config{Endpoint: "e", Vault: "v", KeyID: "k", Sealed: []byte("sealed-rek")})
 	if err != nil {
 		t.Fatalf("Bootstrap: %v", err)
 	}
@@ -251,7 +260,7 @@ func TestBootstrap_NilResultFromDecrypter(t *testing.T) {
 	restore := withDialer(t, fake)
 	defer restore()
 
-	_, err := Bootstrap(context.Background(), Config{Endpoint: "e", KeyID: "k"})
+	_, err := Bootstrap(context.Background(), Config{Endpoint: "e", Vault: "v", KeyID: "k"})
 	if err == nil {
 		t.Fatal("Bootstrap returned nil error on nil DecryptResult")
 	}
@@ -259,7 +268,35 @@ func TestBootstrap_NilResultFromDecrypter(t *testing.T) {
 
 type nilResultDecrypter struct{}
 
-func (nilResultDecrypter) Decrypt(_ context.Context, _ string, _ []byte) (*mpc.DecryptResult, error) {
+func (nilResultDecrypter) Reveal(_ context.Context, _, _ string, _ []byte) (*mpc.RevealResult, error) {
 	return nil, nil
 }
 func (nilResultDecrypter) Close() {}
+
+// The vault has to reach the ring, not just the config. It scopes the share set,
+// and a request naming only a key is refused — which is what kept the REK from
+// ever opening. Config carrying it and the call dropping it looks identical
+// from here unless something checks the far side.
+func TestBootstrap_CarriesTheVaultToTheRing(t *testing.T) {
+	rek := make([]byte, 32)
+	for i := range rek {
+		rek[i] = byte(i + 1)
+	}
+	fake := &fakeDecrypter{plaintext: rek}
+	defer withDialer(t, fake)()
+
+	if _, err := Bootstrap(context.Background(), Config{
+		Endpoint: "e",
+		Vault:    "acme",
+		KeyID:    "master",
+		Sealed:   []byte("sealed"),
+	}); err != nil {
+		t.Fatalf("Bootstrap: %v", err)
+	}
+	if fake.gotVault != "acme" {
+		t.Errorf("the ring was asked under vault %q, want acme", fake.gotVault)
+	}
+	if fake.gotKeyID != "master" {
+		t.Errorf("the ring was asked for key %q, want master", fake.gotKeyID)
+	}
+}
