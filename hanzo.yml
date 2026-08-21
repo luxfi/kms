@@ -1,32 +1,19 @@
-# Build is owned by platform.hanzo.ai, not GitHub Actions. Platform reads this
-# file, schedules the image build onto the self-hosted arcd pools over the
-# native long-poll fabric, and pushes to GHCR — no GitHub-Actions hop.
+# Platform-native CI/CD — luxfi/kms
 #
-# STATUS: declaration of intent, NOT the live path. The build that actually runs
-# today is .github/workflows/build-lux-kms.yml, restored after this file briefly
-# replaced it — the native plane is not serving yet (the platform Deployment is
-# scaled to 0/0 and PLATFORM_BUILD_CALLBACK_TOKEN, the bearer POST /v1/runner
-# needs, is in neither cluster), so cutting over left kms unable to build at all.
+# BUILD IS NOT DECLARED HERE. ghcr.io/luxfi/kms is built and pushed by
+# .hanzo/workflows/release.yml on the native forge runners (git.hanzo.ai ->
+# git-runner, pool `lux-build-linux-amd64`). That workflow smokes the image
+# against /healthz before a manifest exists and proves the pushed tag resolves
+# after, and it is the only thing that publishes this image.
 #
-# The 422 "Actions has been disabled for this user" that motivated the cutover is
-# ACCOUNT-scoped, not repo-scoped: the hanzo-dev account gets it, the zeekay
-# account dispatches fine. Push-triggered runs did stop firing around 2026-07-24,
-# so builds need an explicit dispatch either way.
-#
-# Switch to this path when the native plane serves, and do it for the whole fleet
-# at once — every sibling repo still builds on Actions.
+# ONE publisher per image. An `images:` block here would put a second, ungated
+# build on the same `vX.Y.Z` tag from the same commit — two producers racing one
+# name, and the one that wins is whichever finishes last. The platform lane
+# yields to a repo's own `.hanzo/workflows/cicd.yml`; release.yml is a workflow
+# of its own, so the yield is spelled by declaring no build.
 #
 # Schema: ~/work/hanzo/platform/docs/PLATFORM_CI.md §hanzo.yml.
-build:
-  matrix:
-    - { os: linux, arch: amd64 }
-  dockerfile: ./Dockerfile
-  context: .
-  image: ghcr.io/luxfi/kms
-  tag-pattern: "{{git.tag}}"
-  push: true
-  dispatch: native
-
-# No `deploy:` block. The kms Deployment in the hanzo namespace is kustomize-
-# managed and carries no operator CR, so there is nothing here for the Service-CR
-# rollout to target. Rolling the image stays a separate, explicit step.
+#
+# No `deploy:` block either. The kms Deployment in the hanzo namespace is
+# kustomize-managed and carries no operator CR, so there is nothing here for the
+# Service-CR rollout to target. Rolling the image stays a separate, explicit step.
