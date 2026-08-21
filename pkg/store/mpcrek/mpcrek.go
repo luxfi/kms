@@ -109,9 +109,15 @@ var (
 // pod restart doesn't hang behind a dead cluster.
 type Config struct {
 	Endpoint string
-	KeyID    string
-	NodeID   string
-	Timeout  time.Duration
+
+	// Vault is the org the share set is filed under. The ring scopes every
+	// answer by it, so a request without one is refused — which is what kept
+	// this whole path from ever working: the call named a key and no owner.
+	Vault string
+
+	KeyID   string
+	NodeID  string
+	Timeout time.Duration
 
 	// Sealed is the REK, encrypted to the ring's group key.
 	//
@@ -127,6 +133,9 @@ func (c Config) Validate() error {
 	if strings.TrimSpace(c.Endpoint) == "" {
 		return fmt.Errorf("%w: Endpoint is required", ErrUnconfigured)
 	}
+	if strings.TrimSpace(c.Vault) == "" {
+		return fmt.Errorf("%w: Vault is required", ErrUnconfigured)
+	}
 	if strings.TrimSpace(c.KeyID) == "" {
 		return fmt.Errorf("%w: KeyID is required", ErrUnconfigured)
 	}
@@ -136,16 +145,15 @@ func (c Config) Validate() error {
 	return nil
 }
 
-// MPCDecrypter is the subset of mpc.ZapClient that Bootstrap needs.
-// Defined as an interface so tests can supply a fake without dialing a
-// real MPC cluster.
-type MPCDecrypter interface {
-	Decrypt(ctx context.Context, keyID string, ciphertext []byte) (*mpc.DecryptResult, error)
+// Opener is the subset of mpc.ZapClient that Bootstrap needs. An interface so
+// a test can answer without a ring.
+type Opener interface {
+	Reveal(ctx context.Context, vault, keyID string, ciphertext []byte) (*mpc.RevealResult, error)
 	Close()
 }
 
 // dialer is overridable in tests. Production wires NewZapClient.
-var dialer = func(nodeID, endpoint string) (MPCDecrypter, error) {
+var dialer = func(nodeID, endpoint string) (Opener, error) {
 	c, err := mpc.NewZapClient(nodeID, endpoint)
 	if err != nil {
 		return nil, err
@@ -187,12 +195,12 @@ func Bootstrap(ctx context.Context, cfg Config) ([]byte, error) {
 	// answers with shares and stores nothing that needs opening, so there is no
 	// record on that side to fetch by name — which is why the sealed REK can
 	// sit somewhere public and this call carries it.
-	res, err := client.Decrypt(dialCtx, cfg.KeyID, cfg.Sealed)
+	res, err := client.Reveal(dialCtx, cfg.Vault, cfg.KeyID, cfg.Sealed)
 	if err != nil {
-		return nil, fmt.Errorf("mpcrek: threshold decrypt key=%s: %w", cfg.KeyID, err)
+		return nil, fmt.Errorf("mpcrek: open %s/%s: %w", cfg.Vault, cfg.KeyID, err)
 	}
 	if res == nil {
-		return nil, fmt.Errorf("mpcrek: threshold decrypt key=%s: nil result", cfg.KeyID)
+		return nil, fmt.Errorf("mpcrek: open %s/%s: nil result", cfg.Vault, cfg.KeyID)
 	}
 
 	rek := res.Plaintext
