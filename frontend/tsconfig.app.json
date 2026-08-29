@@ -6,8 +6,8 @@
     "lib": ["ES2021", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
-    "baseUrl": ".",
     "paths": {
+      "*": ["./*"],
       "@app/*": [
         "./src/*"
       ]
@@ -33,5 +33,5 @@
     "./src/**/*.tsx",
     "./.storybook/**/*.ts",
     "./.storybook/**/*.tsx"
-  ],
+  ]
 }
