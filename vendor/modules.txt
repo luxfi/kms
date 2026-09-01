@@ -138,6 +138,7 @@ github.com/luxfi/crypto/bls
 github.com/luxfi/crypto/bls/signer/localsigner
 github.com/luxfi/crypto/cb58
 github.com/luxfi/crypto/common
+github.com/luxfi/crypto/encryption
 github.com/luxfi/crypto/hash
 github.com/luxfi/crypto/internal/gpuhost
 github.com/luxfi/crypto/mldsa
@@ -200,7 +201,7 @@ github.com/luxfi/sampler
 # github.com/luxfi/tls v1.1.1
 ## explicit; go 1.26.4
 github.com/luxfi/tls
-# github.com/luxfi/vm v1.3.1
+# github.com/luxfi/vm v1.3.2
 ## explicit; go 1.26.4
 github.com/luxfi/vm/components/verify
 # github.com/luxfi/zap v1.2.6
