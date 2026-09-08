@@ -36,9 +36,9 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            pool: lux-build-linux-amd64
+            pool: linux-amd64
           - arch: arm64
-            pool: lux-build-linux-arm64
+            pool: linux-arm64
     runs-on: ['${{ matrix.pool }}']
     timeout-minutes: 45
     steps:
@@ -134,7 +134,7 @@ jobs:
     # Registry-side only: imagetools reads the two per-arch manifests and writes
     # a list pointing at both. No builder and no platform of its own, so which
     # pool runs this does not matter.
-    runs-on: [lux-build-linux-amd64]
+    runs-on: [linux-amd64]
     timeout-minutes: 15
     steps:
       - name: Compute the release names
