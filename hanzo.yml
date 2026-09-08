@@ -2,7 +2,7 @@
 #
 # BUILD IS NOT DECLARED HERE. ghcr.io/luxfi/kms is built and pushed by
 # .hanzo/workflows/release.yml on the native forge runners (git.hanzo.ai ->
-# git-runner, pool `lux-build-linux-amd64`). That workflow smokes the image
+# git-runner, pool `linux-amd64`). That workflow smokes the image
 # against /healthz before a manifest exists and proves the pushed tag resolves
 # after, and it is the only thing that publishes this image.
 #
