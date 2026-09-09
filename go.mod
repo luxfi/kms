@@ -1,6 +1,6 @@
 module github.com/luxfi/kms
 
-go 1.26.4
+go 1.26.8
 
 require (
 	github.com/cloudflare/circl v1.6.3
