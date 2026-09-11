@@ -92,7 +92,8 @@ type Client struct {
 type Config struct {
 	// NodeID we present to the mesh. Defaults to "kmsclient-<random>".
 	NodeID string
-	// Port to listen on (0 = OS-assigned). ZAP requires a listener even for callers.
+	// Port to listen on while discovering (0 = OS-assigned). A direct dial
+	// (PeerAddr set) starts no listener, so Port is unused there.
 	Port int
 	// PeerAddr (host:port) of the KMS node. If non-empty, Dial uses
 	// ConnectDirect. If empty, Dial uses mDNS discovery by ServiceType.
@@ -148,8 +149,15 @@ func DialWithConfig(ctx context.Context, cfg Config) (*Client, error) {
 		Port:        cfg.Port,
 		NoDiscovery: cfg.PeerAddr != "",
 	})
-	if err := n.Start(); err != nil {
-		return nil, fmt.Errorf("zapclient: start node: %w", err)
+	// Only discovery starts the node, because a peer has to be able to find
+	// it. A direct dial binds nothing: every call is answered on the
+	// connection it went out on, and with discovery off nothing dials back.
+	// Starting it anyway bound Port on every interface, :0 by default, in
+	// every process that held a KMS client.
+	if cfg.PeerAddr == "" {
+		if err := n.Start(); err != nil {
+			return nil, fmt.Errorf("zapclient: start node: %w", err)
+		}
 	}
 
 	caps := cfg.LocalCaps
