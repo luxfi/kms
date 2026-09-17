@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -215,7 +216,7 @@ func newOrgJWTAuth(iamEndpoint, expectedIssuer string) *orgJWTAuth {
 func normalizeSet(s string, norm func(string) string) []string {
 	out := []string{}
 	seen := map[string]bool{}
-	for _, part := range strings.Split(s, ",") {
+	for part := range strings.SplitSeq(s, ",") {
 		v := norm(strings.TrimSpace(part))
 		if v == "" || seen[v] {
 			continue
@@ -248,12 +249,7 @@ func parseIssuers(s string) []string {
 // configured accepted issuers (trailing-slash insensitive).
 func issuerAllowed(allowed []string, iss string) bool {
 	iss = strings.TrimRight(iss, "/")
-	for _, a := range allowed {
-		if iss == a {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(allowed, iss)
 }
 
 func (a *orgJWTAuth) validate(ctx context.Context, raw string) (*orgClaims, error) {

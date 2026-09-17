@@ -51,13 +51,11 @@ func newTenantFixture(t *testing.T, homeOrgs ...string) *tenantFixture {
 		url: srv.URL,
 		mint: func(owner string, roles ...string) string {
 			return signOrgClaims(t, signer, orgClaims{
-				Claims: jwt.Claims{
-					Issuer:  iam.URL,
-					Subject: "svc",
-					Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
-				},
-				Owner: owner,
-				Roles: roles,
+				Issuer:  iam.URL,
+				Subject: "svc",
+				Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+				Owner:   owner,
+				Roles:   roles,
 			})
 		},
 		close: func() { srv.Close(); iam.Close() },

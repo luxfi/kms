@@ -1,10 +1,12 @@
 module github.com/luxfi/kms
 
-go 1.26.8
+go 1.27.1
 
 require (
 	github.com/cloudflare/circl v1.6.3
 	github.com/go-jose/go-jose/v4 v4.1.4
+	github.com/luxfi/age v1.6.0
+	github.com/luxfi/crypto v1.20.5
 	github.com/luxfi/go-bip39 v1.2.0
 	github.com/luxfi/ids v1.3.2
 	github.com/luxfi/keys v1.4.1
@@ -35,11 +37,9 @@ require (
 	github.com/klauspost/crc32 v1.3.0 // indirect
 	github.com/luxfi/accel v1.2.4 // indirect
 	github.com/luxfi/address v1.1.1 // indirect
-	github.com/luxfi/age v1.6.0
 	github.com/luxfi/cache v1.3.1 // indirect
 	github.com/luxfi/constants v1.6.2 // indirect
 	github.com/luxfi/container v0.2.1 // indirect
-	github.com/luxfi/crypto v1.20.5
 	github.com/luxfi/formatting v1.1.1 // indirect
 	github.com/luxfi/geth v1.20.1 // indirect
 	github.com/luxfi/go-bip32 v1.1.0 // indirect

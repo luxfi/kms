@@ -28,7 +28,7 @@ func mpcServerReporting(t *testing.T, threshold int, participants []string) *htt
 			return
 		}
 		n++
-		body := map[string]interface{}{
+		body := map[string]any{
 			"wallet_id":     "wallet-" + string(rune('0'+n)),
 			"vault_id":      "vault-1",
 			"ecdsa_pub_key": "04pubkey",

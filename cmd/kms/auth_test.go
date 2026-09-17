@@ -74,12 +74,10 @@ func TestRequireOrgJWT_validTokenForCorrectOrg(t *testing.T) {
 	auth := newOrgJWTAuth(iam.URL, "")
 
 	tok := signOrgClaims(t, signer, orgClaims{
-		Claims: jwt.Claims{
-			Issuer:  iam.URL,
-			Subject: "user-z",
-			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		Owner: "org1", // user-token case: owner IS the org
+		Issuer:  iam.URL,
+		Subject: "user-z",
+		Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		Owner:   "org1", // user-token case: owner IS the org
 	})
 
 	called := false
@@ -110,12 +108,10 @@ func TestRequireOrgJWT_crossOrgRejected(t *testing.T) {
 
 	// Token for org=org2, request for org=org1 → 403.
 	tok := signOrgClaims(t, signer, orgClaims{
-		Claims: jwt.Claims{
-			Issuer:  iam.URL,
-			Subject: "org2-app",
-			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		Owner: "org2",
+		Issuer:  iam.URL,
+		Subject: "org2-app",
+		Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		Owner:   "org2",
 	})
 
 	mux := http.NewServeMux()
@@ -143,12 +139,10 @@ func TestRequireOrgJWT_subScopeAuthorized(t *testing.T) {
 	// "lux-infra" (the lux-operator's projectSlug) → 200. A token for
 	// the parent org reaches every hyphen-delimited project under it.
 	tok := signOrgClaims(t, signer, orgClaims{
-		Claims: jwt.Claims{
-			Issuer:  iam.URL,
-			Subject: "lux-kms",
-			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		Owner: "lux",
+		Issuer:  iam.URL,
+		Subject: "lux-kms",
+		Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		Owner:   "lux",
 	})
 
 	called := false
@@ -181,12 +175,10 @@ func TestRequireOrgJWT_subScopeBoundaryRejected(t *testing.T) {
 	// boundary in the prefix rule prevents a token for "lux" from
 	// leaking into an unrelated org whose slug merely shares a prefix.
 	tok := signOrgClaims(t, signer, orgClaims{
-		Claims: jwt.Claims{
-			Issuer:  iam.URL,
-			Subject: "lux-kms",
-			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		Owner: "lux",
+		Issuer:  iam.URL,
+		Subject: "lux-kms",
+		Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		Owner:   "lux",
 	})
 
 	mux := http.NewServeMux()
@@ -212,13 +204,11 @@ func TestRequireOrgJWT_kmsAdminCrossesOrgs(t *testing.T) {
 
 	// kms-admin role lets the holder reach across orgs.
 	tok := signOrgClaims(t, signer, orgClaims{
-		Claims: jwt.Claims{
-			Issuer:  iam.URL,
-			Subject: "ops",
-			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		Owner: "operator-org",
-		Roles: []string{"kms-admin"},
+		Issuer:  iam.URL,
+		Subject: "ops",
+		Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		Owner:   "operator-org",
+		Roles:   []string{"kms-admin"},
 	})
 
 	mux := http.NewServeMux()
@@ -243,12 +233,10 @@ func TestRequireOrgJWT_expiredRejected(t *testing.T) {
 	auth := newOrgJWTAuth(iam.URL, "")
 
 	tok := signOrgClaims(t, signer, orgClaims{
-		Claims: jwt.Claims{
-			Issuer:  iam.URL,
-			Subject: "old",
-			Expiry:  jwt.NewNumericDate(time.Now().Add(-time.Hour)),
-		},
-		Owner: "org1",
+		Issuer:  iam.URL,
+		Subject: "old",
+		Expiry:  jwt.NewNumericDate(time.Now().Add(-time.Hour)),
+		Owner:   "org1",
 	})
 
 	mux := http.NewServeMux()
@@ -274,12 +262,10 @@ func TestRequireOrgJWT_wrongIssuerRejected(t *testing.T) {
 
 	// Issuer mismatch — claim says some-other-iam, validator expects iam.URL.
 	tok := signOrgClaims(t, signer, orgClaims{
-		Claims: jwt.Claims{
-			Issuer:  "https://other-iam.example.com",
-			Subject: "u",
-			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		Owner: "org1",
+		Issuer:  "https://other-iam.example.com",
+		Subject: "u",
+		Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		Owner:   "org1",
 	})
 
 	mux := http.NewServeMux()
@@ -307,14 +293,12 @@ func TestRequireOrgJWT_applicationToken_orgFromName(t *testing.T) {
 	auth := newOrgJWTAuth(iam.URL, "")
 
 	tok := signOrgClaims(t, signer, orgClaims{
-		Claims: jwt.Claims{
-			Issuer:  iam.URL,
-			Subject: "admin/org1-kms",
-			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		Owner: "admin",
-		Name:  "org1-kms",
-		Type:  "application",
+		Issuer:  iam.URL,
+		Subject: "admin/org1-kms",
+		Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		Owner:   "admin",
+		Name:    "org1-kms",
+		Type:    "application",
 	})
 
 	mux := http.NewServeMux()
@@ -342,14 +326,12 @@ func TestRequireOrgJWT_applicationToken_crossOrgRejected(t *testing.T) {
 	auth := newOrgJWTAuth(iam.URL, "")
 
 	tok := signOrgClaims(t, signer, orgClaims{
-		Claims: jwt.Claims{
-			Issuer:  iam.URL,
-			Subject: "admin/org1-kms",
-			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		Owner: "admin",
-		Name:  "org1-kms",
-		Type:  "application",
+		Issuer:  iam.URL,
+		Subject: "admin/org1-kms",
+		Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		Owner:   "admin",
+		Name:    "org1-kms",
+		Type:    "application",
 	})
 
 	mux := http.NewServeMux()
@@ -376,15 +358,13 @@ func TestRequireOrgJWT_tagPicksOrg(t *testing.T) {
 	auth := newOrgJWTAuth(iam.URL, "")
 
 	tok := signOrgClaims(t, signer, orgClaims{
-		Claims: jwt.Claims{
-			Issuer:  iam.URL,
-			Subject: "admin/some-app",
-			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		Owner: "admin",
-		Name:  "some-app",
-		Type:  "application",
-		Tag:   "org1",
+		Issuer:  iam.URL,
+		Subject: "admin/some-app",
+		Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		Owner:   "admin",
+		Name:    "some-app",
+		Type:    "application",
+		Tag:     "org1",
 	})
 
 	mux := http.NewServeMux()
@@ -409,11 +389,9 @@ func TestRequireOrgJWT_missingOwnerClaimRejected(t *testing.T) {
 	auth := newOrgJWTAuth(iam.URL, "")
 
 	tok := signOrgClaims(t, signer, orgClaims{
-		Claims: jwt.Claims{
-			Issuer:  iam.URL,
-			Subject: "u",
-			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
+		Issuer:  iam.URL,
+		Subject: "u",
+		Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		// Owner deliberately empty AND no Tag/Name/Type — orgs() yields
 		// nothing, so the token is rejected.
 	})
@@ -445,14 +423,12 @@ func TestRequireOrgJWT_splitJwksAndIssuer(t *testing.T) {
 	auth := newOrgJWTAuth(jwksHost.URL, publicIssuer)
 
 	tok := signOrgClaims(t, signer, orgClaims{
-		Claims: jwt.Claims{
-			Issuer:  publicIssuer, // minted with public host
-			Subject: "admin/org1-kms",
-			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		Owner: "admin",
-		Name:  "org1-kms",
-		Type:  "application",
+		Issuer:  publicIssuer, // minted with public host
+		Subject: "admin/org1-kms",
+		Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		Owner:   "admin",
+		Name:    "org1-kms",
+		Type:    "application",
 	})
 
 	mux := http.NewServeMux()
@@ -484,14 +460,12 @@ func TestRequireOrgJWT_multiIssuerWhiteLabel(t *testing.T) {
 
 	mkTok := func(iss string) string {
 		return signOrgClaims(t, signer, orgClaims{
-			Claims: jwt.Claims{
-				Issuer:  iss,
-				Subject: "admin/sdm-kms",
-				Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
-			},
-			Owner: "admin",
-			Name:  "sdm-kms",
-			Type:  "application",
+			Issuer:  iss,
+			Subject: "admin/sdm-kms",
+			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+			Owner:   "admin",
+			Name:    "sdm-kms",
+			Type:    "application",
 		})
 	}
 
@@ -533,13 +507,11 @@ func newTestKeyAuth(t *testing.T, roles ...string) (auth *orgJWTAuth, bearer str
 	iam := httptest.NewServer(jwksHandler(jwks))
 	auth = newOrgJWTAuth(iam.URL, "")
 	bearer = signOrgClaims(t, signer, orgClaims{
-		Claims: jwt.Claims{
-			Issuer:  iam.URL,
-			Subject: "ops",
-			Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		Owner: "operator-org",
-		Roles: roles,
+		Issuer:  iam.URL,
+		Subject: "ops",
+		Expiry:  jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		Owner:   "operator-org",
+		Roles:   roles,
 	})
 	return auth, bearer, iam.Close
 }

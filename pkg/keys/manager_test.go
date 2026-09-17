@@ -105,7 +105,7 @@ func mockMPCServer(t *testing.T) *httptest.Server {
 			// snake_case keys match the mpcd wire (KeygenResult in
 			// luxfi/mpc pkg/api/server.go). camelCase here was the drift that
 			// silently decoded to an empty result.
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			json.NewEncoder(w).Encode(map[string]any{
 				"id":            "id-" + string(rune('0'+keygenCount)),
 				"wallet_id":     "wallet-" + string(rune('0'+keygenCount)),
 				"vault_id":      "vault-1",

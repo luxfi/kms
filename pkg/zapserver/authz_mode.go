@@ -55,6 +55,7 @@ package zapserver
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/luxfi/ids"
@@ -148,9 +149,7 @@ type StaticScopeProvider struct {
 // caller cannot change what the server enforces.
 func NewStaticScopeProvider(m map[ids.NodeID]Grants) *StaticScopeProvider {
 	c := make(map[ids.NodeID]Grants, len(m))
-	for k, v := range m {
-		c[k] = v
-	}
+	maps.Copy(c, m)
 	return &StaticScopeProvider{byNode: c}
 }
 

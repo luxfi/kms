@@ -931,7 +931,7 @@ func registerKMSRoutes(mux *http.ServeMux, auth *orgJWTAuth, mgr *keys.Manager, 
 			})
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		writeJSON(w, http.StatusOK, map[string]any{
 			"kms": "ok",
 			"mpc": status,
 		})
@@ -1177,15 +1177,15 @@ func normalizeS3Endpoint(raw string) (host string, useSSL bool) {
 // zapdbLogger adapts slog to ZapDB's Logger interface.
 type zapdbLogger struct{}
 
-func (zapdbLogger) Errorf(format string, args ...interface{}) {
+func (zapdbLogger) Errorf(format string, args ...any) {
 	slog.Error(fmt.Sprintf(format, args...))
 }
-func (zapdbLogger) Warningf(format string, args ...interface{}) {
+func (zapdbLogger) Warningf(format string, args ...any) {
 	slog.Warn(fmt.Sprintf(format, args...))
 }
-func (zapdbLogger) Infof(format string, args ...interface{}) {
+func (zapdbLogger) Infof(format string, args ...any) {
 	slog.Info(fmt.Sprintf(format, args...))
 }
-func (zapdbLogger) Debugf(format string, args ...interface{}) {
+func (zapdbLogger) Debugf(format string, args ...any) {
 	slog.Debug(fmt.Sprintf(format, args...))
 }

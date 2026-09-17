@@ -112,7 +112,7 @@ func TestNonceLedger_ConcurrentInsert_RaceFree(t *testing.T) {
 	var firstSeen, replays int64
 	wg.Add(N)
 	start := make(chan struct{})
-	for i := 0; i < N; i++ {
+	for range N {
 		go func() {
 			defer wg.Done()
 			<-start // unleash all goroutines together to maximise contention
@@ -152,7 +152,7 @@ func TestNonceLedger_GcRemovesExpired(t *testing.T) {
 	defer l.Stop()
 
 	now := time.Unix(1_717_200_000, 0)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		nonce := fmt.Sprintf("nonce-%d", i)
 		if _, err := l.SeenOrInsert(context.Background(), nodeID(byte(i)), nonce, now); err != nil {
 			t.Fatalf("insert %d: %v", i, err)

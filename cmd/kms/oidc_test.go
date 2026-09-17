@@ -378,40 +378,34 @@ func TestMintClientCredential_validatesJWT(t *testing.T) {
 		{
 			name: "wrong-signer",
 			token: signClaims(t, wrongSigner, sessionClaims{
-				Claims: jwt.Claims{
-					Issuer:   iam.URL,
-					Subject:  "u1",
-					Audience: jwt.Audience{cfg.clientID},
-					Expiry:   jwt.NewNumericDate(time.Now().Add(time.Hour)),
-				},
-				Owner: cfg.owner,
-				Roles: []string{roleKMSAdmin},
+				Issuer:   iam.URL,
+				Subject:  "u1",
+				Audience: jwt.Audience{cfg.clientID},
+				Expiry:   jwt.NewNumericDate(time.Now().Add(time.Hour)),
+				Owner:    cfg.owner,
+				Roles:    []string{roleKMSAdmin},
 			}),
 		},
 		{
 			name: "expired",
 			token: signClaims(t, signer, sessionClaims{
-				Claims: jwt.Claims{
-					Issuer:   iam.URL,
-					Subject:  "u1",
-					Audience: jwt.Audience{cfg.clientID},
-					Expiry:   jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
-				},
-				Owner: cfg.owner,
-				Roles: []string{roleKMSAdmin},
+				Issuer:   iam.URL,
+				Subject:  "u1",
+				Audience: jwt.Audience{cfg.clientID},
+				Expiry:   jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
+				Owner:    cfg.owner,
+				Roles:    []string{roleKMSAdmin},
 			}),
 		},
 		{
 			name: "wrong-aud",
 			token: signClaims(t, signer, sessionClaims{
-				Claims: jwt.Claims{
-					Issuer:   iam.URL,
-					Subject:  "u1",
-					Audience: jwt.Audience{"some-other-app"},
-					Expiry:   jwt.NewNumericDate(time.Now().Add(time.Hour)),
-				},
-				Owner: cfg.owner,
-				Roles: []string{roleKMSAdmin},
+				Issuer:   iam.URL,
+				Subject:  "u1",
+				Audience: jwt.Audience{"some-other-app"},
+				Expiry:   jwt.NewNumericDate(time.Now().Add(time.Hour)),
+				Owner:    cfg.owner,
+				Roles:    []string{roleKMSAdmin},
 			}),
 		},
 	}
@@ -445,14 +439,12 @@ func TestMintClientCredential_requiresKmsAdminRole(t *testing.T) {
 	cfg.jwtValidator = newSessionJWTValidator(iam.URL, cfg.clientID, cfg.owner)
 
 	tok := signClaims(t, signer, sessionClaims{
-		Claims: jwt.Claims{
-			Issuer:   iam.URL,
-			Subject:  "u-no-roles",
-			Audience: jwt.Audience{cfg.clientID},
-			Expiry:   jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		Owner: cfg.owner,
-		Roles: []string{"viewer"}, // not admin
+		Issuer:   iam.URL,
+		Subject:  "u-no-roles",
+		Audience: jwt.Audience{cfg.clientID},
+		Expiry:   jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		Owner:    cfg.owner,
+		Roles:    []string{"viewer"}, // not admin
 	})
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/kms/credentials", strings.NewReader(`{}`))
@@ -492,18 +484,16 @@ func TestMintClientCredential_rateLimits(t *testing.T) {
 	t.Setenv("KMS_IAM_ADMIN_CLIENT_SECRET", "admin-secret")
 
 	tok := signClaims(t, signer, sessionClaims{
-		Claims: jwt.Claims{
-			Issuer:   iam.URL,
-			Subject:  "u-burst",
-			Audience: jwt.Audience{cfg.clientID},
-			Expiry:   jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		Owner: cfg.owner,
-		Roles: []string{roleKMSAdmin},
+		Issuer:   iam.URL,
+		Subject:  "u-burst",
+		Audience: jwt.Audience{cfg.clientID},
+		Expiry:   jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		Owner:    cfg.owner,
+		Roles:    []string{roleKMSAdmin},
 	})
 
 	// First 5 must succeed.
-	for i := 0; i < mintRateLimit; i++ {
+	for i := range mintRateLimit {
 		req := httptest.NewRequest(http.MethodPost, "/v1/kms/credentials", strings.NewReader(`{}`))
 		req.AddCookie(&http.Cookie{Name: sessionCookie, Value: tok})
 		rec := httptest.NewRecorder()
@@ -548,14 +538,12 @@ func TestMintClientCredential_auditLogs(t *testing.T) {
 	t.Setenv("KMS_IAM_ADMIN_CLIENT_SECRET", "admin-secret")
 
 	tok := signClaims(t, signer, sessionClaims{
-		Claims: jwt.Claims{
-			Issuer:   iam.URL,
-			Subject:  "u-audit",
-			Audience: jwt.Audience{cfg.clientID},
-			Expiry:   jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		Owner: cfg.owner,
-		Roles: []string{roleKMSAdmin},
+		Issuer:   iam.URL,
+		Subject:  "u-audit",
+		Audience: jwt.Audience{cfg.clientID},
+		Expiry:   jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		Owner:    cfg.owner,
+		Roles:    []string{roleKMSAdmin},
 	})
 
 	var buf bytes.Buffer

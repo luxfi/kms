@@ -43,6 +43,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -635,12 +636,7 @@ func readBE64(b []byte) int64 {
 // hasRole returns true if any element of roles equals want (case-sensitive,
 // matches IAM convention).
 func hasRole(roles []string, want string) bool {
-	for _, r := range roles {
-		if r == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(roles, want)
 }
 
 // ---------------------------------------------------------------------------

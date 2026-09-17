@@ -184,7 +184,7 @@ func (c *Client) Keygen(ctx context.Context, vaultID string, req KeygenRequest) 
 // This uses the transaction creation flow.
 func (c *Client) Sign(ctx context.Context, req SignRequest) (*SignResult, error) {
 	url := fmt.Sprintf("%s/v1/transactions", c.BaseURL)
-	body, err := json.Marshal(map[string]interface{}{
+	body, err := json.Marshal(map[string]any{
 		"vault_id":  req.VaultID,
 		"wallet_id": req.WalletID,
 		"key_type":  req.KeyType,

@@ -327,7 +327,7 @@ func TestTheBindingIsNotTheSessionKey(t *testing.T) {
 // rests on this.
 func TestTwoHandshakesNameDifferentChannels(t *testing.T) {
 	binds := map[string]bool{}
-	for i := 0; i < 8; i++ {
+	for range 8 {
 		_, hello, err := NewClient(CapMLKEM768)
 		if err != nil {
 			t.Fatal(err)

@@ -9,7 +9,7 @@ import (
 // fillHash mirrors fill_hash() in luxcpp/crypto/attestation/test/composite_test.cpp.
 func fillHash(seed byte) Hash {
 	var h Hash
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		h[i] = byte(int(seed) + i)
 	}
 	return h

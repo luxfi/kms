@@ -143,7 +143,7 @@ func TestPutRejectsAmbiguousCoord(t *testing.T) {
 // list that reads as the complete truth.
 func TestFindCapsTheAnswerAndSaysSo(t *testing.T) {
 	s := findTestStore(t)
-	for i := 0; i < maxFindRows+1; i++ {
+	for i := range maxFindRows + 1 {
 		mustPut(t, s, "bulk", "prod", "N"+strconv.Itoa(i))
 	}
 

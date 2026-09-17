@@ -40,34 +40,34 @@ func keccakF1600(state *[25]uint64) {
 	var c [5]uint64
 	var d [5]uint64
 	var b [25]uint64
-	for r := 0; r < 24; r++ {
+	for r := range 24 {
 		// theta
-		for x := 0; x < 5; x++ {
+		for x := range 5 {
 			c[x] = state[x] ^ state[x+5] ^ state[x+10] ^ state[x+15] ^ state[x+20]
 		}
-		for x := 0; x < 5; x++ {
+		for x := range 5 {
 			d[x] = c[(x+4)%5] ^ bits.RotateLeft64(c[(x+1)%5], 1)
 		}
-		for y := 0; y < 5; y++ {
-			for x := 0; x < 5; x++ {
+		for y := range 5 {
+			for x := range 5 {
 				state[x+5*y] ^= d[x]
 			}
 		}
 		// rho + pi
-		for x := 0; x < 5; x++ {
-			for y := 0; y < 5; y++ {
+		for x := range 5 {
+			for y := range 5 {
 				newX := y
 				newY := (2*x + 3*y) % 5
 				b[newX+5*newY] = bits.RotateLeft64(state[x+5*y], keccakR[x][y])
 			}
 		}
 		// chi
-		for y := 0; y < 5; y++ {
+		for y := range 5 {
 			var row [5]uint64
-			for x := 0; x < 5; x++ {
+			for x := range 5 {
 				row[x] = b[x+5*y]
 			}
-			for x := 0; x < 5; x++ {
+			for x := range 5 {
 				state[x+5*y] = row[x] ^ ((^row[(x+1)%5]) & row[(x+2)%5])
 			}
 		}
@@ -83,7 +83,7 @@ func keccak256(input []byte, out []byte) {
 	i := 0
 	// Absorb full blocks
 	for len(input)-i >= rate {
-		for j := 0; j < rate/8; j++ {
+		for j := range rate / 8 {
 			state[j] ^= binary.LittleEndian.Uint64(input[i+j*8 : i+j*8+8])
 		}
 		keccakF1600(&state)
@@ -97,12 +97,12 @@ func keccak256(input []byte, out []byte) {
 	}
 	block[rem] = 0x01
 	block[rate-1] |= 0x80
-	for j := 0; j < rate/8; j++ {
+	for j := range rate / 8 {
 		state[j] ^= binary.LittleEndian.Uint64(block[j*8 : j*8+8])
 	}
 	keccakF1600(&state)
 	// Squeeze 32 bytes
-	for j := 0; j < 4; j++ {
+	for j := range 4 {
 		binary.LittleEndian.PutUint64(out[j*8:], state[j])
 	}
 }

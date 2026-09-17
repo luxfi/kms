@@ -46,7 +46,7 @@ type capturingLogger struct {
 	warns []string
 }
 
-func (c *capturingLogger) Warn(msg string, ctx ...interface{}) {
+func (c *capturingLogger) Warn(msg string, ctx ...any) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	b := strings.Builder{}
@@ -68,7 +68,7 @@ func (c *capturingLogger) lines() []string {
 	return out
 }
 
-func toStr(v interface{}) string {
+func toStr(v any) string {
 	switch t := v.(type) {
 	case string:
 		return t

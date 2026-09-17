@@ -408,7 +408,7 @@ func TestInProcessAuthorizer_CacheTTL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("authz: %v", err)
 	}
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		_, _ = az.Authorize(context.Background(), Identity{NodeID: knownIdent.NodeID}, "p", OpAuthGet)
 	}
 	if calls != 1 {

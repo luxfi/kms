@@ -303,8 +303,8 @@ func TestHealthHandler(t *testing.T) {
 		wantMPCField bool
 	}{
 		{"secrets-only mode", "", nil, "ok", false},
-		{"mpc up", "vault-1", boolp(true), "ok", false},
-		{"mpc down", "vault-1", boolp(false), "degraded", true},
+		{"mpc up", "vault-1", new(true), "ok", false},
+		{"mpc down", "vault-1", new(false), "degraded", true},
 		{"mpc nil flag treated as down", "vault-1", nil, "degraded", true},
 	}
 	for _, c := range cases {
@@ -330,8 +330,6 @@ func TestHealthHandler(t *testing.T) {
 		})
 	}
 }
-
-func boolp(v bool) *bool { return &v }
 
 // nil pointer must short-circuit cleanly; this is the legacy code path
 // (mpcAvailable wasn't passed in earlier versions). Keep this test as a
